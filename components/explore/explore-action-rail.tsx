@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
   rail: {
     position: "absolute",
     right: 8,
-    top: "38%",
+    top: "40%",
     alignItems: "center",
     gap: 16,
     zIndex: 10,

@@ -9,7 +9,6 @@ import {
 } from "@/components/explore/country-image";
 import { ExploreActionRail } from "@/components/explore/explore-action-rail";
 import { ExploreFooter } from "@/components/explore/explore-footer";
-import { ExploreTopBar } from "@/components/explore/explore-top-bar";
 import { HeroScrims } from "@/components/explore/hero-scrims";
 import { MediaCarousel } from "@/components/explore/media-carousel";
 import { getAiFactByIndex, getCountryImages } from "@/lib/format-country";
@@ -30,7 +29,7 @@ export function CountryFeedPage({ country, pageHeight }: CountryFeedPageProps) {
 
   useEffect(() => {
     for (const imageUri of images) {
-      prefetchCountryImage(imageUri);
+      void prefetchCountryImage(imageUri);
     }
   }, [images]);
 
@@ -52,8 +51,6 @@ export function CountryFeedPage({ country, pageHeight }: CountryFeedPageProps) {
       {/* pageheight here adjusts the height of the scrims to make them darker */}
       <HeroScrims pageHeight={pageHeight / 1.5} />
       <View className="flex-1" pointerEvents="box-none">
-        <ExploreTopBar country={country} />
-
         <View className="flex-1 justify-end" pointerEvents="box-none">
           <View className="px-2">
             <CountryHeader country={country} />

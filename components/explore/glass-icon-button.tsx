@@ -8,6 +8,8 @@ type GlassIconButtonProps = {
   active?: boolean;
   activeColor?: string;
   accessibilityLabel?: string;
+  /** `plain` = icon only, no glass circle (e.g. Explore header search). */
+  variant?: "glass" | "plain";
 };
 
 export function GlassIconButton({
@@ -17,7 +19,10 @@ export function GlassIconButton({
   active = false,
   activeColor = "#fbbf24",
   accessibilityLabel,
+  variant = "glass",
 }: GlassIconButtonProps) {
+  const iconColor = active ? activeColor : "#ffffff";
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -25,13 +30,13 @@ export function GlassIconButton({
       onPress={onPress}
       style={({ pressed }) => [styles.hitArea, pressed && styles.pressed]}
     >
-      <View style={styles.circle}>
-        <Ionicons
-          name={icon}
-          size={24}
-          color={active ? activeColor : "#ffffff"}
-        />
-      </View>
+      {variant === "plain" ? (
+        <Ionicons name={icon} size={24} color={iconColor} />
+      ) : (
+        <View style={styles.circle}>
+          <Ionicons name={icon} size={24} color={iconColor} />
+        </View>
+      )}
       <Text style={[styles.label, active && { color: activeColor }]}>
         {label}
       </Text>

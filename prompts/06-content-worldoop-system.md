@@ -2,7 +2,7 @@
 
 Start with:
 
-```
+```text
 @prompts-worldloop/00-backend-overview.md
 @prompts-worldloop/01-country-data-service.md implement it
 @prompts-worldloop/02-local-redis-setup.md implement it

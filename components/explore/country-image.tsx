@@ -16,15 +16,37 @@ function imageSource(uri: string) {
   };
 }
 
-/** Warm the disk/memory cache so hero swaps do not flash. */
-export function prefetchCountryImage(uri: string | undefined) {
-  const normalized = uri ? normalizeImageUrl(uri) : null;
-  if (!normalized) return;
+const warmedUris = new Set<string>();
+const inflightPrefetches = new Map<string, Promise<void>>();
 
-  void Image.prefetch(normalized, {
+export function isCountryImageReady(uri: string | undefined): boolean {
+  const normalized = uri ? normalizeImageUrl(uri) : null;
+  return normalized ? warmedUris.has(normalized) : false;
+}
+
+/** Warm disk/memory cache; resolves when safe to paint without a navy flash. */
+export function prefetchCountryImage(uri: string | undefined): Promise<void> {
+  const normalized = uri ? normalizeImageUrl(uri) : null;
+  if (!normalized) return Promise.resolve();
+
+  if (warmedUris.has(normalized)) return Promise.resolve();
+
+  const existing = inflightPrefetches.get(normalized);
+  if (existing) return existing;
+
+  const promise = Image.prefetch(normalized, {
     headers: imageSource(normalized).headers,
     cachePolicy: "memory-disk",
-  });
+  })
+    .then(() => {
+      warmedUris.add(normalized);
+    })
+    .finally(() => {
+      inflightPrefetches.delete(normalized);
+    });
+
+  inflightPrefetches.set(normalized, promise);
+  return promise;
 }
 
 type CountryImageProps = {
@@ -51,8 +73,10 @@ export function CountryImage({
     [uri],
   );
 
-  /** URI currently painted — stays on the previous photo until the next is cached. */
-  const [shownUri, setShownUri] = useState<string | null>(null);
+  const [shownUri, setShownUri] = useState<string | null>(() => {
+    const initial = uri ? normalizeImageUrl(uri) : null;
+    return initial && warmedUris.has(initial) ? initial : null;
+  });
   const [failed, setFailed] = useState(false);
   const requestRef = useRef(0);
 
@@ -70,10 +94,12 @@ export function CountryImage({
     const requestId = ++requestRef.current;
     setFailed(false);
 
-    void Image.prefetch(normalizedUri, {
-      headers: imageSource(normalizedUri).headers,
-      cachePolicy: "memory-disk",
-    }).then(() => {
+    if (warmedUris.has(normalizedUri)) {
+      setShownUri(normalizedUri);
+      return;
+    }
+
+    void prefetchCountryImage(normalizedUri).then(() => {
       if (requestRef.current !== requestId) return;
       setShownUri(normalizedUri);
     });

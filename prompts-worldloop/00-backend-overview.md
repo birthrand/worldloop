@@ -21,7 +21,7 @@ It should:
 
 ## Architecture
 
-```
+```text
 Mobile App (Expo)
         │
         ▼
@@ -37,6 +37,7 @@ External APIs            Cache storage
 - REST Countries
 - World Bank (optional)
 - Unsplash / Pexels
+
 ```
 
 ---
@@ -71,7 +72,7 @@ Graceful degradation (serve without cache when Redis is down) may exist in code 
 
 ## Folder structure
 
-```
+```text
 backend/
   src/
     api/
@@ -98,6 +99,7 @@ backend/
     utils/
       logger.ts
 docker-compose.yml    # Redis — added in prompt 02
+
 ```
 
 ---
@@ -139,12 +141,12 @@ Early features may return partial objects (e.g. no `images` or `ai` until those 
 
 ## Cache keys and TTLs
 
-| Key pattern | TTL |
-|-------------|-----|
-| `country:{name}` | 90 days |
-| `feed:countries:{cursor}` | 7 days |
-| `ai:{country}` | 7 days |
-| `images:{country}` | 30 days |
+| Key pattern               | TTL     |
+| ------------------------- | ------- |
+| `country:{name}`          | 90 days |
+| `feed:countries:{cursor}` | 7 days  |
+| `ai:{country}`            | 7 days  |
+| `images:{country}`        | 30 days |
 
 ---
 

@@ -27,3 +27,36 @@ export async function fetchFeedCountries(
 
   return response.json() as Promise<FeedCountriesResponse>;
 }
+
+export type SearchCountriesResponse = {
+  data: Country[];
+  meta: {
+    query: string | null;
+    region: string | null;
+    count: number;
+  };
+};
+
+export async function fetchSearchCountries(
+  query?: string,
+  region?: string,
+): Promise<SearchCountriesResponse> {
+  const url = new URL(`${API_BASE_URL}/search`);
+  const q = query?.trim() ?? "";
+  const r = region?.trim() ?? "";
+
+  if (!q && !r) {
+    throw new Error("At least one of query or region is required");
+  }
+
+  if (q) url.searchParams.set("query", q);
+  if (r) url.searchParams.set("region", r);
+
+  const response = await fetch(url.toString());
+
+  if (!response.ok) {
+    throw new Error(`Search request failed (${response.status})`);
+  }
+
+  return response.json() as Promise<SearchCountriesResponse>;
+}

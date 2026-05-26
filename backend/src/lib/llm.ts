@@ -45,21 +45,33 @@ export async function createStructuredChatCompletion(
     );
   }
 
-  const response = await fetch(`${env.openAiBaseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${env.openAiApiKey}`,
-    },
-    body: JSON.stringify({
-      model: env.openAiModel,
-      messages,
-      temperature: 0.7,
-      response_format: {
-        type: "json_object",
+  const controller = new AbortController();
+  const timeoutMs = 12_000;
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  let response: Response;
+  try {
+    response = await fetch(`${env.openAiBaseUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${env.openAiApiKey}`,
       },
-    }),
-  });
+      body: JSON.stringify({
+        model: env.openAiModel,
+        messages,
+        temperature: 0.7,
+        response_format: {
+          type: "json_object",
+        },
+      }),
+      signal: controller.signal,
+    });
+  } catch {
+    throw new HttpError("LLM provider unreachable", 502, "AI_PROVIDER_ERROR");
+  } finally {
+    clearTimeout(timeout);
+  }
 
   if (!response.ok) {
     throw new HttpError(
