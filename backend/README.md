@@ -18,12 +18,12 @@ docker compose exec redis redis-cli ping   # must return PONG
 
 If Docker is unavailable:
 
-| Platform | Fallback |
-|----------|----------|
-| Windows | [Docker Desktop](https://www.docker.com/products/docker-desktop/), [Memurai](https://www.memurai.com/), or `winget install Redis.Redis` (starts on port 6379; use `redis-cli ping`) |
-| macOS | `brew install redis && brew services start redis` |
-| Linux | `sudo apt install redis-server && sudo systemctl start redis` |
-| Any | [Upstash](https://upstash.com/) free Redis — set `REDIS_URL` in `backend/.env` |
+| Platform | Fallback                                                                                                                                                                            |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Windows  | [Docker Desktop](https://www.docker.com/products/docker-desktop/), [Memurai](https://www.memurai.com/), or `winget install Redis.Redis` (starts on port 6379; use `redis-cli ping`) |
+| macOS    | `brew install redis && brew services start redis`                                                                                                                                   |
+| Linux    | `sudo apt install redis-server && sudo systemctl start redis`                                                                                                                       |
+| Any      | [Upstash](https://upstash.com/) free Redis — set `REDIS_URL` in `backend/.env`                                                                                                      |
 
 Do not proceed with later backend prompts until Redis returns `PONG` and the backend logs `Redis connected`.
 
@@ -62,26 +62,30 @@ The second request should log `Cache hit` for `country:japan` and `images:japan`
 
 ## Image API keys (Feature 3)
 
-Add at least one key to `backend/.env` (never in the Expo app):
+Configure keys in `backend/.env` only (never in the Expo app). Image URLs are resolved in this order:
 
-- [Unsplash](https://unsplash.com/developers) — `UNSPLASH_ACCESS_KEY` (primary)
-- [Pexels](https://www.pexels.com/api/) — `PEXELS_API_KEY` (backup)
+1. **Unsplash** (primary) — `UNSPLASH_ACCESS_KEY` from [Unsplash Developers](https://unsplash.com/developers)
+2. **Pexels** (backup) — `PEXELS_API_KEY` from [Pexels API](https://www.pexels.com/api/) when Unsplash returns no results or is unavailable
+3. **Wikipedia** (last resort) — only when both API providers fail or are not configured
 
-Without keys, country responses still work and use static placeholder image URLs.
+Results are **cached per country** in Redis (`images:{country}`, 30-day TTL). Reuse the cached array on subsequent requests; do not call providers again for the same country while the cache entry is valid.
+
+Consumers should mirror the same provider fallback order and country-level caching so image behavior stays consistent with the backend.
 
 ## Endpoints
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/health` | Health check |
-| GET | `/country/:name` | Single country with `images[]` (1–5 URLs) |
-| GET | `/feed/countries` | All countries with `images[]` per item |
+| Method | Path              | Description                               |
+| ------ | ----------------- | ----------------------------------------- |
+| GET    | `/health`         | Health check                              |
+| GET    | `/country/:name`  | Single country with `images[]` (1–5 URLs) |
+| GET    | `/feed/countries` | Paginated feed (`?cursor=&limit=`, default 20, max 30) |
 
 ## Examples
 
 ```bash
 curl http://localhost:3001/country/japan
-curl http://localhost:3001/feed/countries
+curl "http://localhost:3001/feed/countries?limit=20"
+curl "http://localhost:3001/feed/countries?cursor=20&limit=20"
 curl http://localhost:3001/country/not-a-real-country
 ```
 

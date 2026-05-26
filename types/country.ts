@@ -1,4 +1,4 @@
-/** Full country shape (images + ai added in later prompts). */
+/** Country shape aligned with the backend feed API. */
 export type Country = {
   name: string;
   capital: string;
@@ -6,7 +6,7 @@ export type Country = {
   population: number;
   /** ISO 3166-1 alpha-2 (e.g. AF for Afghanistan). */
   cca2: string;
-  /** Always https://flagcdn.com/w320/{cca2}.png — not Wikimedia. */
+  /** Always https://flagcdn.com/w320/{cca2}.png */
   flag: string;
   latlng: [number, number];
   images?: string[];
@@ -19,9 +19,3 @@ export type Country = {
     narration: string;
   };
 };
-
-/** Basic metadata returned by Feature 1 endpoints. */
-export type CountryBasic = Pick<
-  Country,
-  "name" | "capital" | "region" | "population" | "cca2" | "flag" | "latlng"
->;

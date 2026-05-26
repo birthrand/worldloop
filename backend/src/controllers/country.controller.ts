@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 
 import { HttpError } from "../lib/http.js";
+import { enrichCountryWithAi } from "../services/ai.service.js";
 import { getCountryByName } from "../services/country.service.js";
 import { enrichCountryWithImages } from "../services/image.service.js";
 
@@ -17,8 +18,9 @@ export async function getCountry(
     }
 
     const country = await getCountryByName(name.trim());
-    const enriched = await enrichCountryWithImages(country);
-    res.json({ data: enriched });
+    const withImages = await enrichCountryWithImages(country);
+    const withAi = await enrichCountryWithAi(withImages);
+    res.json({ data: withAi });
   } catch (error) {
     next(error);
   }

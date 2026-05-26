@@ -1,4 +1,5 @@
 import { env } from "../config/env.js";
+import { flagCdnUrlFromIso2 } from "../lib/flag-url.js";
 import { fetchJson, HttpError } from "../lib/http.js";
 import type { CountryBasic } from "../types/country.js";
 import {
@@ -12,7 +13,7 @@ type RestCountry = {
   capital?: string[];
   region?: string;
   population?: number;
-  flags?: { png?: string; svg?: string };
+  cca2?: string;
   latlng?: number[];
 };
 
@@ -24,12 +25,16 @@ function normalizeCountry(raw: RestCountry): CountryBasic | null {
   const lng = raw.latlng?.[1];
   if (typeof lat !== "number" || typeof lng !== "number") return null;
 
+  const cca2 = raw.cca2?.trim().toUpperCase();
+  if (!cca2 || cca2.length !== 2) return null;
+
   return {
     name,
     capital: raw.capital?.[0] ?? "N/A",
     region: raw.region ?? "Unknown",
     population: raw.population ?? 0,
-    flag: raw.flags?.png ?? raw.flags?.svg ?? "",
+    cca2,
+    flag: flagCdnUrlFromIso2(cca2),
     latlng: [lat, lng],
   };
 }
@@ -37,8 +42,17 @@ function normalizeCountry(raw: RestCountry): CountryBasic | null {
 function normalizeMany(rawList: RestCountry[]): CountryBasic[] {
   return rawList
     .map(normalizeCountry)
-    .filter((c): c is CountryBasic => c !== null)
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .filter((c): c is CountryBasic => c !== null);
+}
+
+/** Fisher–Yates shuffle; mutates a copy so feed order stays stable while cached. */
+function shuffleCountries<T>(items: T[]): T[] {
+  const list = [...items];
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [list[i], list[j]] = [list[j], list[i]];
+  }
+  return list;
 }
 
 async function fetchCountryFromApi(name: string): Promise<CountryBasic> {
@@ -58,7 +72,7 @@ async function fetchCountryFromApi(name: string): Promise<CountryBasic> {
 }
 
 async function fetchAllCountriesFromApi(): Promise<CountryBasic[]> {
-  const url = `${env.restCountriesBaseUrl}/all?fields=name,capital,region,population,flags,latlng`;
+  const url = `${env.restCountriesBaseUrl}/all?fields=name,capital,region,population,cca2,latlng`;
   const data = await fetchJson<RestCountry[]>(url);
   return normalizeMany(data);
 }
@@ -72,5 +86,8 @@ export async function getCountryByName(name: string): Promise<CountryBasic> {
 export async function getFeedCountries(): Promise<CountryBasic[]> {
   const key = cacheKeys.feedCountries("all");
 
-  return getOrSet(key, CACHE_TTL.feed, () => fetchAllCountriesFromApi());
+  return getOrSet(key, CACHE_TTL.feed, async () => {
+    const countries = await fetchAllCountriesFromApi();
+    return shuffleCountries(countries);
+  });
 }

@@ -1,6 +1,7 @@
 import cors from "cors";
 import express from "express";
 
+import { aiRouter } from "./api/ai.routes.js";
 import { countryRouter } from "./api/country.routes.js";
 import { feedRouter } from "./api/feed.routes.js";
 import { healthRouter } from "./api/health.routes.js";
@@ -24,6 +25,7 @@ logger.info("ENV CHECK", {
 app.use("/health", healthRouter);
 app.use("/country", countryRouter);
 app.use("/feed", feedRouter);
+app.use("/ai", aiRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

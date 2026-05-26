@@ -19,7 +19,11 @@ export default function RootLayout() {
           headerShown: false,
           contentStyle: { backgroundColor: "#F1F5F9" },
         }}
-      />
+      >
+        <Stack.Screen name="index" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="dev" />
+      </Stack>
     </View>
   );
 }

@@ -6,7 +6,11 @@ Implement **Feature 3: Image Service** for the WorldLoop backend.
 
 ## Goal
 
-Provide 1–5 high-quality image URLs per country from Unsplash (primary) or Pexels (backup).
+Provide 1–5 high-quality image URLs per country using this provider chain (per AGENTS.md):
+
+1. **Unsplash** (primary)
+2. **Pexels** (backup)
+3. **Wikipedia** (last resort — no API key)
 
 ## Prerequisites (all required)
 
@@ -19,7 +23,8 @@ Provide 1–5 high-quality image URLs per country from Unsplash (primary) or Pex
 - Cache image URL arrays in Redis: key `images:{country}`, TTL 30 days
 - Merge `images: string[]` into country objects before returning to clients
 - Integrate into `GET /country/:name` and `GET /feed/countries`
-- Fallback: empty array or 1–2 static placeholder URLs when APIs fail (document in code)
+- Wikipedia fallback in `image.service.ts` when Unsplash and Pexels return no results (Wikipedia REST + MediaWiki APIs; set a descriptive `User-Agent`)
+- Final fallback: empty `images` array when all providers fail (endpoint must still succeed)
 
 ## Out of scope
 
@@ -29,7 +34,8 @@ Provide 1–5 high-quality image URLs per country from Unsplash (primary) or Pex
 
 ## Acceptance criteria
 
-- Country responses include `images` with 1–5 URLs when APIs succeed
+- Country responses include `images` with 1–5 URLs when any provider succeeds
+- Provider order is Unsplash → Pexels → Wikipedia → `[]`
 - Failed image fetch does not break the country endpoint (graceful fallback)
 - Image results are cached in Redis and reused on second request (`Cache hit` in logs)
 - No Unsplash/Pexels API keys in the Expo app

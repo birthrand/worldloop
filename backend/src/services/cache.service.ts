@@ -15,6 +15,7 @@ export const cacheKeys = {
   country: (name: string) => `country:${name.toLowerCase()}`,
   feedCountries: (cursor = "all") => `feed:countries:${cursor}`,
   images: (name: string) => `images:${name.toLowerCase()}`,
+  ai: (name: string) => `ai:${name.toLowerCase()}`,
 } as const;
 
 let client: RedisClientType | null = null;
@@ -79,7 +80,6 @@ function isReady(): boolean {
 }
 
 export async function cacheGet<T>(key: string): Promise<T | null> {
-  console.log("CACHE GET CALLED:", key);
   if (!isReady() || !client) return null;
 
   try {
@@ -104,7 +104,6 @@ export async function cacheSet(
   value: unknown,
   ttlSeconds: number,
 ): Promise<void> {
-  console.log("CACHE SET CALLED:", key);
   if (!isReady() || !client) return;
 
   try {
