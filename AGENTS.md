@@ -45,6 +45,16 @@ Use the following stack:
 
 Do not introduce new major libraries unless there is a strong reason.
 
+### Backend implementation prompts
+
+Incremental backend build steps live in `prompts-worldloop/` (alias: `worldloop-prompts/`). Implement in numeric order:
+
+1. `01-country-data-service.md` — country API + cache code
+2. **`02-local-redis-setup.md` — required: install & run Redis (Docker), verify cache hits**
+3. `03`+ — images, AI, feed, etc. (do not skip step 2)
+
+See `prompts-worldloop/README.md` for the full list and build order.
+
 ---
 
 ## Development Philosophy
