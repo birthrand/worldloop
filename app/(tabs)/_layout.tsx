@@ -11,7 +11,6 @@ export default function TabsLayout() {
         tabBar={(props) => <BottomTabBar {...props} />}
         screenOptions={{
           headerShown: false,
-          safeAreaInsets: { bottom: 0 },
           tabBarStyle: {
             position: "absolute",
             left: 0,

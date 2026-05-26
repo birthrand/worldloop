@@ -20,6 +20,8 @@ const CARD_WIDTH = 120;
 const CARD_HEIGHT = 96;
 
 export function RecentlyViewedSection({ entries }: RecentlyViewedSectionProps) {
+  const visibleEntries = entries.filter((entry) => entry.country?.name?.trim());
+
   return (
     <View className="gap-4">
       <View className="flex-row items-center justify-between">
@@ -42,8 +44,11 @@ export function RecentlyViewedSection({ entries }: RecentlyViewedSectionProps) {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {entries.map((entry) => (
-          <RecentlyViewedCard key={entry.country.name} entry={entry} />
+        {visibleEntries.map((entry) => (
+          <RecentlyViewedCard
+            key={`recent-${entry.viewedAt}-${entry.country.name}`}
+            entry={entry}
+          />
         ))}
       </ScrollView>
     </View>

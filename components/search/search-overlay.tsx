@@ -90,7 +90,10 @@ export function SearchOverlay() {
       setError(null);
 
       try {
-        const { data } = await fetchSearchCountries(q || undefined, r || undefined);
+        const { data } = await fetchSearchCountries(
+          q || undefined,
+          r || undefined,
+        );
         setResults(data);
         setStatus("success");
         if (q) void saveRecentSearch(q);
@@ -158,26 +161,28 @@ export function SearchOverlay() {
     closeSearch();
   }, [closeSearch]);
 
-  const toggleRegion = useCallback(
-    (next: string) => {
-      setRegion((current) => (current === next ? null : next));
-    },
-    [],
-  );
+  const toggleRegion = useCallback((next: string) => {
+    setRegion((current) => (current === next ? null : next));
+  }, []);
 
   const handleSubmit = useCallback(() => {
     scheduleSearch(query, region, true);
   }, [query, region, scheduleSearch]);
 
-  const handleRecentTap = useCallback((term: string) => {
-    setQuery(term);
-    scheduleSearch(term, region, true);
-  }, [region, scheduleSearch]);
+  const handleRecentTap = useCallback(
+    (term: string) => {
+      setQuery(term);
+      scheduleSearch(term, region, true);
+    },
+    [region, scheduleSearch],
+  );
 
   const showIdle =
     status === "idle" && results.length === 0 && !query.trim() && !region;
   const showEmpty =
-    status === "success" && results.length === 0 && (!!query.trim() || !!region);
+    status === "success" &&
+    results.length === 0 &&
+    (!!query.trim() || !!region);
 
   return (
     <Modal
@@ -251,6 +256,8 @@ export function SearchOverlay() {
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
             style={styles.chipsScroll}
             contentContainerStyle={styles.chipsRow}
             className="pb-4"
@@ -262,7 +269,11 @@ export function SearchOverlay() {
                   key={name}
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
-                  accessibilityLabel={`Filter by ${name}`}
+                  accessibilityLabel={
+                    selected
+                      ? `Clear ${name} region filter`
+                      : `Filter by ${name}`
+                  }
                   onPress={() => toggleRegion(name)}
                   hitSlop={4}
                   style={({ pressed }) => [
@@ -278,6 +289,14 @@ export function SearchOverlay() {
                   >
                     {name}
                   </Text>
+                  {/* {selected ? (
+                    <Ionicons
+                      name="close-circle"
+                      size={16}
+                      color="#fbbf24"
+                      style={styles.chipClearIcon}
+                    />
+                  ) : null} */}
                 </Pressable>
               );
             })}
@@ -290,12 +309,15 @@ export function SearchOverlay() {
           ) : null}
 
           {showIdle ? (
-            <View className="flex-1 px-4">
-              <Text className="body-md text-white/50">
-                Search by country name or pick a region
-              </Text>
+            <ScrollView
+              style={styles.idleScroll}
+              contentContainerStyle={styles.idleScrollContent}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              showsVerticalScrollIndicator={false}
+            >
               {recentSearches.length > 0 ? (
-                <View className="mt-6 gap-3">
+                <View className="gap-3">
                   <Text className="font-semibold text-sm text-white/80">
                     Recent searches
                   </Text>
@@ -311,27 +333,41 @@ export function SearchOverlay() {
                           pressed && { opacity: 0.85 },
                         ]}
                       >
-                        <Ionicons name="time-outline" size={14} color="#94a3b8" />
+                        <Ionicons
+                          name="time-outline"
+                          size={14}
+                          color="#94a3b8"
+                        />
                         <Text className="body-sm text-white/80">{term}</Text>
                       </Pressable>
                     ))}
                   </View>
                 </View>
               ) : null}
-            </View>
+            </ScrollView>
           ) : status === "loading" ? (
-            <View className="flex-1 items-center justify-center">
+            <ScrollView
+              style={styles.centeredScroll}
+              contentContainerStyle={styles.centeredScrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
               <ActivityIndicator size="large" color="#fbbf24" />
-            </View>
+            </ScrollView>
           ) : showEmpty ? (
-            <View className="flex-1 items-center justify-center px-6">
+            <ScrollView
+              style={styles.centeredScroll}
+              contentContainerStyle={styles.centeredScrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
               <Text className="font-semibold text-lg text-white">
                 No countries found
               </Text>
               <Text className="mt-2 text-center body-md text-white/50">
                 Try another spelling or pick a different region.
               </Text>
-            </View>
+            </ScrollView>
           ) : (
             <View className="min-h-0 flex-1">
               <FlatList
@@ -344,6 +380,7 @@ export function SearchOverlay() {
                   />
                 )}
                 keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
                 contentContainerStyle={styles.listContent}
                 showsVerticalScrollIndicator={false}
                 style={styles.resultsList}
@@ -447,6 +484,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
@@ -454,8 +494,27 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255, 255, 255, 0.2)",
     justifyContent: "center",
   },
+  chipClearIcon: {
+    marginLeft: 2,
+  },
   chipSelected: {
     borderColor: "#fbbf24",
+  },
+  idleScroll: {
+    flex: 1,
+  },
+  idleScrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 16,
+  },
+  centeredScroll: {
+    flex: 1,
+  },
+  centeredScrollContent: {
+    flexGrow: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
   },
   recentChip: {
     flexDirection: "row",

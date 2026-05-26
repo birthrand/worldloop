@@ -1,5 +1,5 @@
 import { API_BASE_URL } from "@/constants/api";
-import type { Country } from "@/types/country";
+import type { Country, MapCountry } from "@/types/country";
 
 export type FeedCountriesResponse = {
   data: Country[];
@@ -59,4 +59,34 @@ export async function fetchSearchCountries(
   }
 
   return response.json() as Promise<SearchCountriesResponse>;
+}
+
+export type MapCountriesResponse = {
+  data: MapCountry[];
+};
+
+export async function fetchMapCountries(): Promise<MapCountriesResponse> {
+  const response = await fetch(`${API_BASE_URL}/map/countries`);
+
+  if (!response.ok) {
+    throw new Error(`Map countries request failed (${response.status})`);
+  }
+
+  return response.json() as Promise<MapCountriesResponse>;
+}
+
+type CountryDetailResponse = {
+  data: Country;
+};
+
+export async function fetchCountryByName(name: string): Promise<Country> {
+  const encoded = encodeURIComponent(name.trim());
+  const response = await fetch(`${API_BASE_URL}/country/${encoded}`);
+
+  if (!response.ok) {
+    throw new Error(`Country request failed (${response.status})`);
+  }
+
+  const payload = (await response.json()) as CountryDetailResponse;
+  return payload.data;
 }

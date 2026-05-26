@@ -19,6 +19,30 @@ type RecentlyViewedState = {
   clearRecentlyViewed: () => void;
 };
 
+function normalizeRecordedCountry(country: Country): Country | null {
+  const wrapped = country as Country & { data?: Country };
+  const normalized = wrapped.data ?? country;
+  const name = normalized.name?.trim();
+
+  if (!name) return null;
+  return normalized;
+}
+
+function sanitizeEntries(entries: RecentlyViewedEntry[]): RecentlyViewedEntry[] {
+  const seen = new Set<string>();
+  const cleaned: RecentlyViewedEntry[] = [];
+
+  for (const entry of entries) {
+    const normalized = normalizeRecordedCountry(entry.country);
+    if (!normalized || seen.has(normalized.name)) continue;
+
+    seen.add(normalized.name);
+    cleaned.push({ ...entry, country: normalized });
+  }
+
+  return cleaned.slice(0, MAX_RECENT);
+}
+
 function seedCountry(
   name: string,
   cca2: string,
@@ -95,10 +119,15 @@ export const useRecentlyViewedStore = create<RecentlyViewedState>()(
       entries: [],
 
       recordView: (country: Country) => {
+        const normalized = normalizeRecordedCountry(country);
+        if (!normalized) return;
+
         const { entries } = get();
-        const without = entries.filter((e) => e.country.name !== country.name);
+        const without = entries.filter(
+          (e) => e.country.name !== normalized.name,
+        );
         const next: RecentlyViewedEntry[] = [
-          { country, viewedAt: Date.now() },
+          { country: normalized, viewedAt: Date.now() },
           ...without,
         ].slice(0, MAX_RECENT);
         set({ entries: next });
@@ -115,6 +144,10 @@ export const useRecentlyViewedStore = create<RecentlyViewedState>()(
     {
       name: "worldloop-recently-viewed",
       storage: createJSONStorage(() => AsyncStorage),
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        state.entries = sanitizeEntries(state.entries);
+      },
     },
   ),
 );

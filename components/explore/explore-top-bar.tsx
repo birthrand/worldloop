@@ -239,7 +239,12 @@ export function ExploreTopBar() {
       return;
     }
 
-    if (!isContinent(name) || selectedRegion === name) return;
+    if (!isContinent(name)) return;
+
+    if (selectedRegion === name) {
+      void setRegionFilter(null);
+      return;
+    }
 
     void setRegionFilter(name);
   };
@@ -274,7 +279,9 @@ export function ExploreTopBar() {
               const accessibilityLabel =
                 name === FOR_YOU_TAB
                   ? "Show your personalized country feed"
-                  : `Show countries in ${name}`;
+                  : selected
+                    ? `Clear ${name} filter and show For You feed`
+                    : `Show countries in ${name}`;
 
               return (
                 <View

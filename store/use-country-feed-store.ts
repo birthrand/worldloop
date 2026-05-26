@@ -1,10 +1,13 @@
 import { create } from "zustand";
 
+import { CONTINENTS } from "@/constants/regions";
 import { fetchFeedCountries, fetchSearchCountries } from "@/lib/api";
 import { prefetchFeedHeroImages } from "@/lib/prefetch-feed-heroes";
 import type { Country } from "@/types/country";
 
 let regionFilterGeneration = 0;
+let regionPrefetchGeneration = 0;
+const regionFetchPromises = new Map<string, Promise<Country[]>>();
 
 const DEFAULT_LIMIT = 20;
 
@@ -40,6 +43,54 @@ function isLoading(status: FeedStatus): boolean {
   return status === "loading" || status === "loadingMore";
 }
 
+function cancelRegionPrefetch(): void {
+  regionPrefetchGeneration += 1;
+}
+
+async function ensureRegionCountries(region: string): Promise<Country[]> {
+  const cached = useCountryFeedStore.getState().regionCache[region];
+  if (cached) return cached;
+
+  const inFlight = regionFetchPromises.get(region);
+  if (inFlight) return inFlight;
+
+  const promise = fetchSearchCountries(undefined, region)
+    .then(({ data }) => {
+      useCountryFeedStore.setState((state) => ({
+        regionCache: { ...state.regionCache, [region]: data },
+      }));
+      return data;
+    })
+    .finally(() => {
+      regionFetchPromises.delete(region);
+    });
+
+  regionFetchPromises.set(region, promise);
+  return promise;
+}
+
+function prefetchRegionsSequentially(excludeRegion?: string | null): void {
+  const generation = ++regionPrefetchGeneration;
+
+  void (async () => {
+    for (const continent of CONTINENTS) {
+      if (generation !== regionPrefetchGeneration) return;
+      if (continent === excludeRegion) continue;
+
+      const { regionCache } = useCountryFeedStore.getState();
+      if (regionCache[continent]) continue;
+
+      try {
+        const data = await ensureRegionCountries(continent);
+        if (generation !== regionPrefetchGeneration) return;
+        void prefetchFeedHeroImages(data.slice(0, 2));
+      } catch {
+        // Background prefetch — ignore failures.
+      }
+    }
+  })();
+}
+
 export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
   countries: [],
   nextCursor: null,
@@ -52,7 +103,7 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
 
   loadInitialFeed: async (limit = DEFAULT_LIMIT, options) => {
     if (!options?.force && get().countries.length > 0) return;
-    if (isLoading(get().status)) return;
+    if (!options?.force && isLoading(get().status)) return;
 
     const showBlockingLoad = get().countries.length === 0;
     if (showBlockingLoad) {
@@ -72,6 +123,7 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
         error: null,
       });
       void prefetchFeedHeroImages(data.slice(2));
+      prefetchRegionsSequentially(null);
     } catch (err) {
       set({
         status: "error",
@@ -82,8 +134,6 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
   },
 
   setRegionFilter: async (region) => {
-    if (isLoading(get().status)) return;
-
     const requestId = ++regionFilterGeneration;
 
     if (region === null) {
@@ -100,6 +150,7 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
           status: "idle",
           error: null,
         });
+        prefetchRegionsSequentially(null);
         return;
       }
 
@@ -130,28 +181,35 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
         status: "idle",
         error: null,
       });
+      prefetchRegionsSequentially(region);
       return;
     }
 
-    set({ selectedRegion: region, currentIndex: 0, error: null });
+    set({
+      selectedRegion: region,
+      countries: [],
+      currentIndex: 0,
+      status: "loading",
+      error: null,
+    });
 
     try {
-      const { data } = await fetchSearchCountries(undefined, region);
+      const data = await ensureRegionCountries(region);
       if (requestId !== regionFilterGeneration) return;
 
       await prefetchFeedHeroImages(data);
       if (requestId !== regionFilterGeneration) return;
 
-      set((state) => ({
+      set({
         countries: data,
         nextCursor: null,
         currentIndex: 0,
         selectedRegion: region,
         status: "idle",
         error: null,
-        regionCache: { ...state.regionCache, [region]: data },
-      }));
+      });
       void prefetchFeedHeroImages(data.slice(2, 6));
+      prefetchRegionsSequentially(region);
     } catch (err) {
       if (requestId !== regionFilterGeneration) return;
 
@@ -233,6 +291,9 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
   },
 
   resetFeed: () => {
+    regionFilterGeneration += 1;
+    cancelRegionPrefetch();
+    regionFetchPromises.clear();
     set({
       countries: [],
       nextCursor: null,

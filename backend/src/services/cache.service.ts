@@ -8,6 +8,7 @@ export const CACHE_TTL = {
   country: 90 * 24 * 60 * 60,
   feed: 7 * 24 * 60 * 60,
   search: 7 * 24 * 60 * 60,
+  map: 30 * 24 * 60 * 60,
   ai: 7 * 24 * 60 * 60,
   images: 30 * 24 * 60 * 60,
 } as const;
@@ -17,6 +18,7 @@ export const cacheKeys = {
   feedCountries: (cursor = "all") => `feed:countries:${cursor}`,
   search: (query: string, region: string) =>
     `search:${query.toLowerCase()}:${region.toLowerCase()}`,
+  mapCountries: () => "map:countries",
   images: (name: string) => `images:${name.trim().toLowerCase()}`,
   ai: (name: string) => `ai:${name.toLowerCase()}`,
 } as const;

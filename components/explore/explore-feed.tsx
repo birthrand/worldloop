@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Pressable,
   StyleSheet,
+  Text,
   View,
   type LayoutChangeEvent,
   type ViewToken,
@@ -25,6 +27,10 @@ export function ExploreFeed() {
   const status = useCountryFeedStore((s) => s.status);
   const setCurrentIndex = useCountryFeedStore((s) => s.setCurrentIndex);
   const loadMoreFeed = useCountryFeedStore((s) => s.loadMoreFeed);
+  const setRegionFilter = useCountryFeedStore((s) => s.setRegionFilter);
+  const error = useCountryFeedStore((s) => s.error);
+
+  const feedListKey = selectedRegion ?? "for-you";
 
   const scrollToCurrentIndex = useCallback(
     (animated: boolean) => {
@@ -103,12 +109,13 @@ export function ExploreFeed() {
       </View>
       {pageHeight > 0 ? (
         <FlatList
+          key={feedListKey}
           ref={listRef}
           style={styles.list}
           data={countries}
           keyExtractor={keyExtractor}
           renderItem={renderItem}
-          extraData={`${pageHeight}-${selectedRegion ?? "for-you"}`}
+          extraData={pageHeight}
           initialScrollIndex={
             currentIndex > 0 && currentIndex < countries.length
               ? currentIndex
@@ -145,6 +152,25 @@ export function ExploreFeed() {
           <ActivityIndicator size="large" color="#fbbf24" />
         </View>
       )}
+
+      {status === "error" && countries.length === 0 && selectedRegion !== null && (
+        <View style={styles.errorOverlay}>
+          <Text style={styles.errorTitle}>Couldn&apos;t load {selectedRegion}</Text>
+          <Text style={styles.errorMessage}>
+            {error ?? "Check that the backend is running and try again."}
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Retry loading ${selectedRegion}`}
+            onPress={() => {
+              void setRegionFilter(selectedRegion);
+            }}
+            style={({ pressed }) => [styles.retryButton, pressed && styles.retryPressed]}
+          >
+            <Text style={styles.retryText}>Retry</Text>
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 }
@@ -165,5 +191,42 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(0, 0, 0, 0.25)",
+  },
+  errorOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(11, 19, 43, 0.92)",
+    paddingHorizontal: 32,
+    gap: 12,
+  },
+  errorTitle: {
+    fontSize: 18,
+    fontFamily: "Poppins-SemiBold",
+    color: "#ffffff",
+    textAlign: "center",
+  },
+  errorMessage: {
+    fontSize: 14,
+    fontFamily: "Poppins-Regular",
+    color: "rgba(255, 255, 255, 0.7)",
+    textAlign: "center",
+  },
+  retryButton: {
+    marginTop: 8,
+    backgroundColor: "#fbbf24",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 24,
+    minHeight: 44,
+    justifyContent: "center",
+  },
+  retryPressed: {
+    opacity: 0.9,
+  },
+  retryText: {
+    fontSize: 14,
+    fontFamily: "Poppins-SemiBold",
+    color: "#0b132b",
   },
 });
