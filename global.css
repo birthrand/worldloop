@@ -26,6 +26,11 @@
   --color-border: #e2e8f0;
   --color-background: #f1f5f9;
 
+  /* Bottom tab bar */
+  --color-tab-bar: #0b132b;
+  --color-tab-active: #fbbf24;
+  --color-tab-inactive: #94a3b8;
+
   /* Typography scale */
   --font-sans: Poppins-Regular;
 
