@@ -20,7 +20,7 @@ Let users search countries by name and filter by region (optional population ran
 - Search by country name (partial match, case-insensitive)
 - Optional `region` filter (e.g. Europe, Asia)
 - Return enriched country objects (metadata + images + ai) using cache when possible
-- Cache popular search results in Redis (e.g. `search:{query}:{region}`, TTL 7 days)
+- Cache popular search results in Redis (e.g. `search:{normalizedQuery}:{normalizedRregion}`, TTL 7 days)
 
 ## Out of scope
 

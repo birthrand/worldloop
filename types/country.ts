@@ -1,3 +1,14 @@
+/** Lightweight country shape from GET /map/countries. */
+export type MapCountry = {
+  name: string;
+  capital: string;
+  region: string;
+  population: number;
+  flag: string;
+  latlng: [number, number];
+  image: string | null;
+};
+
 /** Country shape aligned with the backend feed API. */
 export type Country = {
   name: string;

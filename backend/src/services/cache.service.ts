@@ -7,14 +7,19 @@ import { logger } from "../utils/logger.js";
 export const CACHE_TTL = {
   country: 90 * 24 * 60 * 60,
   feed: 7 * 24 * 60 * 60,
+  search: 7 * 24 * 60 * 60,
+  map: 30 * 24 * 60 * 60,
   ai: 7 * 24 * 60 * 60,
   images: 30 * 24 * 60 * 60,
 } as const;
 
 export const cacheKeys = {
-  country: (name: string) => `country:${name.toLowerCase()}`,
+  country: (name: string) => `country:${name.trim().toLowerCase()}`,
   feedCountries: (cursor = "all") => `feed:countries:${cursor}`,
-  images: (name: string) => `images:${name.toLowerCase()}`,
+  search: (query: string, region: string) =>
+    `search:${query.toLowerCase()}:${region.toLowerCase()}`,
+  mapCountries: () => "map:countries",
+  images: (name: string) => `images:${name.trim().toLowerCase()}`,
   ai: (name: string) => `ai:${name.toLowerCase()}`,
 } as const;
 
@@ -42,15 +47,7 @@ export async function connectCache(): Promise<void> {
   });
 
   try {
-    await Promise.race([
-      client.connect(),
-      new Promise<never>((_, reject) =>
-        setTimeout(
-          () => reject(new Error("Redis connection timed out")),
-          CONNECT_TIMEOUT_MS,
-        ),
-      ),
-    ]);
+    await client.connect();
     connected = true;
     logger.info("Redis connected");
   } catch (error) {

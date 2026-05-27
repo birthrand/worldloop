@@ -12,7 +12,7 @@ Serve lightweight country data optimized for the interactive world map screen.
 
 - `01-country-data-service.md` completed
 - **`02-local-redis-setup.md` completed** — Redis running and verified
-- `03-image-service.md` recommended (first image for map markers)
+- `03-image-service.md` (first image for map markers)
 
 ## Scope
 

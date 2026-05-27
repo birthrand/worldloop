@@ -12,7 +12,8 @@ export function resolveFlagCdnUrl(flag: string, iso2?: string): string | null {
 
   try {
     const url = new URL(value.startsWith("http") ? value : `https://${value}`);
-    if (!url.hostname.toLowerCase().includes("flagcdn.com")) {
+    const host = url.hostname.toLowerCase();
+    if (!(host === "flagcdn.com" || host.endsWith(".flagcdn.com"))) {
       return null;
     }
     url.protocol = "https:";

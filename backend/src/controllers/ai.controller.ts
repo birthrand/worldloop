@@ -2,8 +2,8 @@ import type { NextFunction, Request, Response } from "express";
 
 import { env } from "../config/env.js";
 import { HttpError } from "../lib/http.js";
-import { getCountryByName } from "../services/country.service.js";
 import { getAiForCountry } from "../services/ai.service.js";
+import { getCountryByName } from "../services/country.service.js";
 
 type AiGenerateBody = {
   countryName?: string;
@@ -17,14 +17,7 @@ type AiGenerateBody = {
 
 function requireInternalApiKey(req: Request): void {
   const provided = req.header("x-internal-api-key");
-  if (!env.internalApiKey) {
-    throw new HttpError(
-      "INTERNAL_API_KEY is not configured",
-      503,
-      "INTERNAL_AUTH_NOT_CONFIGURED",
-    );
-  }
-  if (!provided || provided !== env.internalApiKey) {
+  if (!env.internalApiKey || !provided || provided !== env.internalApiKey) {
     throw new HttpError("Unauthorized", 401, "UNAUTHORIZED");
   }
 }

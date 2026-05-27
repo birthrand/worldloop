@@ -1,4 +1,4 @@
-import type { Request, Response, NextFunction } from "express";
+import type { NextFunction, Request, Response } from "express";
 
 import { HttpError } from "../lib/http.js";
 import { logger } from "../utils/logger.js";
@@ -7,8 +7,12 @@ export function errorHandler(
   err: unknown,
   _req: Request,
   res: Response,
-  _next: NextFunction,
+  next: NextFunction,
 ): void {
+  if (res.headersSent) {
+    next(err);
+    return;
+  }
   if (err instanceof HttpError) {
     res.status(err.status).json({
       error: {

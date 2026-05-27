@@ -5,6 +5,10 @@ import {
 
 /** Compact population label (e.g. 33.7M). */
 export function formatPopulation(population: number): string {
+  // Runtime safety: backend responses can occasionally miss population,
+  // and we must not crash the feed renderer.
+  if (!Number.isFinite(population)) return "—";
+
   if (population >= 1_000_000_000) {
     return `${(population / 1_000_000_000).toFixed(1).replace(/\.0$/, "")}B`;
   }

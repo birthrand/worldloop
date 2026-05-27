@@ -1,7 +1,10 @@
 import "dotenv/config";
 
 export const env = {
-  port: Number(process.env.PORT ?? 3001),
+  port: (() => {
+    const parsed = Number(process.env.PORT);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : 3001;
+  })(),
   redisUrl: process.env.REDIS_URL ?? "redis://localhost:6379",
   restCountriesBaseUrl:
     process.env.REST_COUNTRIES_BASE_URL ?? "https://restcountries.com/v3.1",

@@ -5,6 +5,8 @@ import { aiRouter } from "./api/ai.routes.js";
 import { countryRouter } from "./api/country.routes.js";
 import { feedRouter } from "./api/feed.routes.js";
 import { healthRouter } from "./api/health.routes.js";
+import { mapRouter } from "./api/map.routes.js";
+import { searchRouter } from "./api/search.routes.js";
 import { env } from "./config/env.js";
 import {
   errorHandler,
@@ -25,6 +27,8 @@ logger.info("ENV CHECK", {
 app.use("/health", healthRouter);
 app.use("/country", countryRouter);
 app.use("/feed", feedRouter);
+app.use("/search", searchRouter);
+app.use("/map", mapRouter);
 app.use("/ai", aiRouter);
 
 app.use(notFoundHandler);
@@ -39,7 +43,9 @@ async function start() {
 
   const shutdown = async () => {
     logger.info("Shutting down");
-    server.close();
+    await new Promise<void>((resolve, reject) => {
+      server.close((err) => (err ? reject(err) : resolve()));
+    });
     await disconnectCache();
     process.exit(0);
   };
