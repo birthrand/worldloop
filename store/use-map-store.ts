@@ -11,7 +11,15 @@ export type MapFilterChip =
   | "nature"
   | "history";
 
+export type MapMode = "2d" | "3d";
+
 type MapStatus = "idle" | "loading" | "error";
+
+export type GlobeCameraHandle = {
+  focusCountry: (country: MapCountry, duration?: number) => void;
+  resetCamera: () => void;
+  zoomBy: (direction: "in" | "out") => void;
+};
 
 type MapState = {
   countries: MapCountry[];
@@ -19,10 +27,16 @@ type MapState = {
   error: string | null;
   selectedCountry: MapCountry | null;
   activeChip: MapFilterChip;
+  mapMode: MapMode;
+  globeCamera: GlobeCameraHandle | null;
   loadMapCountries: () => Promise<void>;
   selectCountry: (name: string | null) => void;
   selectRandomCountry: () => MapCountry | null;
   setActiveChip: (chip: MapFilterChip) => void;
+  setMapMode: (mode: MapMode) => void;
+  toggleMapMode: () => void;
+  registerGlobeCamera: (handle: GlobeCameraHandle | null) => void;
+  focusCountryOnGlobe: (name: string, duration?: number) => void;
   getVisibleCountries: () => MapCountry[];
 };
 
@@ -49,6 +63,8 @@ export const useMapStore = create<MapState>((set, get) => ({
   error: null,
   selectedCountry: null,
   activeChip: "all",
+  mapMode: "2d",
+  globeCamera: null,
 
   loadMapCountries: async () => {
     const { status } = get();
@@ -92,6 +108,21 @@ export const useMapStore = create<MapState>((set, get) => ({
   },
 
   setActiveChip: (chip) => set({ activeChip: chip }),
+
+  setMapMode: (mode) => set({ mapMode: mode }),
+
+  toggleMapMode: () =>
+    set((state) => ({
+      mapMode: state.mapMode === "3d" ? "2d" : "3d",
+    })),
+
+  registerGlobeCamera: (handle) => set({ globeCamera: handle }),
+
+  focusCountryOnGlobe: (name, duration) => {
+    const country = get().countries.find((c) => c.name === name) ?? null;
+    if (!country) return;
+    get().globeCamera?.focusCountry(country, duration);
+  },
 
   getVisibleCountries: () => {
     const { countries, activeChip } = get();

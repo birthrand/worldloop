@@ -12,6 +12,8 @@ const regionFetchPromises = new Map<string, Promise<Country[]>>();
 const DEFAULT_LIMIT = 20;
 
 type FeedStatus = "idle" | "loading" | "loadingMore" | "error";
+type FeedSortField = "name" | "population";
+type FeedSortOrder = "asc" | "desc";
 
 type ForYouSnapshot = {
   countries: Country[];
@@ -23,6 +25,8 @@ type CountryFeedState = {
   nextCursor: string | null;
   currentIndex: number;
   selectedRegion: string | null;
+  sortField: FeedSortField | null;
+  sortOrder: FeedSortOrder | null;
   regionCache: Record<string, Country[]>;
   forYouSnapshot: ForYouSnapshot | null;
   status: FeedStatus;
@@ -33,6 +37,8 @@ type CountryFeedState = {
   ) => Promise<void>;
   loadMoreFeed: (limit?: number) => Promise<void>;
   setRegionFilter: (region: string | null) => Promise<void>;
+  setSort: (field: FeedSortField, order: FeedSortOrder) => void;
+  clearSort: () => void;
   setCurrentIndex: (index: number) => void;
   focusCountryInFeed: (country: Country) => void;
   getCurrentCountry: () => Country | undefined;
@@ -41,6 +47,21 @@ type CountryFeedState = {
 
 function isLoading(status: FeedStatus): boolean {
   return status === "loading" || status === "loadingMore";
+}
+
+function sortCountries(
+  countries: Country[],
+  sortField: FeedSortField | null,
+  sortOrder: FeedSortOrder | null,
+): Country[] {
+  if (!sortField || !sortOrder) return countries;
+  const direction = sortOrder === "asc" ? 1 : -1;
+  return [...countries].sort((a, b) => {
+    if (sortField === "population") {
+      return (a.population - b.population) * direction;
+    }
+    return a.name.localeCompare(b.name) * direction;
+  });
 }
 
 function cancelRegionPrefetch(): void {
@@ -96,6 +117,8 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
   nextCursor: null,
   currentIndex: 0,
   selectedRegion: null,
+  sortField: null,
+  sortOrder: null,
   regionCache: {},
   forYouSnapshot: null,
   status: "idle",
@@ -113,8 +136,9 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
     try {
       const { data, nextCursor } = await fetchFeedCountries(undefined, limit);
       await prefetchFeedHeroImages(data);
+      const { sortField, sortOrder } = get();
       set({
-        countries: data,
+        countries: sortCountries(data, sortField, sortOrder),
         nextCursor,
         currentIndex: 0,
         selectedRegion: null,
@@ -141,9 +165,10 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
       if (snapshot && snapshot.countries.length > 0) {
         await prefetchFeedHeroImages(snapshot.countries);
         if (requestId !== regionFilterGeneration) return;
+        const { sortField, sortOrder } = get();
 
         set({
-          countries: snapshot.countries,
+          countries: sortCountries(snapshot.countries, sortField, sortOrder),
           nextCursor: snapshot.nextCursor,
           currentIndex: 0,
           selectedRegion: null,
@@ -172,9 +197,10 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
     if (cached) {
       await prefetchFeedHeroImages(cached);
       if (requestId !== regionFilterGeneration) return;
+      const { sortField, sortOrder } = get();
 
       set({
-        countries: cached,
+        countries: sortCountries(cached, sortField, sortOrder),
         nextCursor: null,
         currentIndex: 0,
         selectedRegion: region,
@@ -199,9 +225,10 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
 
       await prefetchFeedHeroImages(data);
       if (requestId !== regionFilterGeneration) return;
+      const { sortField, sortOrder } = get();
 
       set({
-        countries: data,
+        countries: sortCountries(data, sortField, sortOrder),
         nextCursor: null,
         currentIndex: 0,
         selectedRegion: region,
@@ -240,7 +267,11 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
       const existingNames = new Set(countries.map((c) => c.name));
       const uniqueNew = data.filter((c) => !existingNames.has(c.name));
       set((state) => {
-        const nextCountries = [...state.countries, ...uniqueNew];
+        const nextCountries = sortCountries(
+          [...state.countries, ...uniqueNew],
+          state.sortField,
+          state.sortOrder,
+        );
         return {
           countries: nextCountries,
           nextCursor: newCursor,
@@ -263,6 +294,24 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
           err instanceof Error ? err.message : "Failed to load more countries",
       });
     }
+  },
+
+  setSort: (field, order) => {
+    set((state) => ({
+      sortField: field,
+      sortOrder: order,
+      countries: sortCountries(state.countries, field, order),
+      currentIndex: 0,
+    }));
+  },
+
+  clearSort: () => {
+    set((state) => ({
+      sortField: null,
+      sortOrder: null,
+      countries: [...state.countries],
+      currentIndex: 0,
+    }));
   },
 
   setCurrentIndex: (index: number) => {
@@ -299,6 +348,8 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
       nextCursor: null,
       currentIndex: 0,
       selectedRegion: null,
+      sortField: null,
+      sortOrder: null,
       regionCache: {},
       forYouSnapshot: null,
       status: "idle",

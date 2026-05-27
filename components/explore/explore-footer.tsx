@@ -20,6 +20,9 @@ export function ExploreFooter({ country }: ExploreFooterProps) {
         <Text
           className="min-w-0 flex-1 font-semibold text-white"
           numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={15 / 18}
+          ellipsizeMode="tail"
           style={{ fontSize: 18 }}
         >
           {country.name}

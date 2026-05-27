@@ -347,7 +347,9 @@ export function ExploreTopBar() {
             pressed && styles.pressed,
           ]}
         >
-          <Ionicons name="search" size={24} color="#ffffff" />
+          <View className="p-2 bg-white/10 rounded-full border border-white/10">
+            <Ionicons name="search" size={24} color="#ffffff" />
+          </View>
         </Pressable>
       </View>
     </View>

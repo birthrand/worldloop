@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -11,21 +12,23 @@ import {
 import type { Region } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { MapCanvas, type MapCanvasHandle } from "@/components/map/map-canvas";
 import { MapControls } from "@/components/map/map-controls";
 import { MapCountryPreviewCard } from "@/components/map/map-country-preview-card";
+import { MapLandingToast } from "@/components/map/map-landing-toast";
 import { MapFeaturedChips } from "@/components/map/map-featured-chips";
 import { MapFilterChips } from "@/components/map/map-filter-chips";
+import { MapHeader } from "@/components/map/map-header";
 import { MapOnboardingSheet } from "@/components/map/map-onboarding-sheet";
 import { MapSearchRow } from "@/components/map/map-search-row";
-import { RandomCountryFab } from "@/components/map/random-country-fab";
-import {
-  WorldMapView,
-  type MapZoomTier,
-  type WorldMapViewHandle,
-} from "@/components/map/world-map-view";
+import { MapLeftActionFabs } from "@/components/map/map-left-action-fabs";
+import { type MapZoomTier } from "@/components/map/world-map-view";
 import { regionForCountry } from "@/constants/map-regions";
-import { TRENDING_COUNTRY_NAMES } from "@/constants/trending-countries";
 import { buildMapClusters, type MapCluster } from "@/lib/map-clusters";
+import {
+  buildMapRandomPool,
+  pickRandomMapCountry,
+} from "@/lib/map-random-pick";
 import { useCountryFeedStore } from "@/store/use-country-feed-store";
 import { filterMapCountriesByChip, useMapStore } from "@/store/use-map-store";
 import { useMapUiStore } from "@/store/use-map-ui-store";
@@ -34,36 +37,64 @@ import type { MapCountry } from "@/types/country";
 
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
-  const mapRef = useRef<WorldMapViewHandle>(null);
+  const mapRef = useRef<MapCanvasHandle>(null);
   const zoomTierRef = useRef<MapZoomTier>("world");
+  const isMapAnimatingRef = useRef(false);
+  /** Blocks world-zoom reset while animating into a continent/country focus. */
+  const suppressWorldResetRef = useRef(false);
+  const mapAnimationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   const status = useMapStore((s) => s.status);
   const error = useMapStore((s) => s.error);
   const selectedCountry = useMapStore((s) => s.selectedCountry);
   const activeChip = useMapStore((s) => s.activeChip);
   const countries = useMapStore((s) => s.countries);
+  const mapMode = useMapStore((s) => s.mapMode);
   const loadMapCountries = useMapStore((s) => s.loadMapCountries);
   const selectCountry = useMapStore((s) => s.selectCountry);
   const setActiveChip = useMapStore((s) => s.setActiveChip);
+  const toggleMapMode = useMapStore((s) => s.toggleMapMode);
+  const focusCountryOnGlobe = useMapStore((s) => s.focusCountryOnGlobe);
 
   const focusedRegion = useMapUiStore((s) => s.focusedRegion);
+  const spotlightCountryName = useMapUiStore((s) => s.spotlightCountryName);
   const setDisplayMode = useMapUiStore((s) => s.setDisplayMode);
   const setFocusedRegion = useMapUiStore((s) => s.setFocusedRegion);
   const setFeaturedShortcut = useMapUiStore((s) => s.setFeaturedShortcut);
+  const setSpotlightCountry = useMapUiStore((s) => s.setSpotlightCountry);
   const resetGlobalPulse = useMapUiStore((s) => s.resetGlobalPulse);
   const hasSeenMapOnboarding = useMapUiStore((s) => s.hasSeenMapOnboarding);
   const dismissMapOnboarding = useMapUiStore((s) => s.dismissMapOnboarding);
 
   const [zoomTier, setZoomTier] = useState<MapZoomTier>("world");
+  const [landingMessage, setLandingMessage] = useState<string | null>(null);
+  const [isNextCountryLoading, setIsNextCountryLoading] = useState(false);
+  const is3d = mapMode === "3d";
+  const featuredShortcut = useMapUiStore((s) => s.featuredShortcut);
+
   const clusters = useMemo(() => buildMapClusters(countries), [countries]);
 
   const pinCountries = useMemo(() => {
-    if (zoomTier === "world") return [];
-    const base = focusedRegion
-      ? countries.filter((c) => c.region === focusedRegion)
-      : countries;
+    if (!focusedRegion) {
+      if (!spotlightCountryName) return [];
+      const spotlight =
+        countries.find((c) => c.name === spotlightCountryName) ?? null;
+      return spotlight ? [spotlight] : [];
+    }
+    const base = countries.filter((c) => c.region === focusedRegion);
     return filterMapCountriesByChip(base, activeChip);
-  }, [zoomTier, focusedRegion, countries, activeChip]);
+  }, [focusedRegion, countries, activeChip, spotlightCountryName]);
+
+  const mapMarkerCountries = useMemo(() => {
+    const base = is3d ? countries : pinCountries;
+    if (!spotlightCountryName) return base;
+    return base.filter((c) => c.name === spotlightCountryName);
+  }, [countries, is3d, pinCountries, spotlightCountryName]);
+
+  const highlightedCountryName =
+    selectedCountry?.name ?? spotlightCountryName ?? null;
 
   useEffect(() => {
     if (status === "idle" && countries.length === 0) {
@@ -71,53 +102,117 @@ export default function MapScreen() {
     }
   }, [status, countries.length, loadMapCountries]);
 
+  const focusGlobeCountry = useCallback(
+    (pick: MapCountry, duration = 650) => {
+      selectCountry(pick.name);
+      focusCountryOnGlobe(pick.name, duration);
+    },
+    [focusCountryOnGlobe, selectCountry],
+  );
+
   const computeZoomTier = useCallback((latitudeDelta: number): MapZoomTier => {
     if (latitudeDelta > 60) return "world";
     if (latitudeDelta > 20) return "region";
     return "country";
   }, []);
 
+  const animateMapToRegion = useCallback((region: Region, duration = 500) => {
+    isMapAnimatingRef.current = true;
+    if (mapAnimationTimerRef.current) {
+      clearTimeout(mapAnimationTimerRef.current);
+    }
+    mapAnimationTimerRef.current = setTimeout(() => {
+      isMapAnimatingRef.current = false;
+      mapAnimationTimerRef.current = null;
+    }, duration + 150);
+    mapRef.current?.animateToRegion(region, duration);
+  }, []);
+
   const focusCountry = useCallback(
     (country: MapCountry) => {
+      if (spotlightCountryName) {
+        selectCountry(country.name);
+        if (is3d) {
+          focusCountryOnGlobe(country.name, 450);
+        } else {
+          animateMapToRegion(regionForCountry(country.latlng), 500);
+        }
+        return;
+      }
+
+      if (is3d) {
+        focusGlobeCountry(country, 450);
+        return;
+      }
       selectCountry(country.name);
-      mapRef.current?.animateToRegion(regionForCountry(country.latlng), 500);
+      animateMapToRegion(regionForCountry(country.latlng), 500);
     },
-    [selectCountry],
+    [
+      animateMapToRegion,
+      focusCountryOnGlobe,
+      focusGlobeCountry,
+      is3d,
+      selectCountry,
+      spotlightCountryName,
+    ],
   );
 
   const handleClusterPress = useCallback(
     (cluster: MapCluster) => {
       selectCountry(null);
+      setSpotlightCountry(null);
       setFeaturedShortcut(null);
       setDisplayMode("explore");
+      suppressWorldResetRef.current = true;
       setFocusedRegion(cluster.region);
       zoomTierRef.current = "region";
       setZoomTier("region");
-      mapRef.current?.animateToRegion(
-        regionForCountry(cluster.center, 45),
-        650,
-      );
+      animateMapToRegion(regionForCountry(cluster.center, 45), 650);
     },
-    [selectCountry, setDisplayMode, setFocusedRegion, setFeaturedShortcut],
+    [
+      animateMapToRegion,
+      selectCountry,
+      setDisplayMode,
+      setFocusedRegion,
+      setFeaturedShortcut,
+      setSpotlightCountry,
+    ],
   );
 
   const handleRegionChangeComplete = useCallback(
     (region: Region) => {
+      if (is3d) return;
+
       const nextTier = computeZoomTier(region.latitudeDelta);
+
+      if (isMapAnimatingRef.current) {
+        if (zoomTierRef.current !== nextTier) {
+          // Mid-animation frames can still look like "world" zoom — don't hide pins.
+          if (suppressWorldResetRef.current && nextTier === "world") {
+            return;
+          }
+          zoomTierRef.current = nextTier;
+          setZoomTier(nextTier);
+        }
+        return;
+      }
+
       if (zoomTierRef.current === nextTier) return;
       zoomTierRef.current = nextTier;
       setZoomTier(nextTier);
 
       if (nextTier === "world") {
-        resetGlobalPulse();
-        selectCountry(null);
+        if (!suppressWorldResetRef.current) {
+          resetGlobalPulse();
+          selectCountry(null);
+          setSpotlightCountry(null);
+        }
         return;
       }
 
+      suppressWorldResetRef.current = false;
       setDisplayMode("explore");
 
-      // If user pinches in without tapping a cluster, pick the closest cluster
-      // so the map does not overwhelm with pins.
       const currentFocused = useMapUiStore.getState().focusedRegion;
       if (!currentFocused && clusters.length > 0) {
         const centerLat = region.latitude;
@@ -141,56 +236,69 @@ export default function MapScreen() {
     [
       clusters,
       computeZoomTier,
+      is3d,
       resetGlobalPulse,
       selectCountry,
       setDisplayMode,
       setFocusedRegion,
+      setSpotlightCountry,
     ],
   );
 
-  const focusByMapCountry = useCallback(
-    (pick: MapCountry) => {
-      setActiveChip("all");
-      setFeaturedShortcut(null);
+  const flyMapToCountry = useCallback(
+    (pick: MapCountry, duration = 650) => {
+      if (is3d) {
+        focusCountryOnGlobe(pick.name, duration);
+        return;
+      }
+
       setDisplayMode("explore");
+      suppressWorldResetRef.current = true;
       setFocusedRegion(pick.region);
       zoomTierRef.current = "region";
       setZoomTier("region");
-      selectCountry(pick.name);
-      mapRef.current?.animateToRegion(regionForCountry(pick.latlng, 45), 650);
+      animateMapToRegion(regionForCountry(pick.latlng, 45), duration);
     },
     [
-      selectCountry,
-      setActiveChip,
+      animateMapToRegion,
+      focusCountryOnGlobe,
+      is3d,
       setDisplayMode,
-      setFeaturedShortcut,
       setFocusedRegion,
     ],
   );
 
-  const handleTrendingPress = useCallback(() => {
-    if (countries.length === 0) return;
-    const trending = countries.filter((c) =>
-      TRENDING_COUNTRY_NAMES.has(c.name),
-    );
-    const pick = trending[0] ?? countries[0];
-    if (!pick) return;
-    setActiveChip("all");
-    setFeaturedShortcut("trending");
-    setDisplayMode("explore");
-    setFocusedRegion(pick.region);
-    zoomTierRef.current = "region";
-    setZoomTier("region");
-    selectCountry(pick.name);
-    mapRef.current?.animateToRegion(regionForCountry(pick.latlng, 45), 650);
-  }, [
-    countries,
-    selectCountry,
-    setActiveChip,
-    setDisplayMode,
-    setFeaturedShortcut,
-    setFocusedRegion,
-  ]);
+  const showLandingToast = useCallback((countryName: string) => {
+    setLandingMessage(`You landed in ${countryName}`);
+  }, []);
+
+  const spotlightOnMap = useCallback(
+    (pick: MapCountry) => {
+      selectCountry(null);
+      setSpotlightCountry(pick.name);
+      setActiveChip("all");
+      setFeaturedShortcut(null);
+      flyMapToCountry(pick, 650);
+    },
+    [
+      flyMapToCountry,
+      selectCountry,
+      setActiveChip,
+      setFeaturedShortcut,
+      setSpotlightCountry,
+    ],
+  );
+
+  const advanceToCountryPreview = useCallback(
+    (pick: MapCountry) => {
+      selectCountry(pick.name);
+      setSpotlightCountry(pick.name);
+      flyMapToCountry(pick, 650);
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      showLandingToast(pick.name);
+    },
+    [flyMapToCountry, selectCountry, setSpotlightCountry, showLandingToast],
+  );
 
   const handleForYouPress = useCallback(async () => {
     if (countries.length === 0) return;
@@ -214,7 +322,17 @@ export default function MapScreen() {
     }
 
     if (!pick) {
-      handleTrendingPress();
+      pick = countries[0] ?? null;
+    }
+
+    if (!pick) {
+      return;
+    }
+
+    if (is3d) {
+      setActiveChip("all");
+      setFeaturedShortcut("forYou");
+      focusGlobeCountry(pick);
       return;
     }
 
@@ -225,10 +343,12 @@ export default function MapScreen() {
     zoomTierRef.current = "region";
     setZoomTier("region");
     selectCountry(pick.name);
-    mapRef.current?.animateToRegion(regionForCountry(pick.latlng, 45), 650);
+    animateMapToRegion(regionForCountry(pick.latlng, 45), 650);
   }, [
+    animateMapToRegion,
     countries,
-    handleTrendingPress,
+    focusGlobeCountry,
+    is3d,
     selectCountry,
     setActiveChip,
     setDisplayMode,
@@ -252,6 +372,13 @@ export default function MapScreen() {
 
     if (!pick) return;
 
+    if (is3d) {
+      setActiveChip("all");
+      setFeaturedShortcut("newActivity");
+      focusGlobeCountry(pick);
+      return;
+    }
+
     setActiveChip("all");
     setFeaturedShortcut("newActivity");
     setDisplayMode("explore");
@@ -259,9 +386,12 @@ export default function MapScreen() {
     zoomTierRef.current = "region";
     setZoomTier("region");
     selectCountry(pick.name);
-    mapRef.current?.animateToRegion(regionForCountry(pick.latlng, 45), 650);
+    animateMapToRegion(regionForCountry(pick.latlng, 45), 650);
   }, [
+    animateMapToRegion,
     countries,
+    focusGlobeCountry,
+    is3d,
     selectCountry,
     setActiveChip,
     setDisplayMode,
@@ -272,89 +402,132 @@ export default function MapScreen() {
   const handleRandomCountry = useCallback(async () => {
     if (countries.length === 0) return;
 
-    const ui = useMapUiStore.getState();
+    const pool = await buildMapRandomPool({
+      countries,
+      activeChip,
+      featuredShortcut,
+      focusedRegion,
+      useWorldPool: is3d || zoomTierRef.current === "world",
+    });
+    const pick = pickRandomMapCountry(pool);
+    if (!pick) return;
 
-    if (zoomTierRef.current === "world") {
-      const shortcut = ui.featuredShortcut;
-      let pool: MapCountry[] = [];
+    spotlightOnMap(pick);
+  }, [
+    activeChip,
+    countries,
+    featuredShortcut,
+    focusedRegion,
+    is3d,
+    spotlightOnMap,
+  ]);
 
-      if (shortcut === "trending") {
-        pool = countries.filter((c) => TRENDING_COUNTRY_NAMES.has(c.name));
-      } else if (shortcut === "forYou") {
-        useRecentlyViewedStore.getState().seedIfEmpty();
-        const names = useRecentlyViewedStore
-          .getState()
-          .entries.slice(0, 3)
-          .map((e) => e.country.name);
-        pool = countries.filter((c) => names.includes(c.name));
-      } else if (shortcut === "newActivity") {
-        const feed = useCountryFeedStore.getState();
-        if (feed.countries.length === 0 && feed.status === "idle") {
-          await feed.loadInitialFeed();
-        }
-        const names = feed.countries.slice(0, 3).map((c) => c.name);
-        pool = countries.filter((c) => names.includes(c.name));
-      }
-
-      if (pool.length === 0) {
-        const trending = countries.filter((c) =>
-          TRENDING_COUNTRY_NAMES.has(c.name),
-        );
-        pool = trending.length > 0 ? trending : countries;
-      }
-
-      const pick = pool[Math.floor(Math.random() * pool.length)] ?? null;
-      if (!pick) return;
-      focusByMapCountry(pick);
+  const handleNextCountry = useCallback(async () => {
+    if (!selectedCountry || countries.length === 0 || isNextCountryLoading) {
       return;
     }
 
-    const base = focusedRegion
-      ? countries.filter((c) => c.region === focusedRegion)
-      : countries;
-    const visible = filterMapCountriesByChip(base, activeChip);
-    if (visible.length === 0) return;
+    setIsNextCountryLoading(true);
+    try {
+      const pool = await buildMapRandomPool({
+        countries,
+        activeChip,
+        featuredShortcut,
+        focusedRegion,
+        useWorldPool: is3d || zoomTierRef.current === "world",
+      });
+      const pick = pickRandomMapCountry(pool, selectedCountry.name);
+      if (!pick) return;
 
-    const pick = visible[Math.floor(Math.random() * visible.length)] ?? null;
-    if (!pick) return;
+      advanceToCountryPreview(pick);
+    } finally {
+      setIsNextCountryLoading(false);
+    }
+  }, [
+    activeChip,
+    advanceToCountryPreview,
+    countries,
+    featuredShortcut,
+    focusedRegion,
+    is3d,
+    isNextCountryLoading,
+    selectedCountry,
+  ]);
 
-    selectCountry(pick.name);
-    mapRef.current?.animateToRegion(regionForCountry(pick.latlng), 600);
-  }, [activeChip, countries, focusByMapCountry, focusedRegion, selectCountry]);
+  const handleReset = useCallback(() => {
+    suppressWorldResetRef.current = false;
+    mapRef.current?.resetWorldView();
+    resetGlobalPulse();
+    setZoomTier("world");
+    zoomTierRef.current = "world";
+    selectCountry(null);
+    setSpotlightCountry(null);
+    setActiveChip("all");
+  }, [resetGlobalPulse, selectCountry, setActiveChip, setSpotlightCountry]);
+
+  const dismissPreview = useCallback(() => {
+    selectCountry(null);
+  }, [selectCountry]);
+
+  const deselectCountry = useCallback(() => {
+    suppressWorldResetRef.current = false;
+    selectCountry(null);
+    setSpotlightCountry(null);
+    resetGlobalPulse();
+  }, [resetGlobalPulse, selectCountry, setSpotlightCountry]);
+
+  const handleMapBackgroundPress = useCallback(() => {
+    if (selectedCountry) {
+      dismissPreview();
+      return;
+    }
+
+    if (!spotlightCountryName && !focusedRegion) {
+      return;
+    }
+
+    deselectCountry();
+  }, [
+    deselectCountry,
+    dismissPreview,
+    focusedRegion,
+    selectedCountry,
+    spotlightCountryName,
+  ]);
 
   const bottomPad = Math.max(insets.bottom, 16) + 88;
   const showOnboarding =
     !hasSeenMapOnboarding &&
-    zoomTier === "world" &&
+    (is3d || zoomTier === "world") &&
     status !== "loading" &&
     countries.length > 0 &&
-    selectedCountry === null;
+    selectedCountry === null &&
+    spotlightCountryName === null;
 
   return (
     <View style={styles.screen}>
       <StatusBar style="light" />
 
-      <WorldMapView
+      <MapCanvas
         ref={mapRef}
-        countries={pinCountries}
+        countries={mapMarkerCountries}
+        boundaryCountries={countries}
         clusters={clusters}
-        selectedName={selectedCountry?.name ?? null}
+        selectedName={highlightedCountryName}
         focusedRegion={focusedRegion}
-        zoomTier={zoomTier}
+        zoomTier={is3d ? "region" : zoomTier}
         onCountryPress={focusCountry}
         onClusterPress={handleClusterPress}
-        onMapPress={() => selectCountry(null)}
+        onMapPress={handleMapBackgroundPress}
         onRegionChangeComplete={handleRegionChangeComplete}
       />
 
       <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
         <View pointerEvents="box-none" className="gap-2">
-          <View style={{ paddingTop: insets.top + 8 }}>
-            <MapSearchRow />
-          </View>
-          {zoomTier === "world" ? (
+          <MapHeader onGlobePress={toggleMapMode} />
+          <MapSearchRow />
+          {is3d || zoomTier === "world" || !focusedRegion ? (
             <MapFeaturedChips
-              onTrendingPress={handleTrendingPress}
               onForYouPress={() => void handleForYouPress()}
               onNewActivityPress={() => void handleNewActivityPress()}
             />
@@ -391,33 +564,50 @@ export default function MapScreen() {
           </View>
         ) : null}
 
-        <MapControls
-          onReset={() => {
-            mapRef.current?.resetWorldView();
-            resetGlobalPulse();
-            setZoomTier("world");
-            zoomTierRef.current = "world";
-            selectCountry(null);
-            setActiveChip("all");
-          }}
-          onZoomIn={() => mapRef.current?.zoomBy("in")}
-          onZoomOut={() => mapRef.current?.zoomBy("out")}
-        />
-
-        <RandomCountryFab onPress={() => void handleRandomCountry()} />
+        {landingMessage ? (
+          <MapLandingToast
+            message={landingMessage}
+            onDismiss={() => setLandingMessage(null)}
+          />
+        ) : null}
 
         {selectedCountry ? (
-          <View style={[styles.previewWrap, { bottom: bottomPad }]}>
-            <MapCountryPreviewCard
-              country={selectedCountry}
-              onDismiss={() => selectCountry(null)}
-            />
-          </View>
+          <>
+            {!is3d ? (
+              <Pressable
+                style={styles.dismissBackdrop}
+                onPress={dismissPreview}
+                accessibilityRole="button"
+                accessibilityLabel="Dismiss country preview"
+              />
+            ) : null}
+            <View
+              style={[styles.previewWrap, { bottom: bottomPad }]}
+              pointerEvents="box-none"
+            >
+              <MapCountryPreviewCard
+                country={selectedCountry}
+                onNextCountry={() => void handleNextCountry()}
+                isNextCountryLoading={isNextCountryLoading}
+              />
+            </View>
+          </>
         ) : showOnboarding ? (
           <View style={[styles.previewWrap, { bottom: bottomPad }]}>
             <MapOnboardingSheet onDismiss={() => dismissMapOnboarding()} />
           </View>
         ) : null}
+
+        <MapControls
+          onReset={handleReset}
+          onZoomIn={() => mapRef.current?.zoomBy("in")}
+          onZoomOut={() => mapRef.current?.zoomBy("out")}
+        />
+
+        <MapLeftActionFabs
+          onRandomPress={() => void handleRandomCountry()}
+          showBoundaryControls={!is3d}
+        />
       </View>
     </View>
   );
@@ -451,6 +641,9 @@ const styles = StyleSheet.create({
   retryButton: {
     paddingHorizontal: 12,
     paddingVertical: 8,
+  },
+  dismissBackdrop: {
+    ...StyleSheet.absoluteFillObject,
   },
   previewWrap: {
     position: "absolute",

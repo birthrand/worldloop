@@ -83,7 +83,7 @@ export function MapOnboardingSheet({ onDismiss }: MapOnboardingSheetProps) {
         Explore the World
       </Text>
       <Text style={styles.subtitle}>
-        Tap a country to see trending content from that region.
+        Tap a country to see content from that region.
       </Text>
 
       <View style={styles.hintsRow}>

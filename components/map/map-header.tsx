@@ -18,7 +18,7 @@ export function MapHeader({ onGlobePress }: MapHeaderProps) {
       <View className="flex-row items-center justify-between">
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Reset map view"
+          accessibilityLabel="Toggle 2D and 3D map"
           onPress={onGlobePress}
           hitSlop={8}
           style={({ pressed }) => [

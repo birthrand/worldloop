@@ -5,7 +5,6 @@ import type { FeaturedShortcut } from "@/store/use-map-ui-store";
 import { useMapUiStore } from "@/store/use-map-ui-store";
 
 type FeaturedChipsProps = {
-  onTrendingPress: () => void;
   onForYouPress: () => void;
   onNewActivityPress: () => void;
 };
@@ -17,13 +16,11 @@ type ChipConfig = {
 };
 
 const CHIPS: ChipConfig[] = [
-  { id: "trending", label: "Trending Now", icon: "flame" },
   { id: "forYou", label: "For You World", icon: "globe-outline" },
   { id: "newActivity", label: "New Activity", icon: "sparkles" },
 ];
 
 export function MapFeaturedChips({
-  onTrendingPress,
   onForYouPress,
   onNewActivityPress,
 }: FeaturedChipsProps) {
@@ -44,11 +41,7 @@ export function MapFeaturedChips({
             accessibilityState={{ selected }}
             accessibilityLabel={chip.label}
             onPress={
-              chip.id === "trending"
-                ? onTrendingPress
-                : chip.id === "forYou"
-                  ? onForYouPress
-                  : onNewActivityPress
+              chip.id === "forYou" ? onForYouPress : onNewActivityPress
             }
             style={({ pressed }) => [
               styles.chip,

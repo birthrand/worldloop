@@ -1,13 +1,36 @@
-import { forwardRef, useCallback, useImperativeHandle, useRef } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+} from "react";
 import { Platform, StyleSheet } from "react-native";
-import MapView, { PROVIDER_DEFAULT, type Region } from "react-native-maps";
+import MapView, {
+  Polygon,
+  PROVIDER_DEFAULT,
+  type Region,
+} from "react-native-maps";
 
-import { MAP_DARK_STYLE } from "@/constants/map-dark-style";
-import { WORLD_INITIAL_REGION } from "@/constants/map-regions";
 import { MapCountryMarker } from "@/components/map/map-country-marker";
 import { MapPulseClusterMarker } from "@/components/map/map-pulse-cluster-marker";
+import {
+  boundaryStyleRenderKey,
+  resolveBoundaryFillColor,
+  resolveBoundaryStrokeColor,
+  resolveBoundaryStrokeWidth,
+} from "@/constants/map-boundary-style";
+import { MAP_DARK_STYLE } from "@/constants/map-dark-style";
+import { WORLD_INITIAL_REGION } from "@/constants/map-regions";
 import type { MapCluster } from "@/lib/map-clusters";
+import {
+  filterBoundaryPolygonsByMapContext,
+  parseCountryBoundaryPolygons,
+} from "@/lib/map-country-boundaries";
+import { useMapUiStore } from "@/store/use-map-ui-store";
 import type { MapCountry } from "@/types/country";
+
+const countriesGeoJson = require("@/assets/geo/ne_50m_admin_0_countries/ne_50m_admin_0_countries.json");
 
 export type WorldMapViewHandle = {
   animateToRegion: (region: Region, duration?: number) => void;
@@ -19,6 +42,8 @@ export type MapZoomTier = "world" | "region" | "country";
 
 type WorldMapViewProps = {
   countries: MapCountry[];
+  /** Full country list for boundary region matching (markers may be a subset). */
+  boundaryCountries: MapCountry[];
   clusters: MapCluster[];
   selectedName: string | null;
   focusedRegion: string | null;
@@ -33,6 +58,7 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
   function WorldMapView(
     {
       countries,
+      boundaryCountries,
       clusters,
       selectedName,
       focusedRegion,
@@ -77,6 +103,39 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
       [animateToRegion],
     );
 
+    const boundaryStyle = useMapUiStore((s) => s.boundaryStyle);
+
+    const allCountryBoundaries = useMemo(
+      () => parseCountryBoundaryPolygons(countriesGeoJson),
+      [],
+    );
+
+    const countryBoundaries = useMemo(
+      () =>
+        filterBoundaryPolygonsByMapContext(allCountryBoundaries, {
+          selectedCountryName: selectedName,
+          focusedRegion,
+          countries: boundaryCountries,
+        }),
+      [
+        allCountryBoundaries,
+        boundaryCountries,
+        focusedRegion,
+        selectedName,
+      ],
+    );
+
+    const outlineStrokeWidth = resolveBoundaryStrokeWidth(
+      boundaryStyle,
+      zoomTier,
+    );
+    const outlineStrokeColor = resolveBoundaryStrokeColor(
+      boundaryStyle,
+      zoomTier,
+    );
+    const outlineFillColor = resolveBoundaryFillColor(boundaryStyle);
+    const boundaryRenderKey = boundaryStyleRenderKey(boundaryStyle, zoomTier);
+
     return (
       <MapView
         ref={mapRef}
@@ -96,23 +155,35 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
         showsScale={false}
         showsUserLocation={false}
         showsMyLocationButton={false}
-        mapType={Platform.OS === "android" ? "standard" : "mutedStandard"}
+        mapType={Platform.OS === "android" ? "standard" : "hybridFlyover"}
       >
-        {zoomTier === "world"
-          ? clusters.map((cluster) => (
-              <MapPulseClusterMarker
-                key={cluster.id}
-                cluster={cluster}
-                selected={focusedRegion === cluster.region}
-                onPress={onClusterPress}
-              />
-            ))
-          : countries.map((country) => (
+        {countryBoundaries.map((polygon) => (
+          <Polygon
+            key={`${polygon.id}-${boundaryRenderKey}`}
+            coordinates={polygon.coordinates}
+            holes={polygon.holes}
+            tappable={false}
+            strokeColor={outlineStrokeColor}
+            strokeWidth={outlineStrokeWidth}
+            fillColor={outlineFillColor}
+            zIndex={1}
+          />
+        ))}
+        {focusedRegion || countries.length > 0
+          ? countries.map((country) => (
               <MapCountryMarker
                 key={country.name}
                 country={country}
                 selected={selectedName === country.name}
                 onPress={() => onCountryPress(country)}
+              />
+            ))
+          : clusters.map((cluster) => (
+              <MapPulseClusterMarker
+                key={cluster.id}
+                cluster={cluster}
+                selected={focusedRegion === cluster.region}
+                onPress={onClusterPress}
               />
             ))}
       </MapView>

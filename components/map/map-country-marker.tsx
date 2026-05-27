@@ -1,9 +1,7 @@
-import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { StyleSheet, Text, View } from "react-native";
 import { Marker } from "react-native-maps";
 
-import { isTrendingCountry } from "@/constants/trending-countries";
 import { resolveFlagCdnUrl } from "@/lib/flag-url";
 import { cca2FromFlagUrl } from "@/lib/map-country";
 import type { MapCountry } from "@/types/country";
@@ -20,7 +18,6 @@ export function MapCountryMarker({
   onPress,
 }: MapCountryMarkerProps) {
   const [latitude, longitude] = country.latlng;
-  const trending = isTrendingCountry(country.name);
   const flagUri = resolveFlagCdnUrl(country.flag, cca2FromFlagUrl(country.flag));
 
   return (
@@ -32,7 +29,7 @@ export function MapCountryMarker({
       }}
       tracksViewChanges={selected}
     >
-      <View style={styles.wrapper} pointerEvents="none">
+      <View style={styles.wrapper} pointerEvents="box-none">
         <View style={[styles.pin, selected && styles.pinSelected]}>
           {flagUri ? (
             <Image
@@ -48,12 +45,6 @@ export function MapCountryMarker({
           <Text style={styles.countryName} numberOfLines={1}>
             {country.name}
           </Text>
-          {trending ? (
-            <View style={styles.trendingBadge}>
-              <Ionicons name="flame" size={10} color="#fb923c" />
-              <Text style={styles.trendingText}>Trending</Text>
-            </View>
-          ) : null}
         </View>
       </View>
     </Marker>
@@ -106,19 +97,5 @@ const styles = StyleSheet.create({
     textShadowColor: "rgba(0, 0, 0, 0.75)",
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
-  },
-  trendingBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-    backgroundColor: "rgba(251, 146, 60, 0.2)",
-  },
-  trendingText: {
-    fontSize: 9,
-    fontFamily: "Poppins-Medium",
-    color: "#fb923c",
   },
 });

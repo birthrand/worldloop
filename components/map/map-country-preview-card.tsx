@@ -12,7 +12,6 @@ import {
 
 import { prefetchCountryImage } from "@/components/explore/country-image";
 import { FlagBadge } from "@/components/explore/flag-badge";
-import { isTrendingCountry } from "@/constants/trending-countries";
 import { fetchCountryByName } from "@/lib/api";
 import { formatPopulation, getCountryImages } from "@/lib/format-country";
 import { mapCountryToCountry } from "@/lib/map-country";
@@ -22,12 +21,14 @@ import type { Country, MapCountry } from "@/types/country";
 
 type MapCountryPreviewCardProps = {
   country: MapCountry;
-  onDismiss?: () => void;
+  onNextCountry?: () => void;
+  isNextCountryLoading?: boolean;
 };
 
 export function MapCountryPreviewCard({
   country,
-  onDismiss,
+  onNextCountry,
+  isNextCountryLoading = false,
 }: MapCountryPreviewCardProps) {
   const toggleSaved = useSavedCountriesStore((s) => s.toggleSaved);
   const isSaved = useSavedCountriesStore((s) => s.isSaved(country.name));
@@ -63,9 +64,6 @@ export function MapCountryPreviewCard({
     };
   }, [country.name]);
 
-  const trending = isTrendingCountry(country.name);
-  const thumbnailUri =
-    detail?.images?.[0] ?? country.image ?? country.flag ?? null;
   const countryForActions = mapCountryToCountry(country, detail);
 
   const previewImages = useMemo(() => {
@@ -90,51 +88,23 @@ export function MapCountryPreviewCard({
 
   return (
     <View style={styles.card}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Dismiss country preview"
-        onPress={onDismiss}
-        style={styles.dismissHandle}
-      >
-        {/* <View style={styles.handleBar} /> */}
-        {/* <Ionicons
-          name="close-circle"
-          size={36}
-          color="rgba(255, 255, 255, 0.7)"
-        /> */}
-      </Pressable>
-
       <View className="flex-row gap-3">
         <View style={styles.thumbnailWrap}>
-          {thumbnailUri ? (
-            <Image
-              source={{ uri: thumbnailUri }}
-              style={styles.thumbnail}
-              contentFit="cover"
-            />
-          ) : (
-            <View style={[styles.thumbnail, styles.thumbnailFallback]}>
-              <FlagBadge flag={country.flag} width={56} height={40} />
-            </View>
-          )}
+          <View style={[styles.thumbnail, styles.thumbnailFallback]}>
+            <FlagBadge flag={country.flag} width={88} height={64} />
+          </View>
         </View>
 
         <View className="min-w-0 flex-1 gap-2 justify-center">
           <View className="flex-row items-start justify-between gap-2">
             <View className="min-w-0 flex-1 flex-row flex-wrap items-center gap-2">
-              <FlagBadge flag={country.flag} width={28} height={20} />
+              {/* <FlagBadge flag={country.flag} width={28} height={20} /> */}
               <Text
-                className="font-semibold text-[18px] text-white mt-1"
+                className="font-semibold text-[18px] text-white"
                 numberOfLines={1}
               >
                 {country.name}
               </Text>
-              {/* {trending ? (
-                <View style={styles.trendingPill}>
-                  <Ionicons name="flame" size={12} color="#fb923c" />
-                  <Text style={styles.trendingPillText}>Trending</Text>
-                </View>
-              ) : null} */}
             </View>
 
             {/* <Pressable
@@ -167,6 +137,7 @@ export function MapCountryPreviewCard({
               // icon="location-outline"
               label={country.capital}
               caption="Capital"
+              expandLabel
             />
             <StatItem
               // icon="globe-outline"
@@ -178,8 +149,8 @@ export function MapCountryPreviewCard({
       </View>
 
       <View style={styles.aiBlock}>
-        <View className="flex-row items-center gap-2">
-          <Ionicons name="sparkles" size={16} color="#fbbf24" />
+        <View className="flex-row items-center gap-1">
+          <Ionicons name="bulb" size={16} color="#fbbf24" />
           <Text className="font-semibold text-sm text-tab-active">
             AI Fun Fact
           </Text>
@@ -207,6 +178,27 @@ export function MapCountryPreviewCard({
         ) : null}
       </View> */}
 
+      {onNextCountry ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Next country"
+          accessibilityState={{ disabled: isNextCountryLoading }}
+          disabled={isNextCountryLoading}
+          onPress={onNextCountry}
+          style={({ pressed }) => [
+            styles.nextCountryButton,
+            (pressed || isNextCountryLoading) && styles.pressed,
+          ]}
+        >
+          {isNextCountryLoading ? (
+            <ActivityIndicator size="small" color="#fbbf24" />
+          ) : (
+            <Ionicons name="shuffle" size={18} color="#fbbf24" />
+          )}
+          <Text style={styles.nextCountryLabel}>Next country</Text>
+        </Pressable>
+      ) : null}
+
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`View full feed for ${country.name}`}
@@ -227,15 +219,21 @@ function StatItem({
   icon,
   label,
   caption,
+  expandLabel = false,
 }: {
   icon?: keyof typeof Ionicons.glyphMap;
   label: string;
   caption: string;
+  /** Capital: grow to fit full label; other stats stay equal-width and truncate. */
+  expandLabel?: boolean;
 }) {
   return (
-    <View style={styles.statItem}>
+    <View style={[styles.statItem, expandLabel && styles.statItemExpand]}>
       {icon ? <Ionicons name={icon} size={14} color="#94a3b8" /> : null}
-      <Text style={styles.statLabel} numberOfLines={1}>
+      <Text
+        style={styles.statLabel}
+        numberOfLines={expandLabel ? undefined : 1}
+      >
         {label}
       </Text>
       <Text style={styles.statCaption}>{caption}</Text>
@@ -254,43 +252,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.08)",
   },
-  dismissHandle: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 8,
-  },
-
   thumbnailWrap: {
     width: 88,
-    height: 88,
-    borderRadius: 16,
+    height: 64,
+    // borderRadius: 16,
     overflow: "hidden",
   },
   thumbnail: {
     width: 88,
-    height: 88,
+    height: 64,
   },
   thumbnailFallback: {
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(255, 255, 255, 0.06)",
-  },
-  trendingPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    backgroundColor: "rgba(251, 146, 60, 0.15)",
-  },
-  trendingPillText: {
-    fontSize: 11,
-    fontFamily: "Poppins-Medium",
-    color: "#fb923c",
   },
   saveButton: {
     width: 44,
@@ -301,6 +276,12 @@ const styles = StyleSheet.create({
   statItem: {
     flex: 1,
     minWidth: 0,
+  },
+  statItemExpand: {
+    flex: 0,
+    flexGrow: 0,
+    flexShrink: 0,
+    minWidth: undefined,
   },
   statLabel: {
     fontSize: 13,
@@ -317,6 +298,22 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 16,
     backgroundColor: "rgba(255, 255, 255, 0.04)",
+  },
+  nextCountryButton: {
+    height: 48,
+    borderRadius: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
+  },
+  nextCountryLabel: {
+    fontSize: 15,
+    fontFamily: "Poppins-SemiBold",
+    color: "#fbbf24",
   },
   exploreButton: {
     height: 52,
