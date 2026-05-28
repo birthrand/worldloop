@@ -17,10 +17,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { FlagBadge } from "@/components/explore/flag-badge";
 import { FeedErrorBanner } from "@/components/home/feed-error-banner";
-import { CONTINENTS } from "@/constants/regions";
+import { CONTINENTS, continentDisplayLabel } from "@/constants/regions";
 import { fetchSearchCountries } from "@/lib/api";
 import { getAiFact, getCountryImages } from "@/lib/format-country";
 import { openCountryInExplore } from "@/lib/open-country-in-explore";
+import { openCountryOnMap } from "@/lib/open-country-on-map";
 import { useSearchUiStore } from "@/store/use-search-ui-store";
 import type { Country } from "@/types/country";
 
@@ -33,7 +34,9 @@ type SearchStatus = "idle" | "loading" | "success" | "error";
 export function SearchOverlay() {
   const insets = useSafeAreaInsets();
   const isOpen = useSearchUiStore((s) => s.isOpen);
+  const context = useSearchUiStore((s) => s.context);
   const closeSearch = useSearchUiStore((s) => s.closeSearch);
+  const isMapMode = context === "map";
 
   const [query, setQuery] = useState("");
   const [region, setRegion] = useState<string | null>(null);
@@ -184,6 +187,178 @@ export function SearchOverlay() {
     results.length === 0 &&
     (!!query.trim() || !!region);
 
+  const handleResultPress = isMapMode ? openCountryOnMap : openCountryInExplore;
+
+  const searchInput = (
+    <>
+      <Ionicons name="search" size={20} color="#94a3b8" />
+      <TextInput
+        ref={inputRef}
+        value={query}
+        onChangeText={setQuery}
+        placeholder="Search countries, regions, cultures…"
+        placeholderTextColor="rgba(255,255,255,0.4)"
+        autoCorrect={false}
+        autoCapitalize="none"
+        returnKeyType="search"
+        onSubmitEditing={handleSubmit}
+        selectionColor="rgba(251, 191, 36, 0.5)"
+        cursorColor="#ffffff"
+        underlineColorAndroid="transparent"
+        style={styles.input}
+      />
+      {query.length > 0 ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Clear search text"
+          onPress={() => setQuery("")}
+          hitSlop={8}
+        >
+          <Ionicons name="close-circle" size={20} color="#94a3b8" />
+        </Pressable>
+      ) : null}
+    </>
+  );
+
+  const searchField = (
+    <View className="px-4 pb-4">
+      <View
+        className={`h-12 flex-row items-center gap-3 rounded-2xl px-4 ${
+          isMapMode ? "bg-white/15" : "bg-white/8"
+        }`}
+      >
+        {searchInput}
+      </View>
+    </View>
+  );
+
+  const regionChips = (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
+      style={styles.chipsScroll}
+      contentContainerStyle={styles.chipsRow}
+      className="pb-4"
+    >
+      {CONTINENTS.map((name) => {
+        const selected = region === name;
+        return (
+          <Pressable
+            key={name}
+            accessibilityRole="button"
+            accessibilityState={{ selected }}
+            accessibilityLabel={
+              selected ? `Clear ${name} region filter` : `Filter by ${name}`
+            }
+            onPress={() => toggleRegion(name)}
+            hitSlop={4}
+            style={({ pressed }) => [
+              styles.chip,
+              selected && styles.chipSelected,
+              pressed && { opacity: 0.85 },
+            ]}
+          >
+            <Text
+              className={`font-medium text-sm ${
+                selected ? "text-tab-active" : "text-white/70"
+              }`}
+            >
+              {continentDisplayLabel(name)}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </ScrollView>
+  );
+
+  const searchBody = (
+    <>
+      {status === "error" && error ? (
+        <View className="px-4 pb-4">
+          <FeedErrorBanner message={error} onRetry={handleRetry} />
+        </View>
+      ) : null}
+
+      {showIdle ? (
+        <ScrollView
+          style={styles.idleScroll}
+          contentContainerStyle={styles.idleScrollContent}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
+        >
+          {recentSearches.length > 0 ? (
+            <View className="gap-3">
+              <Text className="font-semibold text-sm text-white/80">
+                Recent searches
+              </Text>
+              <View className="flex-row flex-wrap gap-2">
+                {recentSearches.map((term) => (
+                  <Pressable
+                    key={term}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Search for ${term}`}
+                    onPress={() => handleRecentTap(term)}
+                    style={({ pressed }) => [
+                      styles.recentChip,
+                      pressed && { opacity: 0.85 },
+                    ]}
+                  >
+                    <Ionicons name="time-outline" size={14} color="#94a3b8" />
+                    <Text className="body-sm text-white/80">{term}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          ) : null}
+        </ScrollView>
+      ) : status === "loading" ? (
+        <ScrollView
+          style={styles.centeredScroll}
+          contentContainerStyle={styles.centeredScrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <ActivityIndicator size="large" color="#fbbf24" />
+        </ScrollView>
+      ) : showEmpty ? (
+        <ScrollView
+          style={styles.centeredScroll}
+          contentContainerStyle={styles.centeredScrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <Text className="font-semibold text-lg text-white">
+            No countries found
+          </Text>
+          <Text className="mt-2 text-center body-md text-white/50">
+            Try another spelling or pick a different region.
+          </Text>
+        </ScrollView>
+      ) : (
+        <View className="min-h-0 flex-1">
+          <FlatList
+            data={results}
+            keyExtractor={(item) => item.name}
+            renderItem={({ item }) => (
+              <SearchResultRow
+                country={item}
+                onPress={() => handleResultPress(item)}
+              />
+            )}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            style={styles.resultsList}
+          />
+        </View>
+      )}
+    </>
+  );
+
   return (
     <Modal
       visible={isOpen}
@@ -191,204 +366,71 @@ export function SearchOverlay() {
       animationType="fade"
       onRequestClose={handleClose}
     >
-      <View style={styles.root}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Dismiss search"
-          style={styles.scrim}
-          onPress={handleClose}
-        />
+      {isMapMode ? (
+        <View style={styles.root}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Dismiss search"
+            style={styles.scrim}
+            onPress={handleClose}
+          />
 
-        <View
-          className="flex-1 bg-midnight-navy"
-          style={[
-            styles.panel,
-            {
-              paddingTop: insets.top + 8,
-              paddingBottom: insets.bottom + 16,
-            },
-          ]}
-        >
-          <View className="flex-row items-center gap-3 px-4 pb-4">
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Cancel search"
-              onPress={handleClose}
-              hitSlop={8}
-              className="h-11 w-11 items-center justify-center"
-            >
-              <Ionicons name="close" size={24} color="#fff" />
-            </Pressable>
-            <Text className="flex-1 text-center font-semibold text-lg text-white">
-              Search
-            </Text>
-            <View className="h-11 w-11" />
-          </View>
-
-          <View className="px-4 pb-4">
-            <View className="h-12 flex-row items-center gap-3 rounded-2xl bg-white/8 px-4">
-              <Ionicons name="search" size={20} color="#94a3b8" />
-              <TextInput
-                ref={inputRef}
-                value={query}
-                onChangeText={setQuery}
-                placeholder="Search countries, regions, cultures…"
-                placeholderTextColor="rgba(255,255,255,0.4)"
-                autoCorrect={false}
-                autoCapitalize="none"
-                returnKeyType="search"
-                onSubmitEditing={handleSubmit}
-                style={styles.input}
-              />
-              {query.length > 0 ? (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Clear search text"
-                  onPress={() => setQuery("")}
-                  hitSlop={8}
-                >
-                  <Ionicons name="close-circle" size={20} color="#94a3b8" />
-                </Pressable>
-              ) : null}
-            </View>
-          </View>
-
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="on-drag"
-            style={styles.chipsScroll}
-            contentContainerStyle={styles.chipsRow}
-            className="pb-4"
+          <View
+            className="bg-midnight-navy"
+            style={[
+              styles.mapTopPanel,
+              {
+                paddingTop: insets.top + 8,
+                paddingBottom: insets.bottom + 16,
+              },
+            ]}
           >
-            {CONTINENTS.map((name) => {
-              const selected = region === name;
-              return (
-                <Pressable
-                  key={name}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected }}
-                  accessibilityLabel={
-                    selected
-                      ? `Clear ${name} region filter`
-                      : `Filter by ${name}`
-                  }
-                  onPress={() => toggleRegion(name)}
-                  hitSlop={4}
-                  style={({ pressed }) => [
-                    styles.chip,
-                    selected && styles.chipSelected,
-                    pressed && { opacity: 0.85 },
-                  ]}
-                >
-                  <Text
-                    className={`font-medium text-sm ${
-                      selected ? "text-tab-active" : "text-white/70"
-                    }`}
-                  >
-                    {name}
-                  </Text>
-                  {/* {selected ? (
-                    <Ionicons
-                      name="close-circle"
-                      size={16}
-                      color="#fbbf24"
-                      style={styles.chipClearIcon}
-                    />
-                  ) : null} */}
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-
-          {status === "error" && error ? (
-            <View className="px-4 pb-4">
-              <FeedErrorBanner message={error} onRetry={handleRetry} />
-            </View>
-          ) : null}
-
-          {showIdle ? (
-            <ScrollView
-              style={styles.idleScroll}
-              contentContainerStyle={styles.idleScrollContent}
-              keyboardShouldPersistTaps="handled"
-              keyboardDismissMode="on-drag"
-              showsVerticalScrollIndicator={false}
-            >
-              {recentSearches.length > 0 ? (
-                <View className="gap-3">
-                  <Text className="font-semibold text-sm text-white/80">
-                    Recent searches
-                  </Text>
-                  <View className="flex-row flex-wrap gap-2">
-                    {recentSearches.map((term) => (
-                      <Pressable
-                        key={term}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Search for ${term}`}
-                        onPress={() => handleRecentTap(term)}
-                        style={({ pressed }) => [
-                          styles.recentChip,
-                          pressed && { opacity: 0.85 },
-                        ]}
-                      >
-                        <Ionicons
-                          name="time-outline"
-                          size={14}
-                          color="#94a3b8"
-                        />
-                        <Text className="body-sm text-white/80">{term}</Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                </View>
-              ) : null}
-            </ScrollView>
-          ) : status === "loading" ? (
-            <ScrollView
-              style={styles.centeredScroll}
-              contentContainerStyle={styles.centeredScrollContent}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              <ActivityIndicator size="large" color="#fbbf24" />
-            </ScrollView>
-          ) : showEmpty ? (
-            <ScrollView
-              style={styles.centeredScroll}
-              contentContainerStyle={styles.centeredScrollContent}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              <Text className="font-semibold text-lg text-white">
-                No countries found
-              </Text>
-              <Text className="mt-2 text-center body-md text-white/50">
-                Try another spelling or pick a different region.
-              </Text>
-            </ScrollView>
-          ) : (
-            <View className="min-h-0 flex-1">
-              <FlatList
-                data={results}
-                keyExtractor={(item) => item.name}
-                renderItem={({ item }) => (
-                  <SearchResultRow
-                    country={item}
-                    onPress={() => openCountryInExplore(item)}
-                  />
-                )}
-                keyboardShouldPersistTaps="handled"
-                keyboardDismissMode="on-drag"
-                contentContainerStyle={styles.listContent}
-                showsVerticalScrollIndicator={false}
-                style={styles.resultsList}
-              />
-            </View>
-          )}
+            {searchField}
+            {regionChips}
+            <View style={styles.mapSearchBody}>{searchBody}</View>
+          </View>
         </View>
-      </View>
+      ) : (
+        <View style={styles.root}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Dismiss search"
+            style={styles.scrim}
+            onPress={handleClose}
+          />
+
+          <View
+            className="flex-1 bg-midnight-navy"
+            style={[
+              styles.panel,
+              {
+                paddingTop: insets.top + 8,
+                paddingBottom: insets.bottom + 16,
+              },
+            ]}
+          >
+            <View className="flex-row items-center gap-3 px-4 pb-4">
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Cancel search"
+                onPress={handleClose}
+                hitSlop={8}
+                className="h-11 w-11 items-center justify-center"
+              >
+                <Ionicons name="close" size={24} color="#fff" />
+              </Pressable>
+              <Text className="flex-1 text-center font-semibold text-lg text-white">
+                Search
+              </Text>
+              <View className="h-11 w-11" />
+            </View>
+
+            {searchField}
+            {regionChips}
+            {searchBody}
+          </View>
+        </View>
+      )}
     </Modal>
   );
 }
@@ -458,6 +500,21 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
   },
+  mapTopPanel: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: "50%",
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    overflow: "hidden",
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+  },
+  mapSearchBody: {
+    flex: 1,
+    minHeight: 160,
+  },
   scrim: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0, 0, 0, 0.6)",
@@ -471,7 +528,9 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 14,
-    color: "#fff",
+    fontFamily: "Poppins-Regular",
+    color: "#ffffff",
+    backgroundColor: "transparent",
     paddingVertical: 0,
   },
   chipsScroll: {

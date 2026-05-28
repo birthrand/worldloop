@@ -3,8 +3,6 @@ import { useFrame } from "@react-three/fiber/native";
 import { useRef } from "react";
 import type { Mesh } from "three";
 
-import { useMapStore } from "@/store/use-map-store";
-import { useMapUiStore } from "@/store/use-map-ui-store";
 import type { MapCountry } from "@/types/country";
 
 const BASE_SCALE = 1;
@@ -17,15 +15,16 @@ const SELECTED_PIN_COLOR = "#FF0000";
 type GlobeCountryPinProps = {
   country: MapCountry;
   position: [number, number, number];
+  isSelected: boolean;
+  onPress: (country: MapCountry) => void;
 };
 
-export function GlobeCountryPin({ country, position }: GlobeCountryPinProps) {
-  const selectCountry = useMapStore((s) => s.selectCountry);
-  const selectedName = useMapStore((s) => s.selectedCountry?.name ?? null);
-  const spotlightName = useMapUiStore((s) => s.spotlightCountryName);
-  const highlightedName = selectedName ?? spotlightName;
-  const isSelected = highlightedName === country.name;
-
+export function GlobeCountryPin({
+  country,
+  position,
+  isSelected,
+  onPress,
+}: GlobeCountryPinProps) {
   const meshRef = useRef<Mesh>(null);
   const ringRef = useRef<Mesh>(null);
   const pulseRef = useRef(0);
@@ -44,10 +43,7 @@ export function GlobeCountryPin({ country, position }: GlobeCountryPinProps) {
 
   const handlePress = (event: ThreeEvent<MouseEvent>) => {
     event.stopPropagation();
-    selectCountry(country.name);
-    if (useMapStore.getState().mapMode === "3d") {
-      useMapStore.getState().focusCountryOnGlobe(country.name, 450);
-    }
+    onPress(country);
   };
 
   const pinColor = isSelected ? SELECTED_PIN_COLOR : PIN_COLOR;

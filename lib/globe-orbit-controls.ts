@@ -200,9 +200,22 @@ export function createGlobeOrbitControls() {
         .subVectors(internals.rotateEnd, internals.rotateStart)
         .multiplyScalar(scope.rotateSpeed);
 
+      // Keep world-view drag feel unchanged, but reduce angular rotation as the
+      // camera zooms in so panning does not feel increasingly "faster".
+      const cameraDistance =
+        scope.camera?.position?.distanceTo(scope.target) ?? scope.maxZoom;
+      const zoomRotateScale =
+        Number.isFinite(scope.maxZoom) && scope.maxZoom > 0
+          ? Math.max(0.25, Math.min(1, cameraDistance / scope.maxZoom))
+          : 1;
+
       if (height) {
-        this.rotateLeft((2 * Math.PI * internals.rotateDelta.x) / height);
-        this.rotateUp((2 * Math.PI * internals.rotateDelta.y) / height);
+        this.rotateLeft(
+          ((2 * Math.PI * internals.rotateDelta.x) / height) * zoomRotateScale,
+        );
+        this.rotateUp(
+          ((2 * Math.PI * internals.rotateDelta.y) / height) * zoomRotateScale,
+        );
       }
 
       internals.rotateStart.copy(internals.rotateEnd);

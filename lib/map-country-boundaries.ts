@@ -58,6 +58,7 @@ const GEO_ADMIN_ALIASES_BY_API_NAME: Record<string, readonly string[]> = {
     "Dem. Rep. Congo",
     "Democratic Republic of the Congo",
   ],
+  "South Georgia": ["South Georgia and the Islands"],
 };
 
 const NATURAL_EARTH_CONTINENTS_BY_APP_REGION: Record<
@@ -66,6 +67,7 @@ const NATURAL_EARTH_CONTINENTS_BY_APP_REGION: Record<
 > = {
   Africa: ["Africa"],
   Americas: ["North America", "South America"],
+  Antarctic: ["Antarctica"],
   Asia: ["Asia"],
   Europe: ["Europe"],
   Oceania: ["Oceania"],
@@ -89,6 +91,36 @@ function toRingPoints(ring: number[][]): LatLng[] {
     .map(toLatLng);
 }
 
+/**
+ * GeoJSON often repeats the south pole at both -180° and 180°, which makes
+ * react-native-maps draw a map-spanning edge. Drop the duplicate seam point.
+ */
+function removeAntimeridianPoleSeam(points: LatLng[]): LatLng[] {
+  if (points.length < 4) return points;
+
+  const result: LatLng[] = [];
+  for (let i = 0; i < points.length; i++) {
+    const prev = points[i - 1];
+    const next = points[i];
+    const after = points[i + 1];
+
+    if (
+      prev &&
+      after &&
+      Math.abs(prev.longitude - next.longitude) > 180 &&
+      Math.abs(prev.latitude) > 85 &&
+      Math.abs(next.latitude) > 85 &&
+      Math.abs(after.longitude - next.longitude) < 90
+    ) {
+      continue;
+    }
+
+    result.push(next);
+  }
+
+  return result.length >= 3 ? result : points;
+}
+
 function parsePolygonRings(
   polygonCoordinates: number[][][],
   featureId: string,
@@ -97,7 +129,11 @@ function parsePolygonRings(
 ): CountryBoundaryPolygon[] {
   if (polygonCoordinates.length === 0) return [];
 
-  const outer = toRingPoints(polygonCoordinates[0] ?? []);
+  const rawOuter = toRingPoints(polygonCoordinates[0] ?? []);
+  const outer =
+    countryName === "Antarctica"
+      ? removeAntimeridianPoleSeam(rawOuter)
+      : rawOuter;
   if (outer.length < 3) return [];
 
   const holeRings = polygonCoordinates

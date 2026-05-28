@@ -23,12 +23,24 @@ type MapCountryPreviewCardProps = {
   country: MapCountry;
   onNextCountry?: () => void;
   isNextCountryLoading?: boolean;
+  onDismiss?: () => void;
 };
+
+const TITLE_FONT_SIZE = 16;
+const TITLE_MIN_FONT_SIZE = 12;
+const TITLE_CLOSE_SIZE = 32;
+/** Compact inline flag — matches explore feed badge scale, leaves room for stats. */
+const FLAG_WIDTH = 56;
+const FLAG_HEIGHT = 38;
+/** Capital at or above this length gets extra column width; others stay equal thirds. */
+const CAPITAL_EXPAND_CHAR_THRESHOLD = 11;
+const STAT_COLUMN_GAP = 12;
 
 export function MapCountryPreviewCard({
   country,
   onNextCountry,
   isNextCountryLoading = false,
+  onDismiss,
 }: MapCountryPreviewCardProps) {
   const toggleSaved = useSavedCountriesStore((s) => s.toggleSaved);
   const isSaved = useSavedCountriesStore((s) => s.isSaved(country.name));
@@ -88,62 +100,60 @@ export function MapCountryPreviewCard({
 
   return (
     <View style={styles.card}>
-      <View className="flex-row gap-3">
-        <View style={styles.thumbnailWrap}>
-          <View style={[styles.thumbnail, styles.thumbnailFallback]}>
-            <FlagBadge flag={country.flag} width={88} height={64} />
-          </View>
-        </View>
+      <View style={styles.headerBlock}>
+        <View style={styles.titleRow}>
+          {onDismiss ? <View style={styles.titleRowSide} /> : null}
 
-        <View className="min-w-0 flex-1 gap-2 justify-center">
-          <View className="flex-row items-start justify-between gap-2">
-            <View className="min-w-0 flex-1 flex-row flex-wrap items-center gap-2">
-              {/* <FlagBadge flag={country.flag} width={28} height={20} /> */}
-              <Text
-                className="font-semibold text-[18px] text-white"
-                numberOfLines={1}
-              >
-                {country.name}
-              </Text>
-            </View>
+          <Text
+            style={styles.countryName}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={TITLE_MIN_FONT_SIZE / TITLE_FONT_SIZE}
+            ellipsizeMode="tail"
+          >
+            {country.name}
+          </Text>
 
-            {/* <Pressable
+          {onDismiss ? (
+            <Pressable
               accessibilityRole="button"
-              accessibilityLabel={
-                isSaved ? `Unsave ${country.name}` : `Save ${country.name}`
-              }
-              onPress={() => toggleSaved(countryForActions)}
+              accessibilityLabel="Close country preview"
+              onPress={onDismiss}
               hitSlop={8}
               style={({ pressed }) => [
-                styles.saveButton,
+                styles.closeButton,
                 pressed && styles.pressed,
               ]}
             >
-              <Ionicons
-                name={isSaved ? "bookmark" : "bookmark-outline"}
-                size={22}
-                color={isSaved ? "#fbbf24" : "#ffffff"}
-              />
-            </Pressable> */}
+              <Ionicons name="close" size={18} color="#ffffff" />
+            </Pressable>
+          ) : null}
+        </View>
+
+        <View style={styles.metaRow}>
+          <View style={styles.flagWrap}>
+            <FlagBadge
+              flag={country.flag}
+              width={FLAG_WIDTH}
+              height={FLAG_HEIGHT}
+            />
           </View>
 
-          <View className="flex-row gap-2">
-            <StatItem
-              // icon="people-outline"
-              label={formatPopulation(country.population)}
-              caption="Population"
-            />
-            <StatItem
-              // icon="location-outline"
-              label={country.capital}
-              caption="Capital"
-              expandLabel
-            />
-            <StatItem
-              // icon="globe-outline"
-              label={country.region}
-              caption="Region"
-            />
+          <View style={styles.statsColumn}>
+            <View style={styles.statsRow}>
+              <StatItem
+                label={formatPopulation(country.population)}
+                caption="Population"
+              />
+              <StatItem
+                label={country.capital}
+                caption="Capital"
+                expandLabel={
+                  country.capital.length >= CAPITAL_EXPAND_CHAR_THRESHOLD
+                }
+              />
+              <StatItem label={country.region} caption="Region" />
+            </View>
           </View>
         </View>
       </View>
@@ -216,27 +226,27 @@ export function MapCountryPreviewCard({
 }
 
 function StatItem({
-  icon,
   label,
   caption,
   expandLabel = false,
 }: {
-  icon?: keyof typeof Ionicons.glyphMap;
   label: string;
   caption: string;
-  /** Capital: grow to fit full label; other stats stay equal-width and truncate. */
+  /** Long capital: slightly wider column + 2 lines; others stay equal width. */
   expandLabel?: boolean;
 }) {
   return (
-    <View style={[styles.statItem, expandLabel && styles.statItemExpand]}>
-      {icon ? <Ionicons name={icon} size={14} color="#94a3b8" /> : null}
+    <View style={[styles.statItem, expandLabel && styles.statItemWide]}>
       <Text
         style={styles.statLabel}
-        numberOfLines={expandLabel ? undefined : 1}
+        numberOfLines={expandLabel ? 2 : 1}
+        ellipsizeMode="tail"
       >
         {label}
       </Text>
-      <Text style={styles.statCaption}>{caption}</Text>
+      <Text style={styles.statCaption} numberOfLines={1}>
+        {caption}
+      </Text>
     </View>
   );
 }
@@ -244,7 +254,7 @@ function StatItem({
 const styles = StyleSheet.create({
   card: {
     marginHorizontal: 32,
-    marginBottom: 136,
+    marginBottom: 8,
     padding: 16,
     gap: 16,
     borderRadius: 24,
@@ -252,36 +262,72 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.08)",
   },
-  thumbnailWrap: {
-    width: 88,
-    height: 64,
-    // borderRadius: 16,
+  headerBlock: {
+    gap: 12,
+  },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    minHeight: TITLE_CLOSE_SIZE,
+  },
+  titleRowSide: {
+    width: TITLE_CLOSE_SIZE,
+    flexShrink: 0,
+  },
+  countryName: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: TITLE_FONT_SIZE,
+    lineHeight: TITLE_CLOSE_SIZE,
+    fontFamily: "Poppins-SemiBold",
+    color: "#ffffff",
+    textAlign: "center",
+  },
+  closeButton: {
+    width: TITLE_CLOSE_SIZE,
+    height: TITLE_CLOSE_SIZE,
+    flexShrink: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: TITLE_CLOSE_SIZE / 2,
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+  },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  flagWrap: {
+    width: FLAG_WIDTH,
+    height: FLAG_HEIGHT,
+    borderRadius: 10,
     overflow: "hidden",
-  },
-  thumbnail: {
-    width: 88,
-    height: 64,
-  },
-  thumbnailFallback: {
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(255, 255, 255, 0.06)",
   },
-  saveButton: {
-    width: 44,
-    height: 44,
-    alignItems: "center",
+  statsColumn: {
+    flex: 1,
+    minWidth: 0,
     justifyContent: "center",
+    minHeight: FLAG_HEIGHT,
+  },
+  statsRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: STAT_COLUMN_GAP,
   },
   statItem: {
     flex: 1,
+    flexBasis: 0,
     minWidth: 0,
+    gap: 2,
   },
-  statItemExpand: {
-    flex: 0,
-    flexGrow: 0,
-    flexShrink: 0,
-    minWidth: undefined,
+  statItemWide: {
+    flex: 1.85,
+    flexBasis: 0,
+    minWidth: 0,
   },
   statLabel: {
     fontSize: 13,

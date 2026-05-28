@@ -1,13 +1,17 @@
 import { create } from "zustand";
 
+export type SearchUiContext = "default" | "map";
+
 type SearchUiState = {
   isOpen: boolean;
-  openSearch: () => void;
+  context: SearchUiContext;
+  openSearch: (context?: SearchUiContext) => void;
   closeSearch: () => void;
 };
 
 export const useSearchUiStore = create<SearchUiState>((set) => ({
   isOpen: false,
-  openSearch: () => set({ isOpen: true }),
-  closeSearch: () => set({ isOpen: false }),
+  context: "default",
+  openSearch: (context = "default") => set({ isOpen: true, context }),
+  closeSearch: () => set({ isOpen: false, context: "default" }),
 }));

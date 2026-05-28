@@ -13,6 +13,7 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
+  continentDisplayLabel,
   EXPLORE_HEADER_TABS,
   FOR_YOU_TAB,
   isContinent,
@@ -255,6 +256,7 @@ export function ExploreTopBar() {
         <Animated.ScrollView
           ref={scrollRef}
           horizontal
+          scrollEnabled={false}
           showsHorizontalScrollIndicator={false}
           style={styles.continentsScroll}
           contentContainerStyle={styles.continentsRow}
@@ -323,7 +325,7 @@ export function ExploreTopBar() {
                             : styles.continentTextDefault,
                       ]}
                     >
-                      {name}
+                      {name === FOR_YOU_TAB ? name : continentDisplayLabel(name)}
                     </Text>
                   </Pressable>
                 </View>
@@ -340,7 +342,7 @@ export function ExploreTopBar() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Search countries"
-          onPress={openSearch}
+          onPress={() => openSearch()}
           hitSlop={8}
           style={({ pressed }) => [
             styles.searchButton,

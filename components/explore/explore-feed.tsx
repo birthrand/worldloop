@@ -23,6 +23,7 @@ export function ExploreFeed() {
   const hasSyncedInitialScrollRef = useRef(false);
   const countries = useCountryFeedStore((s) => s.countries);
   const currentIndex = useCountryFeedStore((s) => s.currentIndex);
+  const focusEpoch = useCountryFeedStore((s) => s.focusEpoch);
   const selectedRegion = useCountryFeedStore((s) => s.selectedRegion);
   const status = useCountryFeedStore((s) => s.status);
   const setCurrentIndex = useCountryFeedStore((s) => s.setCurrentIndex);
@@ -30,7 +31,7 @@ export function ExploreFeed() {
   const setRegionFilter = useCountryFeedStore((s) => s.setRegionFilter);
   const error = useCountryFeedStore((s) => s.error);
 
-  const feedListKey = selectedRegion ?? "for-you";
+  const feedListKey = `${selectedRegion ?? "for-you"}-${focusEpoch}`;
 
   const scrollToCurrentIndex = useCallback(
     (animated: boolean) => {
@@ -45,10 +46,11 @@ export function ExploreFeed() {
     hasSyncedInitialScrollRef.current = false;
   }, [selectedRegion]);
 
-  // Only scroll programmatically (region filter, focus country, layout).
+  // Only scroll programmatically when restoring a non-zero index (e.g. layout).
+  // Search/home focus remounts the list at index 0 — never scroll the feed to a deep index.
   // User swipes update currentIndex via onViewableItemsChanged — do not fight that scroll.
   useEffect(() => {
-    if (pageHeight <= 0 || countries.length === 0) return;
+    if (pageHeight <= 0 || countries.length === 0 || currentIndex === 0) return;
 
     if (skipProgrammaticScrollRef.current) {
       skipProgrammaticScrollRef.current = false;

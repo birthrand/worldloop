@@ -1,14 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Marker } from "react-native-maps";
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withSequence,
-  withTiming,
-} from "react-native-reanimated";
 
 import { getActivityVisual } from "@/constants/map-activity";
 import type { MapCluster } from "@/lib/map-clusters";
@@ -27,37 +19,16 @@ export function MapPulseClusterMarker({
   const [latitude, longitude] = cluster.center;
   const visual = getActivityVisual(cluster.activity);
 
-  const pulse = useSharedValue(1);
-
-  // "Alive" feel: a gentle breathing loop on bubble markers.
-  useEffect(() => {
-    pulse.value = withRepeat(
-      withSequence(
-        withTiming(1.08, { duration: 1000 }),
-        withTiming(1, { duration: 1000 }),
-      ),
-      -1,
-      false,
-    );
-  }, [pulse]);
-
-  const animatedStyle = useAnimatedStyle(() => {
-    const scale = selected ? 1.12 : pulse.value;
-    return {
-      transform: [{ scale }],
-    };
-  });
-
   return (
     <Marker
       coordinate={{ latitude, longitude }}
-      tracksViewChanges
+      tracksViewChanges={false}
       onPress={(event) => {
         event.stopPropagation?.();
         onPress(cluster);
       }}
     >
-      <Animated.View
+      <View
         style={[
           styles.bubble,
           {
@@ -65,7 +36,6 @@ export function MapPulseClusterMarker({
             backgroundColor: visual.bgColor,
           },
           selected && styles.bubbleSelected,
-          animatedStyle,
         ]}
         pointerEvents="none"
       >
@@ -79,7 +49,7 @@ export function MapPulseClusterMarker({
             {cluster.countryCount}
           </Text>
         </View>
-      </Animated.View>
+      </View>
     </Marker>
   );
 }

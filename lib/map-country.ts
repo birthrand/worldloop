@@ -47,3 +47,44 @@ export function isValidLatLng(
     lng <= 180
   );
 }
+
+/** react-native-maps only renders markers between ±85° latitude. */
+const MAP_MARKER_MAX_LATITUDE = 85;
+
+/**
+ * Pin + camera position for Antarctica. REST Countries reports the south pole
+ * ([-90, 0]), which is off the visible map and hides the flag marker.
+ */
+export const ANTARCTICA_DISPLAY_LATLNG: [number, number] = [-72, 20];
+
+const DISPLAY_LATLNG_BY_NAME: Record<string, [number, number]> = {
+  Antarctica: ANTARCTICA_DISPLAY_LATLNG,
+};
+
+/** WGS84 coordinate used for map pins and camera focus (may differ from API latlng). */
+export function getMapDisplayLatLng(
+  country: Pick<MapCountry | Country, "name" | "latlng">,
+): [number, number] {
+  const override = DISPLAY_LATLNG_BY_NAME[country.name];
+  if (override) return override;
+
+  if (!isValidLatLng(country.latlng)) return country.latlng;
+
+  const [lat, lng] = country.latlng;
+  if (lat < -MAP_MARKER_MAX_LATITUDE) return [-MAP_MARKER_MAX_LATITUDE, lng];
+  if (lat > MAP_MARKER_MAX_LATITUDE) return [MAP_MARKER_MAX_LATITUDE, lng];
+  return [lat, lng];
+}
+
+/** Build a map country from search/feed data when the map list has not loaded yet. */
+export function countryToMapCountry(country: Country): MapCountry {
+  return {
+    name: country.name,
+    capital: country.capital,
+    region: country.region,
+    population: country.population,
+    flag: country.flag,
+    latlng: country.latlng,
+    image: country.images?.[0] ?? null,
+  };
+}

@@ -1,8 +1,12 @@
 import { create } from "zustand";
 
 import { fetchMapCountries } from "@/lib/api";
-import { isValidLatLng } from "@/lib/map-country";
-import type { MapCountry } from "@/types/country";
+import {
+  countryToMapCountry,
+  isValidLatLng,
+} from "@/lib/map-country";
+import { useMapUiStore } from "@/store/use-map-ui-store";
+import type { Country, MapCountry } from "@/types/country";
 
 export type MapFilterChip =
   | "all"
@@ -13,10 +17,14 @@ export type MapFilterChip =
 
 export type MapMode = "2d" | "3d";
 
+/** How the map should focus a country opened from Explore, search, etc. */
+export type ExternalMapFocusMode = "spotlight" | "region";
+
 type MapStatus = "idle" | "loading" | "error";
 
 export type GlobeCameraHandle = {
   focusCountry: (country: MapCountry, duration?: number) => void;
+  focusLatLng: (lat: number, lng: number, duration?: number) => void;
   resetCamera: () => void;
   zoomBy: (direction: "in" | "out") => void;
 };
@@ -26,22 +34,58 @@ type MapState = {
   status: MapStatus;
   error: string | null;
   selectedCountry: MapCountry | null;
+  /** Set when opening Map from Explore/search; consumed once the map can fly the camera. */
+  pendingExternalFocusName: string | null;
+  pendingExternalFocusMode: ExternalMapFocusMode | null;
   activeChip: MapFilterChip;
   mapMode: MapMode;
   globeCamera: GlobeCameraHandle | null;
   loadMapCountries: () => Promise<void>;
   selectCountry: (name: string | null) => void;
+  focusCountryFromExternal: (
+    name: string,
+    fallback?: Country,
+    mode?: ExternalMapFocusMode,
+  ) => void;
+  clearPendingExternalFocus: () => void;
   selectRandomCountry: () => MapCountry | null;
   setActiveChip: (chip: MapFilterChip) => void;
   setMapMode: (mode: MapMode) => void;
   toggleMapMode: () => void;
   registerGlobeCamera: (handle: GlobeCameraHandle | null) => void;
   focusCountryOnGlobe: (name: string, duration?: number) => void;
+  focusLatLngOnGlobe: (lat: number, lng: number, duration?: number) => void;
   getVisibleCountries: () => MapCountry[];
 };
 
+let mapCountriesLoadPromise: Promise<void> | null = null;
+
+function resolveSelectedCountry(
+  countries: MapCountry[],
+  name: string,
+): MapCountry | null {
+  return countries.find((c) => c.name === name) ?? null;
+}
+
+function applyPendingExternalSelection(
+  countries: MapCountry[],
+  pendingName: string | null,
+  pendingMode: ExternalMapFocusMode | null,
+): Partial<MapState> {
+  if (!pendingName || pendingMode === "spotlight") return {};
+  const country = resolveSelectedCountry(countries, pendingName);
+  return country ? { selectedCountry: country } : {};
+}
+
 function withValidCoordinates(countries: MapCountry[]): MapCountry[] {
   return countries.filter((c) => isValidLatLng(c.latlng));
+}
+
+function apply3dUiDefaults() {
+  useMapUiStore.setState({
+    countryMarkerMode: "hidden",
+    showBoundaryLines: false,
+  });
 }
 
 /** Population chip: top 20% by population. Other chips are visual-only in v1. */
@@ -62,28 +106,47 @@ export const useMapStore = create<MapState>((set, get) => ({
   status: "idle",
   error: null,
   selectedCountry: null,
+  pendingExternalFocusName: null,
+  pendingExternalFocusMode: null,
   activeChip: "all",
   mapMode: "2d",
   globeCamera: null,
 
   loadMapCountries: async () => {
-    const { status } = get();
-    if (status === "loading") return;
-
-    set({ status: "loading", error: null });
-
-    try {
-      const { data } = await fetchMapCountries();
-      set({
-        countries: withValidCoordinates(data),
-        status: "idle",
-        error: null,
-      });
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to load map countries";
-      set({ status: "error", error: message });
+    const { status, countries } = get();
+    if (countries.length > 0 && status !== "loading") {
+      return;
     }
+    if (mapCountriesLoadPromise) {
+      return mapCountriesLoadPromise;
+    }
+
+    mapCountriesLoadPromise = (async () => {
+      set({ status: "loading", error: null });
+
+      try {
+        const { data } = await fetchMapCountries();
+        const nextCountries = withValidCoordinates(data);
+        set({
+          countries: nextCountries,
+          status: "idle",
+          error: null,
+          ...applyPendingExternalSelection(
+            nextCountries,
+            get().pendingExternalFocusName,
+            get().pendingExternalFocusMode,
+          ),
+        });
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Failed to load map countries";
+        set({ status: "error", error: message });
+      } finally {
+        mapCountriesLoadPromise = null;
+      }
+    })();
+
+    return mapCountriesLoadPromise;
   },
 
   selectCountry: (name) => {
@@ -92,9 +155,35 @@ export const useMapStore = create<MapState>((set, get) => ({
       return;
     }
 
-    const country = get().countries.find((c) => c.name === name) ?? null;
+    const country = resolveSelectedCountry(get().countries, name);
     set({ selectedCountry: country });
   },
+
+  focusCountryFromExternal: (name, fallback, mode = "region") => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+
+    let country = resolveSelectedCountry(get().countries, trimmed);
+    let countries = get().countries;
+
+    if (!country && fallback) {
+      const injected = countryToMapCountry(fallback);
+      country = injected;
+      if (!countries.some((c) => c.name === injected.name)) {
+        countries = [...countries, injected];
+      }
+    }
+
+    set({
+      countries,
+      pendingExternalFocusName: trimmed,
+      pendingExternalFocusMode: mode,
+      selectedCountry: mode === "spotlight" ? null : country,
+    });
+  },
+
+  clearPendingExternalFocus: () =>
+    set({ pendingExternalFocusName: null, pendingExternalFocusMode: null }),
 
   selectRandomCountry: () => {
     const visible = get().getVisibleCountries();
@@ -109,19 +198,45 @@ export const useMapStore = create<MapState>((set, get) => ({
 
   setActiveChip: (chip) => set({ activeChip: chip }),
 
-  setMapMode: (mode) => set({ mapMode: mode }),
+  setMapMode: (mode) => {
+    if (mode === "3d") {
+      apply3dUiDefaults();
+    }
+    set({ mapMode: mode });
+  },
 
   toggleMapMode: () =>
-    set((state) => ({
-      mapMode: state.mapMode === "3d" ? "2d" : "3d",
-    })),
+    set((state) => {
+      const nextMode = state.mapMode === "3d" ? "2d" : "3d";
+      if (nextMode === "3d") {
+        apply3dUiDefaults();
+      }
+      return { mapMode: nextMode };
+    }),
 
-  registerGlobeCamera: (handle) => set({ globeCamera: handle }),
+  registerGlobeCamera: (handle) => {
+    set({ globeCamera: handle });
+    if (!handle) return;
+
+    const { pendingExternalFocusName, countries, mapMode } = get();
+    if (!pendingExternalFocusName || mapMode !== "3d") return;
+
+    const country =
+      resolveSelectedCountry(countries, pendingExternalFocusName) ?? null;
+    if (!country) return;
+
+    handle.focusCountry(country, 650);
+    get().clearPendingExternalFocus();
+  },
 
   focusCountryOnGlobe: (name, duration) => {
-    const country = get().countries.find((c) => c.name === name) ?? null;
+    const country = resolveSelectedCountry(get().countries, name);
     if (!country) return;
     get().globeCamera?.focusCountry(country, duration);
+  },
+
+  focusLatLngOnGlobe: (lat, lng, duration) => {
+    get().globeCamera?.focusLatLng(lat, lng, duration);
   },
 
   getVisibleCountries: () => {

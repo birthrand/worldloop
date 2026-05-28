@@ -12,8 +12,11 @@ const regionFetchPromises = new Map<string, Promise<Country[]>>();
 const DEFAULT_LIMIT = 20;
 
 type FeedStatus = "idle" | "loading" | "loadingMore" | "error";
-type FeedSortField = "name" | "population";
-type FeedSortOrder = "asc" | "desc";
+export type FeedSortField = "name" | "population";
+export type FeedSortOrder = "asc" | "desc" | "random";
+
+export const DEFAULT_FEED_SORT_FIELD: FeedSortField = "name";
+export const DEFAULT_FEED_SORT_ORDER: FeedSortOrder = "random";
 
 type ForYouSnapshot = {
   countries: Country[];
@@ -24,6 +27,8 @@ type CountryFeedState = {
   countries: Country[];
   nextCursor: string | null;
   currentIndex: number;
+  /** Bumped when opening a country from search/home so Explore remounts at index 0. */
+  focusEpoch: number;
   selectedRegion: string | null;
   sortField: FeedSortField | null;
   sortOrder: FeedSortOrder | null;
@@ -49,19 +54,61 @@ function isLoading(status: FeedStatus): boolean {
   return status === "loading" || status === "loadingMore";
 }
 
+function shuffleCountries<T>(items: T[]): T[] {
+  const list = [...items];
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [list[i], list[j]] = [list[j], list[i]];
+  }
+  return list;
+}
+
 function sortCountries(
   countries: Country[],
   sortField: FeedSortField | null,
   sortOrder: FeedSortOrder | null,
 ): Country[] {
-  if (!sortField || !sortOrder) return countries;
-  const direction = sortOrder === "asc" ? 1 : -1;
+  const field = sortField ?? DEFAULT_FEED_SORT_FIELD;
+  const order = sortOrder ?? DEFAULT_FEED_SORT_ORDER;
+
+  if (order === "random") {
+    return shuffleCountries(countries);
+  }
+
+  const direction = order === "asc" ? 1 : -1;
   return [...countries].sort((a, b) => {
-    if (sortField === "population") {
+    if (field === "population") {
       return (a.population - b.population) * direction;
     }
     return a.name.localeCompare(b.name) * direction;
   });
+}
+
+/** Keep search / deep-link focus when async feed or region loads finish. */
+function mergeFetchedWithFocusedCountry(
+  fetched: Country[],
+  priorCountries: Country[],
+  priorIndex: number,
+  sortField: FeedSortField | null,
+  sortOrder: FeedSortOrder | null,
+): { countries: Country[]; currentIndex: number } {
+  const sortedFetched = sortCountries(fetched, sortField, sortOrder);
+
+  if (priorCountries.length === 0) {
+    return { countries: sortedFetched, currentIndex: 0 };
+  }
+
+  const focused = priorCountries[priorIndex] ?? priorCountries[0];
+  if (!focused) {
+    return { countries: sortedFetched, currentIndex: 0 };
+  }
+
+  const withoutFocused = sortedFetched.filter((c) => c.name !== focused.name);
+
+  return {
+    countries: [focused, ...withoutFocused],
+    currentIndex: 0,
+  };
 }
 
 function cancelRegionPrefetch(): void {
@@ -116,9 +163,10 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
   countries: [],
   nextCursor: null,
   currentIndex: 0,
+  focusEpoch: 0,
   selectedRegion: null,
-  sortField: null,
-  sortOrder: null,
+  sortField: DEFAULT_FEED_SORT_FIELD,
+  sortOrder: DEFAULT_FEED_SORT_ORDER,
   regionCache: {},
   forYouSnapshot: null,
   status: "idle",
@@ -134,19 +182,28 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
     }
 
     try {
+      const prior = get();
       const { data, nextCursor } = await fetchFeedCountries(undefined, limit);
       await prefetchFeedHeroImages(data);
       const { sortField, sortOrder } = get();
+      const feedTail = sortCountries(data, sortField, sortOrder);
+      const { countries, currentIndex } = mergeFetchedWithFocusedCountry(
+        feedTail,
+        prior.countries,
+        prior.currentIndex,
+        sortField,
+        sortOrder,
+      );
       set({
-        countries: sortCountries(data, sortField, sortOrder),
+        countries,
         nextCursor,
-        currentIndex: 0,
+        currentIndex,
         selectedRegion: null,
-        forYouSnapshot: { countries: data, nextCursor },
+        forYouSnapshot: { countries: feedTail, nextCursor },
         status: "idle",
         error: null,
       });
-      void prefetchFeedHeroImages(data.slice(2));
+      void prefetchFeedHeroImages(countries.slice(1, 3));
       prefetchRegionsSequentially(null);
     } catch (err) {
       set({
@@ -184,25 +241,36 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
       return;
     }
 
-    if (get().selectedRegion === region) return;
+    if (get().selectedRegion === region && get().status !== "error") return;
 
-    if (get().selectedRegion === null && get().countries.length > 0) {
-      const { countries, nextCursor } = get();
-      set({
-        forYouSnapshot: { countries, nextCursor },
-      });
+    if (get().selectedRegion === null) {
+      const { forYouSnapshot, nextCursor } = get();
+      if (forYouSnapshot) {
+        set({ forYouSnapshot: { ...forYouSnapshot, nextCursor } });
+      } else if (get().countries.length > 0) {
+        set({
+          forYouSnapshot: { countries: get().countries, nextCursor },
+        });
+      }
     }
 
     const cached = get().regionCache[region];
     if (cached) {
       await prefetchFeedHeroImages(cached);
       if (requestId !== regionFilterGeneration) return;
-      const { sortField, sortOrder } = get();
+      const state = get();
+      const { countries, currentIndex } = mergeFetchedWithFocusedCountry(
+        cached,
+        state.countries,
+        state.currentIndex,
+        state.sortField,
+        state.sortOrder,
+      );
 
       set({
-        countries: sortCountries(cached, sortField, sortOrder),
+        countries,
         nextCursor: null,
-        currentIndex: 0,
+        currentIndex,
         selectedRegion: region,
         status: "idle",
         error: null,
@@ -225,17 +293,24 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
 
       await prefetchFeedHeroImages(data);
       if (requestId !== regionFilterGeneration) return;
-      const { sortField, sortOrder } = get();
+      const state = get();
+      const { countries, currentIndex } = mergeFetchedWithFocusedCountry(
+        data,
+        state.countries,
+        state.currentIndex,
+        state.sortField,
+        state.sortOrder,
+      );
 
       set({
-        countries: sortCountries(data, sortField, sortOrder),
+        countries,
         nextCursor: null,
-        currentIndex: 0,
+        currentIndex,
         selectedRegion: region,
         status: "idle",
         error: null,
       });
-      void prefetchFeedHeroImages(data.slice(2, 6));
+      void prefetchFeedHeroImages(countries.slice(0, 4));
       prefetchRegionsSequentially(region);
     } catch (err) {
       if (requestId !== regionFilterGeneration) return;
@@ -267,11 +342,23 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
       const existingNames = new Set(countries.map((c) => c.name));
       const uniqueNew = data.filter((c) => !existingNames.has(c.name));
       set((state) => {
-        const nextCountries = sortCountries(
-          [...state.countries, ...uniqueNew],
-          state.sortField,
-          state.sortOrder,
-        );
+        const appended = [...state.countries, ...uniqueNew];
+        const nextCountries =
+          (state.sortOrder ?? DEFAULT_FEED_SORT_ORDER) === "random"
+            ? appended
+            : sortCountries(
+                appended,
+                state.sortField,
+                state.sortOrder,
+              );
+        const snapshotTail = state.forYouSnapshot
+          ? sortCountries(
+              [...state.forYouSnapshot.countries, ...uniqueNew],
+              state.sortField,
+              state.sortOrder,
+            )
+          : sortCountries(uniqueNew, state.sortField, state.sortOrder);
+
         return {
           countries: nextCountries,
           nextCursor: newCursor,
@@ -280,7 +367,7 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
           ...(state.selectedRegion === null
             ? {
                 forYouSnapshot: {
-                  countries: nextCountries,
+                  countries: snapshotTail,
                   nextCursor: newCursor,
                 },
               }
@@ -307,9 +394,13 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
 
   clearSort: () => {
     set((state) => ({
-      sortField: null,
-      sortOrder: null,
-      countries: [...state.countries],
+      sortField: DEFAULT_FEED_SORT_FIELD,
+      sortOrder: DEFAULT_FEED_SORT_ORDER,
+      countries: sortCountries(
+        state.countries,
+        DEFAULT_FEED_SORT_FIELD,
+        DEFAULT_FEED_SORT_ORDER,
+      ),
       currentIndex: 0,
     }));
   },
@@ -325,13 +416,29 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
   },
 
   focusCountryInFeed: (country: Country) => {
-    const { countries } = get();
-    const existingIndex = countries.findIndex((c) => c.name === country.name);
-    if (existingIndex >= 0) {
-      set({ currentIndex: existingIndex });
+    const { forYouSnapshot, nextCursor, status, focusEpoch } = get();
+    const nextStatus = status === "loading" ? "idle" : status;
+
+    if (!forYouSnapshot || forYouSnapshot.countries.length === 0) {
+      set({
+        countries: [country],
+        currentIndex: 0,
+        focusEpoch: focusEpoch + 1,
+        status: nextStatus,
+      });
+      void get().loadInitialFeed(undefined, { force: true });
       return;
     }
-    set({ countries: [country, ...countries], currentIndex: 0 });
+
+    const tail = forYouSnapshot.countries.filter((c) => c.name !== country.name);
+
+    set({
+      countries: [country, ...tail],
+      currentIndex: 0,
+      focusEpoch: focusEpoch + 1,
+      nextCursor: forYouSnapshot.nextCursor ?? nextCursor,
+      status: nextStatus,
+    });
   },
 
   getCurrentCountry: () => {
@@ -347,9 +454,10 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
       countries: [],
       nextCursor: null,
       currentIndex: 0,
+      focusEpoch: 0,
       selectedRegion: null,
-      sortField: null,
-      sortOrder: null,
+      sortField: DEFAULT_FEED_SORT_FIELD,
+      sortOrder: DEFAULT_FEED_SORT_ORDER,
       regionCache: {},
       forYouSnapshot: null,
       status: "idle",

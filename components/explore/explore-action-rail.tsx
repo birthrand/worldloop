@@ -1,4 +1,3 @@
-import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
@@ -12,7 +11,14 @@ import {
 } from "react-native";
 
 import { GlassIconButton } from "@/components/explore/glass-icon-button";
-import { useCountryFeedStore } from "@/store/use-country-feed-store";
+import {
+  DEFAULT_FEED_SORT_FIELD,
+  DEFAULT_FEED_SORT_ORDER,
+  type FeedSortField,
+  type FeedSortOrder,
+  useCountryFeedStore,
+} from "@/store/use-country-feed-store";
+import { spotlightCountryOnMap } from "@/lib/open-country-on-map";
 import { useMapStore } from "@/store/use-map-store";
 import { useSavedCountriesStore } from "@/store/use-saved-countries-store";
 import type { Country } from "@/types/country";
@@ -21,15 +27,14 @@ type ExploreActionRailProps = {
   country: Country;
 };
 
-type SortField = "name" | "population";
-type SortOrder = "asc" | "desc";
-
-function getOrderLabels(field: SortField): { asc: string; desc: string } {
+function getOrderLabels(field: FeedSortField): { asc: string; desc: string } {
   if (field === "population") {
     return { asc: "Low → High", desc: "High → Low" };
   }
   return { asc: "A → Z", desc: "Z → A" };
 }
+
+type FeedModalTab = "explore" | "sort";
 
 type SortRadioOptionProps = {
   label: string;
@@ -64,12 +69,24 @@ export function ExploreActionRail({ country }: ExploreActionRailProps) {
   const setSort = useCountryFeedStore((s) => s.setSort);
   const saved = isSaved;
   const [isSortModalOpen, setIsSortModalOpen] = useState(false);
-  const [draftField, setDraftField] = useState<SortField>(sortField ?? "name");
-  const [draftOrder, setDraftOrder] = useState<SortOrder>(sortOrder ?? "asc");
-  const currentField = sortField ?? "name";
-  const currentOrder = sortOrder ?? "asc";
-  const hasSortChanges =
-    draftField !== currentField || draftOrder !== currentOrder;
+  const [draftTab, setDraftTab] = useState<FeedModalTab>("explore");
+  const [draftField, setDraftField] = useState<FeedSortField>(
+    sortField ?? DEFAULT_FEED_SORT_FIELD,
+  );
+  const [draftOrder, setDraftOrder] = useState<FeedSortOrder>(
+    sortOrder ?? DEFAULT_FEED_SORT_ORDER,
+  );
+  const currentField = sortField ?? DEFAULT_FEED_SORT_FIELD;
+  const currentOrder = sortOrder ?? DEFAULT_FEED_SORT_ORDER;
+  const isExploreMode = draftTab === "explore";
+  const effectiveDraftOrder: FeedSortOrder = isExploreMode
+    ? "random"
+    : draftOrder;
+  const hasSortChanges = isExploreMode
+    ? currentOrder !== "random"
+    : currentOrder === "random" ||
+      draftField !== currentField ||
+      draftOrder !== currentOrder;
   const orderLabels = getOrderLabels(draftField);
 
   const handleShare = async () => {
@@ -88,19 +105,31 @@ export function ExploreActionRail({ country }: ExploreActionRailProps) {
 
   const handleOpenSortModal = () => {
     setDraftField(currentField);
-    setDraftOrder(currentOrder);
+    setDraftOrder(currentOrder === "random" ? "asc" : currentOrder);
+    setDraftTab(currentOrder === "random" ? "explore" : "sort");
     setIsSortModalOpen(true);
   };
 
+  const handleSelectExploreTab = () => {
+    setDraftTab("explore");
+  };
+
+  const handleSelectSortTab = () => {
+    if (draftOrder === "random") {
+      setDraftOrder("asc");
+    }
+    setDraftTab("sort");
+  };
+
   const handleApplySort = () => {
-    setSort(draftField, draftOrder);
+    setSort(draftField, effectiveDraftOrder);
     setIsSortModalOpen(false);
   };
 
   const handleJumpToMap = async () => {
     try {
       await useMapStore.getState().loadMapCountries();
-      useMapStore.getState().selectCountry(country.name);
+      spotlightCountryOnMap(country);
       router.push("/(tabs)/map");
     } catch {
       Alert.alert("Map", "Unable to open map right now.");
@@ -121,25 +150,19 @@ export function ExploreActionRail({ country }: ExploreActionRailProps) {
         />
 
         <GlassIconButton
+          icon="volume-medium-outline"
+          label="Listen"
+          onPress={handleListen}
+          accessibilityLabel="Listen — coming soon"
+        />
+
+        <GlassIconButton
           icon="share-social-outline"
           label="Share"
           onPress={() => {
             void handleShare();
           }}
         />
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Listen — coming soon"
-          accessibilityState={{ disabled: true }}
-          onPress={handleListen}
-          style={({ pressed }) => [styles.hitArea, pressed && styles.pressed]}
-        >
-          <View style={[styles.circle, styles.disabledCircle]}>
-            <Ionicons name="volume-medium-outline" size={28} color="#94a3b8" />
-          </View>
-          <Text style={styles.disabledLabel}>Listen</Text>
-        </Pressable>
 
         <GlassIconButton
           icon="globe-outline"
@@ -172,43 +195,103 @@ export function ExploreActionRail({ country }: ExploreActionRailProps) {
             onPress={() => setIsSortModalOpen(false)}
           />
           <View style={styles.modalCard}>
-            <Text style={styles.sectionLabel}>Sort by</Text>
-            <View
-              accessibilityRole="radiogroup"
-              accessibilityLabel="Sort by"
-              style={styles.radioGroup}
-            >
-              <SortRadioOption
-                label="Name"
-                selected={draftField === "name"}
-                onPress={() => setDraftField("name")}
-              />
-              <SortRadioOption
-                label="Population"
-                selected={draftField === "population"}
-                onPress={() => setDraftField("population")}
-              />
+            <View style={styles.modeToggleWrap}>
+              {(
+                [
+                  { id: "explore" as const, label: "Explore" },
+                  { id: "sort" as const, label: "Sort" },
+                ] as const
+              ).map((tab) => {
+                const active =
+                  tab.id === "explore" ? isExploreMode : !isExploreMode;
+                return (
+                  <Pressable
+                    key={tab.id}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    accessibilityLabel={
+                      tab.id === "explore" ? "Explore feed mode" : "Sort feed"
+                    }
+                    onPress={
+                      tab.id === "explore"
+                        ? handleSelectExploreTab
+                        : handleSelectSortTab
+                    }
+                    style={({ pressed }) => [
+                      styles.modeToggleButton,
+                      active && styles.modeToggleButtonActive,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.modeToggleLabel,
+                        active && styles.modeToggleLabelActive,
+                      ]}
+                    >
+                      {tab.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </View>
 
-            <View style={styles.sectionDivider} />
+            {isExploreMode ? (
+              <View
+                accessibilityRole="radiogroup"
+                accessibilityLabel="Explore"
+                style={styles.tabPanel}
+              >
+                <SortRadioOption
+                  label="Random"
+                  selected
+                  onPress={handleSelectExploreTab}
+                />
+                {/* <Text style={styles.tabHint}>
+                  Swipe through countries in a shuffled order.
+                </Text> */}
+              </View>
+            ) : (
+              <View style={styles.tabPanel}>
+                <Text style={styles.sectionLabel}>Sort by</Text>
+                <View
+                  accessibilityRole="radiogroup"
+                  accessibilityLabel="Sort by"
+                  style={styles.radioGroup}
+                >
+                  <SortRadioOption
+                    label="Name"
+                    selected={draftField === "name"}
+                    onPress={() => setDraftField("name")}
+                  />
+                  <SortRadioOption
+                    label="Population"
+                    selected={draftField === "population"}
+                    onPress={() => setDraftField("population")}
+                  />
+                </View>
 
-            <Text style={styles.sectionLabel}>Order</Text>
-            <View
-              accessibilityRole="radiogroup"
-              accessibilityLabel="Order"
-              style={styles.radioGroup}
-            >
-              <SortRadioOption
-                label={orderLabels.asc}
-                selected={draftOrder === "asc"}
-                onPress={() => setDraftOrder("asc")}
-              />
-              <SortRadioOption
-                label={orderLabels.desc}
-                selected={draftOrder === "desc"}
-                onPress={() => setDraftOrder("desc")}
-              />
-            </View>
+                <View style={styles.sectionDivider} />
+
+                <Text style={styles.sectionLabel}>Order</Text>
+                <View
+                  accessibilityRole="radiogroup"
+                  accessibilityLabel="Order"
+                  style={styles.radioGroup}
+                >
+                  <SortRadioOption
+                    label={orderLabels.asc}
+                    selected={draftOrder === "asc"}
+                    onPress={() => setDraftOrder("asc")}
+                  />
+                  <SortRadioOption
+                    label={orderLabels.desc}
+                    selected={draftOrder === "desc"}
+                    onPress={() => setDraftOrder("desc")}
+                  />
+                </View>
+              </View>
+            )}
 
             <View style={styles.sectionDivider} />
 
@@ -291,7 +374,47 @@ const styles = StyleSheet.create({
     backgroundColor: "#111827",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.14)",
-    gap: 6,
+    gap: 8,
+  },
+  modeToggleWrap: {
+    flexDirection: "row",
+    borderRadius: 10,
+    backgroundColor: "rgba(255, 255, 255, 0.07)",
+    padding: 3,
+    gap: 4,
+    marginBottom: 4,
+    overflow: "hidden",
+  },
+  modeToggleButton: {
+    flex: 1,
+    minHeight: 34,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 0,
+  },
+  modeToggleButtonActive: {
+    backgroundColor: "rgba(251, 191, 36, 0.65)",
+    borderWidth: 0,
+    borderTopWidth: 0,
+  },
+  modeToggleLabel: {
+    fontSize: 12,
+    fontFamily: "Poppins-Regular",
+    color: "rgba(255,255,255,0.85)",
+  },
+  modeToggleLabelActive: {
+    color: "#ffffff",
+    fontFamily: "Poppins-SemiBold",
+  },
+  tabPanel: {
+    gap: 4,
+  },
+  tabHint: {
+    marginLeft: 30,
+    fontSize: 12,
+    fontFamily: "Poppins-Regular",
+    color: "rgba(255, 255, 255, 0.45)",
   },
   modalTitle: {
     fontSize: 18,

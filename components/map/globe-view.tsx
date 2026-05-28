@@ -1,4 +1,9 @@
-import { Canvas, useFrame, useThree } from "@react-three/fiber/native";
+import {
+  Canvas,
+  type ThreeEvent,
+  useFrame,
+  useThree,
+} from "@react-three/fiber/native";
 import {
   forwardRef,
   useCallback,
@@ -6,19 +11,32 @@ import {
   useImperativeHandle,
   useMemo,
   useRef,
+  useState,
 } from "react";
 import { StyleSheet, View } from "react-native";
 import * as THREE from "three";
 
+import { GlobeBoundaryLines } from "@/components/map/globe-boundary-lines";
 import { GlobeCountryPin } from "@/components/map/globe-country-pin";
+import { GlobeLabelOverlay } from "@/components/map/globe-label-overlay";
+import { GlobeLabelProjector } from "@/components/map/globe-label-projector";
 import {
   createGlobeOrbitControls,
   type GlobeOrbitControls,
 } from "@/lib/globe-orbit-controls";
+import {
+  buildGlobeVisibleLabels,
+  globeLabelPositionsChanged,
+  type GlobeLabelScreenPosition,
+} from "@/lib/globe-labels";
 import { latLngToVector3 } from "@/lib/latlng-to-sphere";
 import { useGlobeTexture } from "@/lib/load-globe-texture";
-import { isValidLatLng } from "@/lib/map-country";
+import type { MapCluster } from "@/lib/map-clusters";
+import { getMapDisplayLatLng, isValidLatLng } from "@/lib/map-country";
+import type { MapPressCoordinate } from "@/lib/map-map-tap-hit";
 import { useMapStore, type GlobeCameraHandle } from "@/store/use-map-store";
+import type { CountryMarkerDisplayMode } from "@/store/use-map-ui-store";
+import { isGlobeYellowPinsVisible } from "@/store/use-map-ui-store";
 import type { MapCountry } from "@/types/country";
 
 // Some Three.js RN helpers expect THREE on globalThis.
@@ -29,9 +47,10 @@ globalWithThree.THREE = globalWithThree.THREE ?? THREE;
 
 const GLOBE_RADIUS = 1;
 const PIN_RADIUS = GLOBE_RADIUS * 1.02;
-const DEFAULT_CAMERA_DISTANCE = 2.5;
 const MIN_CAMERA_DISTANCE = 1.4;
 const MAX_CAMERA_DISTANCE = 4;
+/** World view starts fully zoomed out (same as reset / zoom-out limit). */
+const DEFAULT_CAMERA_DISTANCE = MAX_CAMERA_DISTANCE;
 
 /** Camera sits on the Atlantic side so Americas + Europe/Africa pins are visible first. */
 const INITIAL_CAMERA_POSITION = latLngToVector3(
@@ -47,24 +66,84 @@ type CameraFlight = {
   duration: number;
 };
 
+/** Fires once after the GL canvas renders its first frame. */
+function GlobePaintNotifier({ onPainted }: { onPainted: () => void }) {
+  const paintedRef = useRef(false);
+
+  useFrame(() => {
+    if (paintedRef.current) return;
+    paintedRef.current = true;
+    onPainted();
+  });
+
+  return null;
+}
+
 type GlobeSceneProps = {
   countries: MapCountry[];
+  visibleLabels: ReturnType<typeof buildGlobeVisibleLabels>;
+  boundaryCountries: MapCountry[];
+  selectedName: string | null;
+  focusedRegion: string | null;
+  countryMarkerMode: CountryMarkerDisplayMode;
   controls: GlobeOrbitControls;
   onReady: (handle: GlobeCameraHandle) => void;
+  onCanvasPainted?: () => void;
+  onLabelPositions: (positions: GlobeLabelScreenPosition[]) => void;
+  onGlobeSurfacePress: (coordinate: MapPressCoordinate) => void;
+  lockUserGestures: boolean;
 };
 
-function GlobeScene({ countries, controls, onReady }: GlobeSceneProps) {
+function GlobeScene({
+  countries,
+  visibleLabels,
+  boundaryCountries,
+  selectedName,
+  focusedRegion,
+  countryMarkerMode,
+  controls,
+  onReady,
+  onCanvasPainted,
+  onLabelPositions,
+  onGlobeSurfacePress,
+  lockUserGestures,
+}: GlobeSceneProps) {
   const texture = useGlobeTexture();
   const { camera } = useThree();
+  const selectCountry = useMapStore((s) => s.selectCountry);
+  const focusCountryOnGlobe = useMapStore((s) => s.focusCountryOnGlobe);
+  const highlightedName = selectedName;
+
+  const handlePinPress = useCallback(
+    (country: MapCountry) => {
+      selectCountry(country.name);
+      focusCountryOnGlobe(country.name, 450);
+    },
+    [focusCountryOnGlobe, selectCountry],
+  );
+
+  const handleGlobeSurfacePress = useCallback(
+    (event: ThreeEvent<MouseEvent>) => {
+      event.stopPropagation();
+      const normal = event.point.clone().normalize();
+      const latitude = THREE.MathUtils.radToDeg(Math.asin(normal.y));
+      const thetaDeg = THREE.MathUtils.radToDeg(Math.atan2(normal.z, -normal.x));
+      const longitude = THREE.MathUtils.euclideanModulo(
+        thetaDeg,
+        360,
+      ) - 180;
+      onGlobeSurfacePress({ latitude, longitude });
+    },
+    [onGlobeSurfacePress],
+  );
+
+  const showYellowPins = isGlobeYellowPinsVisible(countryMarkerMode);
 
   const flightRef = useRef<CameraFlight | null>(null);
   const cameraDistanceRef = useRef(DEFAULT_CAMERA_DISTANCE);
 
-  const focusCountry = useCallback(
-    (country: MapCountry, duration = 650) => {
-      if (!isValidLatLng(country.latlng)) return;
-
-      const [lat, lng] = country.latlng;
+  const focusLatLng = useCallback(
+    (lat: number, lng: number, duration = 650) => {
       const direction = new THREE.Vector3(
         ...latLngToVector3(lat, lng, 1),
       ).normalize();
@@ -80,6 +159,15 @@ function GlobeScene({ countries, controls, onReady }: GlobeSceneProps) {
       };
     },
     [camera],
+  );
+
+  const focusCountry = useCallback(
+    (country: MapCountry, duration = 650) => {
+      if (!isValidLatLng(country.latlng)) return;
+      const [lat, lng] = getMapDisplayLatLng(country);
+      focusLatLng(lat, lng, duration);
+    },
+    [focusLatLng],
   );
 
   const resetCamera = useCallback(() => {
@@ -112,10 +200,16 @@ function GlobeScene({ countries, controls, onReady }: GlobeSceneProps) {
   );
 
   useEffect(() => {
+    if (!flightRef.current) {
+      controls.scope.enabled = !lockUserGestures;
+    }
+  }, [controls.scope, lockUserGestures]);
+
+  useEffect(() => {
     controls.scope.camera = camera as THREE.PerspectiveCamera;
     controls.scope.enablePan = false;
     controls.scope.dampingFactor = 0.05;
-    controls.scope.rotateSpeed = 0.65;
+    controls.scope.rotateSpeed = 0.9;
     controls.scope.zoomSpeed = 0.5;
     controls.scope.minZoom = MIN_CAMERA_DISTANCE;
     controls.scope.maxZoom = MAX_CAMERA_DISTANCE;
@@ -130,13 +224,14 @@ function GlobeScene({ countries, controls, onReady }: GlobeSceneProps) {
   useEffect(() => {
     const handle: GlobeCameraHandle = {
       focusCountry,
+      focusLatLng,
       resetCamera,
       zoomBy,
     };
     onReady(handle);
     useMapStore.getState().registerGlobeCamera(handle);
     return () => useMapStore.getState().registerGlobeCamera(null);
-  }, [focusCountry, onReady, resetCamera, zoomBy]);
+  }, [focusCountry, focusLatLng, onReady, resetCamera, zoomBy]);
 
   useFrame((_, delta) => {
     const flight = flightRef.current;
@@ -153,17 +248,20 @@ function GlobeScene({ countries, controls, onReady }: GlobeSceneProps) {
 
       if (progress >= 1) {
         flightRef.current = null;
-        controls.scope.enabled = true;
+        controls.scope.enabled = !lockUserGestures;
       }
       return;
     }
 
-    controls.scope.enabled = true;
+    controls.scope.enabled = !lockUserGestures;
     controls.functions.update();
   });
 
   return (
     <>
+      {onCanvasPainted ? (
+        <GlobePaintNotifier onPainted={onCanvasPainted} />
+      ) : null}
       <color attach="background" args={["#000000"]} />
 
       <ambientLight intensity={3} />
@@ -180,18 +278,45 @@ function GlobeScene({ countries, controls, onReady }: GlobeSceneProps) {
           metalness={0.05}
         />
       </mesh>
+      <mesh
+        onClick={handleGlobeSurfacePress}
+        onPointerDown={handleGlobeSurfacePress}
+      >
+        <sphereGeometry args={[GLOBE_RADIUS * 1.01, 64, 64]} />
+        <meshBasicMaterial
+          transparent
+          opacity={0}
+          depthWrite={false}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
 
-      {countries.map((country) => {
-        if (!isValidLatLng(country.latlng)) return null;
-        const [lat, lng] = country.latlng;
-        return (
-          <GlobeCountryPin
-            key={country.name}
-            country={country}
-            position={latLngToVector3(lat, lng, PIN_RADIUS)}
-          />
-        );
-      })}
+      <GlobeBoundaryLines
+        boundaryCountries={boundaryCountries}
+        selectedName={selectedName}
+        focusedRegion={focusedRegion}
+      />
+
+      <GlobeLabelProjector
+        labels={visibleLabels}
+        onPositions={onLabelPositions}
+      />
+
+      {showYellowPins
+        ? countries.map((country) => {
+            if (!isValidLatLng(country.latlng)) return null;
+            const [lat, lng] = getMapDisplayLatLng(country);
+            return (
+              <GlobeCountryPin
+                key={country.name}
+                country={country}
+                position={latLngToVector3(lat, lng, PIN_RADIUS)}
+                isSelected={highlightedName === country.name}
+                onPress={handlePinPress}
+              />
+            );
+          })
+        : null}
     </>
   );
 }
@@ -200,19 +325,86 @@ export type GlobeViewHandle = GlobeCameraHandle;
 
 type GlobeViewProps = {
   countries: MapCountry[];
-  onBackgroundPress: () => void;
+  clusters: MapCluster[];
+  /** Full continent clusters — used for label anchors even when region pins are hidden. */
+  labelClusters: MapCluster[];
+  boundaryCountries: MapCountry[];
+  selectedName: string | null;
+  focusedRegion: string | null;
+  countryMarkerMode?: CountryMarkerDisplayMode;
+  onCountryPress: (country: MapCountry) => void;
+  onClusterPress: (cluster: MapCluster) => void;
+  onBackgroundPress: (coordinate?: MapPressCoordinate) => void;
+  onCanvasPainted?: () => void;
+  lockUserGestures?: boolean;
 };
 
 export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
-  function GlobeView({ countries, onBackgroundPress }, ref) {
+  function GlobeView(
+    {
+      countries,
+      clusters,
+      labelClusters,
+      boundaryCountries,
+      selectedName,
+      focusedRegion,
+      countryMarkerMode = "flag",
+      onCountryPress,
+      onClusterPress,
+      onBackgroundPress,
+      onCanvasPainted,
+      lockUserGestures = false,
+    },
+    ref,
+  ) {
     const handleRef = useRef<GlobeCameraHandle | null>(null);
     const controls = useMemo(() => createGlobeOrbitControls(), []);
+    const [labelPositions, setLabelPositions] = useState<
+      GlobeLabelScreenPosition[]
+    >([]);
+
+    const selectedCountry = useMemo(
+      () =>
+        selectedName
+          ? (countries.find((country) => country.name === selectedName) ??
+            null)
+          : null,
+      [countries, selectedName],
+    );
+
+    const visibleLabels = useMemo(
+      () =>
+        buildGlobeVisibleLabels({
+          clusters: labelClusters,
+          selectedCountry,
+        }),
+      [labelClusters, selectedCountry],
+    );
+
+    const continentClustersByRegion = useMemo(
+      () => new Map(labelClusters.map((cluster) => [cluster.region, cluster])),
+      [labelClusters],
+    );
+
+    const handleLabelPositions = useCallback(
+      (positions: GlobeLabelScreenPosition[]) => {
+        setLabelPositions((prev) => {
+          if (!globeLabelPositionsChanged(prev, positions)) {
+            return prev;
+          }
+          return positions;
+        });
+      },
+      [],
+    );
 
     useImperativeHandle(
       ref,
       () => ({
         focusCountry: (country, duration) =>
           handleRef.current?.focusCountry(country, duration),
+        focusLatLng: (lat, lng, duration) =>
+          handleRef.current?.focusLatLng(lat, lng, duration),
         resetCamera: () => handleRef.current?.resetCamera(),
         zoomBy: (direction) => handleRef.current?.zoomBy(direction),
       }),
@@ -226,6 +418,12 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
     const handleBackgroundPress = useCallback(() => {
       onBackgroundPress();
     }, [onBackgroundPress]);
+    const handleGlobeSurfacePress = useCallback(
+      (coordinate: MapPressCoordinate) => {
+        onBackgroundPress(coordinate);
+      },
+      [onBackgroundPress],
+    );
 
     return (
       <View style={styles.container} {...controls.events}>
@@ -242,10 +440,26 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
         >
           <GlobeScene
             countries={countries}
+            visibleLabels={visibleLabels}
+            boundaryCountries={boundaryCountries}
+            selectedName={selectedName}
+            focusedRegion={focusedRegion}
+            countryMarkerMode={countryMarkerMode}
             controls={controls}
             onReady={handleReady}
+            onCanvasPainted={onCanvasPainted}
+            onLabelPositions={handleLabelPositions}
+            onGlobeSurfacePress={handleGlobeSurfacePress}
+            lockUserGestures={lockUserGestures}
           />
         </Canvas>
+
+        <GlobeLabelOverlay
+          labels={visibleLabels}
+          positions={labelPositions}
+          continentClustersByRegion={continentClustersByRegion}
+          onContinentPress={onClusterPress}
+        />
       </View>
     );
   },

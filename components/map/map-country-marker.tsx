@@ -1,24 +1,43 @@
 import { Image } from "expo-image";
+import { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Marker } from "react-native-maps";
 
 import { resolveFlagCdnUrl } from "@/lib/flag-url";
-import { cca2FromFlagUrl } from "@/lib/map-country";
+import { cca2FromFlagUrl, getMapDisplayLatLng } from "@/lib/map-country";
+import type { CountryMarkerDisplayMode } from "@/store/use-map-ui-store";
 import type { MapCountry } from "@/types/country";
 
 type MapCountryMarkerProps = {
   country: MapCountry;
   selected: boolean;
+  displayMode?: CountryMarkerDisplayMode;
   onPress: () => void;
 };
 
 export function MapCountryMarker({
   country,
   selected,
+  displayMode = "flag",
   onPress,
 }: MapCountryMarkerProps) {
-  const [latitude, longitude] = country.latlng;
-  const flagUri = resolveFlagCdnUrl(country.flag, cca2FromFlagUrl(country.flag));
+  const showFlag = displayMode === "flag";
+  const [latitude, longitude] = getMapDisplayLatLng(country);
+  const flagUri = resolveFlagCdnUrl(
+    country.flag,
+    cca2FromFlagUrl(country.flag),
+  );
+
+  const [tracksViewChanges, setTracksViewChanges] = useState(true);
+
+  useEffect(() => {
+    if (displayMode === "hidden") return;
+    setTracksViewChanges(true);
+    const timer = setTimeout(() => setTracksViewChanges(false), 400);
+    return () => clearTimeout(timer);
+  }, [selected, displayMode, flagUri]);
+
+  if (!showFlag) return null;
 
   return (
     <Marker
@@ -27,7 +46,7 @@ export function MapCountryMarker({
         event.stopPropagation?.();
         onPress();
       }}
-      tracksViewChanges={selected}
+      tracksViewChanges={tracksViewChanges}
     >
       <View style={styles.wrapper} pointerEvents="box-none">
         <View style={[styles.pin, selected && styles.pinSelected]}>
@@ -41,11 +60,11 @@ export function MapCountryMarker({
             <Text style={styles.flagEmoji}>🏳️</Text>
           )}
         </View>
-        <View style={styles.labelRow}>
+        {/* <View style={styles.labelRow}>
           <Text style={styles.countryName} numberOfLines={1}>
             {country.name}
           </Text>
-        </View>
+        </View> */}
       </View>
     </Marker>
   );

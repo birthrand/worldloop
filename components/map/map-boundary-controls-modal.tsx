@@ -18,8 +18,11 @@ import {
   clampBoundaryStep,
   DEFAULT_MAP_BOUNDARY_STYLE,
   displayPercentToFillOpacityStep,
+  displayPercentToStrokeOpacityStep,
   fillOpacityStepToDisplayPercent,
+  strokeOpacityStepToDisplayPercent,
   type MapBoundaryStyleSettings,
+  type MapFillColorMode,
 } from "@/constants/map-boundary-style";
 import { hexToHue, hueToHex } from "@/lib/color-utils";
 import { useMapUiStore } from "@/store/use-map-ui-store";
@@ -112,12 +115,21 @@ function FeatureToggleRow({
 type ColorFieldProps = {
   label: string;
   hue: number;
+  colorHex: string | null;
   disabled?: boolean;
   onHueChange: (hue: number) => void;
+  onHexChange: (hex: string | null) => void;
 };
 
-function ColorField({ label, hue, disabled = false, onHueChange }: ColorFieldProps) {
-  const previewHex = hueToHex(hue).toUpperCase();
+function ColorField({
+  label,
+  hue,
+  colorHex,
+  disabled = false,
+  onHueChange,
+  onHexChange,
+}: ColorFieldProps) {
+  const previewHex = (colorHex ?? hueToHex(hue)).toUpperCase();
   const [hexDraft, setHexDraft] = useState(previewHex);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [liveHue, setLiveHue] = useState(hue);
@@ -132,6 +144,7 @@ function ColorField({ label, hue, disabled = false, onHueChange }: ColorFieldPro
   const commitHex = (text: string) => {
     const parsedHue = hexToHue(text);
     if (parsedHue !== null) {
+      onHexChange(text.toUpperCase());
       onHueChange(parsedHue);
     }
   };
@@ -150,30 +163,20 @@ function ColorField({ label, hue, disabled = false, onHueChange }: ColorFieldPro
             disabled && styles.colorSwatchSquareDisabled,
           ]}
         />
-        <TextInput
-          style={[styles.hexInput, disabled && styles.hexInputDisabled]}
-          value={hexDraft}
-          editable={!disabled}
-          autoCapitalize="characters"
-          autoCorrect={false}
-          maxLength={7}
+        <View
           accessibilityLabel={`${label} hex value`}
-          onChangeText={(text) => {
-            const normalized = text.startsWith("#") ? text : `#${text}`;
-            setHexDraft(normalized.toUpperCase());
-            if (normalized.length === 7) {
-              commitHex(normalized);
-            }
-          }}
-          onBlur={() => {
-            const parsedHue = hexToHue(hexDraft);
-            if (parsedHue === null) {
-              setHexDraft(previewHex);
-              return;
-            }
-            commitHex(hexDraft);
-          }}
-        />
+          accessibilityRole="text"
+          style={[styles.hexInput, styles.hexInputReadonly]}
+        >
+          <Text
+            style={[
+              styles.hexReadonlyText,
+              disabled && styles.hexInputDisabled,
+            ]}
+          >
+            {hexDraft}
+          </Text>
+        </View>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`${label} hue picker`}
@@ -206,6 +209,7 @@ function ColorField({ label, hue, disabled = false, onHueChange }: ColorFieldPro
           accessibilityLabel={`${label} hue slider`}
           onValueChange={(nextHue) => {
             setLiveHue(nextHue);
+            onHexChange(null);
             onHueChange(nextHue);
             setHexDraft(hueToHex(nextHue).toUpperCase());
           }}
@@ -227,7 +231,54 @@ type SliderWithValueProps = {
   formatDisplay: (value: number) => string;
   parseDisplay: (text: string) => number | null;
   onValueChange: (value: number) => void;
+  showValueInput?: boolean;
 };
+
+type FillColorModeToggleProps = {
+  mode: MapFillColorMode;
+  disabled?: boolean;
+  onModeChange: (mode: MapFillColorMode) => void;
+};
+
+function FillColorModeToggle({
+  mode,
+  disabled = false,
+  onModeChange,
+}: FillColorModeToggleProps) {
+  return (
+    <View
+      style={[styles.modeToggleWrap, disabled && styles.settingBlockDisabled]}
+      pointerEvents={disabled ? "none" : "auto"}
+    >
+      {(["hue", "grayscale"] as const).map((option) => {
+        const active = option === mode;
+        return (
+          <Pressable
+            key={option}
+            accessibilityRole="button"
+            accessibilityState={{ selected: active, disabled }}
+            accessibilityLabel={`Fill color mode ${option}`}
+            onPress={() => onModeChange(option)}
+            style={({ pressed }) => [
+              styles.modeToggleButton,
+              active && styles.modeToggleButtonActive,
+              pressed && !disabled && styles.pressed,
+            ]}
+          >
+            <Text
+              style={[
+                styles.modeToggleLabel,
+                active && styles.modeToggleLabelActive,
+              ]}
+            >
+              {option === "hue" ? "Hue" : "Grayscale"}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
 
 function SliderWithValue({
   value,
@@ -241,6 +292,7 @@ function SliderWithValue({
   formatDisplay,
   parseDisplay,
   onValueChange,
+  showValueInput = true,
 }: SliderWithValueProps) {
   const [valueDraft, setValueDraft] = useState(formatDisplay(value));
 
@@ -279,28 +331,30 @@ function SliderWithValue({
           </View>
         ) : null}
       </View>
-      <View style={styles.valueFieldGroup}>
-        <TextInput
-          style={styles.valueInput}
-          value={valueDraft}
-          editable={!disabled}
-          keyboardType="number-pad"
-          maxLength={3}
-          accessibilityLabel={`${accessibilityLabel} value`}
-          onChangeText={(text) => {
-            setValueDraft(text.replace(/[^0-9]/g, ""));
-          }}
-          onBlur={() => {
-            const parsed = parseDisplay(valueDraft);
-            if (parsed === null) {
-              setValueDraft(formatDisplay(value));
-              return;
-            }
-            onValueChange(parsed);
-          }}
-        />
-        <Text style={styles.valueUnit}>{unit}</Text>
-      </View>
+      {showValueInput ? (
+        <View style={styles.valueFieldGroup}>
+          <TextInput
+            style={styles.valueInput}
+            value={valueDraft}
+            editable={!disabled}
+            keyboardType="number-pad"
+            maxLength={3}
+            accessibilityLabel={`${accessibilityLabel} value`}
+            onChangeText={(text) => {
+              setValueDraft(text.replace(/[^0-9]/g, ""));
+            }}
+            onBlur={() => {
+              const parsed = parseDisplay(valueDraft);
+              if (parsed === null) {
+                setValueDraft(formatDisplay(value));
+                return;
+              }
+              onValueChange(parsed);
+            }}
+          />
+          <Text style={styles.valueUnit}>{unit}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -328,6 +382,7 @@ export function MapBoundaryControlsModal({
     setBoundaryStyle({
       ...draft,
       strokeThicknessStep: clampBoundaryStep(draft.strokeThicknessStep),
+      strokeOpacityStep: clampBoundaryStep(draft.strokeOpacityStep),
       fillOpacityStep: clampBoundaryStep(draft.fillOpacityStep),
       strokeWidthEnabled: draft.strokeColorEnabled,
     });
@@ -337,7 +392,7 @@ export function MapBoundaryControlsModal({
   const handleResetDefaults = () => {
     setDraft(DEFAULT_MAP_BOUNDARY_STYLE);
     resetBoundaryStyle();
-    onClose();
+    // onClose();
   };
 
   const setBoundaryEnabled = (strokeColorEnabled: boolean) => {
@@ -364,6 +419,7 @@ export function MapBoundaryControlsModal({
         />
         <View style={styles.modalCard}>
           <View style={styles.modalHeader}>
+            <View style={styles.headerSideSpacer} />
             <Text style={styles.modalTitle}>Boundary style</Text>
             <Pressable
               accessibilityRole="button"
@@ -377,6 +433,8 @@ export function MapBoundaryControlsModal({
               <Ionicons name="close" size={18} color="rgba(255,255,255,0.9)" />
             </Pressable>
           </View>
+
+          <View style={styles.sectionDivider} />
 
           <ScrollView
             showsVerticalScrollIndicator={false}
@@ -400,15 +458,20 @@ export function MapBoundaryControlsModal({
             <ColorField
               label="Boundary color"
               hue={draft.strokeColorHue}
+              colorHex={draft.strokeColorHex}
               disabled={!boundaryEnabled}
               onHueChange={(strokeColorHue) =>
                 setDraft((current) => ({ ...current, strokeColorHue }))
+              }
+              onHexChange={(strokeColorHex) =>
+                setDraft((current) => ({ ...current, strokeColorHex }))
               }
             />
 
             <View
               style={[
                 styles.settingBlock,
+                styles.compactSliderBlock,
                 !boundaryEnabled && styles.settingBlockDisabled,
               ]}
               pointerEvents={boundaryEnabled ? "auto" : "none"}
@@ -422,6 +485,7 @@ export function MapBoundaryControlsModal({
                 disabled={!boundaryEnabled}
                 accessibilityLabel="Boundary thickness"
                 tickCount={5}
+                showValueInput={false}
                 formatDisplay={(step) => String(step)}
                 parseDisplay={(text) => {
                   const parsed = Number.parseInt(text, 10);
@@ -439,51 +503,145 @@ export function MapBoundaryControlsModal({
               />
             </View>
 
-            <ColorField
-              label="Fill color"
-              hue={draft.fillColorHue}
-              disabled={!draft.fillEnabled}
-              onHueChange={(fillColorHue) =>
-                setDraft((current) => ({ ...current, fillColorHue }))
-              }
-            />
-
             <View
               style={[
                 styles.settingBlock,
-                !draft.fillEnabled && styles.settingBlockDisabled,
+                styles.compactSliderBlock,
+                !boundaryEnabled && styles.settingBlockDisabled,
               ]}
-              pointerEvents={draft.fillEnabled ? "auto" : "none"}
+              pointerEvents={boundaryEnabled ? "auto" : "none"}
             >
-              <Text style={styles.fieldLabel}>Fill opacity</Text>
+              <Text style={styles.fieldLabel}>Line opacity</Text>
               <SliderWithValue
-                value={draft.fillOpacityStep}
+                value={draft.strokeOpacityStep}
                 min={BOUNDARY_STEP_MIN}
                 max={BOUNDARY_STEP_MAX}
                 unit="%"
-                disabled={!draft.fillEnabled}
-                accessibilityLabel="Fill opacity"
+                disabled={!boundaryEnabled}
+                accessibilityLabel="Boundary line opacity"
                 tickCount={0}
-                endLabels={["0%", "50%", "100%"]}
+                endLabels={["Subtle", "50%", "Strong"]}
+                showValueInput={false}
                 formatDisplay={(step) =>
-                  String(fillOpacityStepToDisplayPercent(step))
+                  String(strokeOpacityStepToDisplayPercent(step))
                 }
                 parseDisplay={(text) => {
                   const parsed = Number.parseInt(text, 10);
                   if (Number.isNaN(parsed)) {
                     return null;
                   }
-                  return displayPercentToFillOpacityStep(parsed);
+                  return displayPercentToStrokeOpacityStep(parsed);
                 }}
-                onValueChange={(fillOpacityStep) =>
+                onValueChange={(strokeOpacityStep) =>
                   setDraft((current) => ({
                     ...current,
-                    fillOpacityStep: clampBoundaryStep(fillOpacityStep),
+                    strokeOpacityStep: clampBoundaryStep(strokeOpacityStep),
                   }))
                 }
               />
             </View>
+
+            {draft.fillEnabled ? (
+              <>
+                <View style={styles.sectionDivider} />
+
+                <ColorField
+                  label="Fill color"
+                  hue={draft.fillColorHue}
+                  colorHex={draft.fillColorHex}
+                  disabled={draft.fillColorMode !== "hue"}
+                  onHueChange={(fillColorHue) =>
+                    setDraft((current) => ({ ...current, fillColorHue }))
+                  }
+                  onHexChange={(fillColorHex) =>
+                    setDraft((current) => ({ ...current, fillColorHex }))
+                  }
+                />
+
+                <View style={styles.settingBlock}>
+                  <Text style={styles.fieldLabel}>Fill color mode</Text>
+                  <FillColorModeToggle
+                    mode={draft.fillColorMode}
+                    disabled={false}
+                    onModeChange={(fillColorMode) =>
+                      setDraft((current) => ({ ...current, fillColorMode }))
+                    }
+                  />
+                </View>
+
+                {draft.fillColorMode === "grayscale" ? (
+                  <View style={styles.settingBlock}>
+                    <Text style={styles.fieldLabel}>Grayscale level</Text>
+                    <SliderWithValue
+                      value={draft.fillGrayLevel}
+                      min={0}
+                      max={100}
+                      unit="%"
+                      disabled={false}
+                      accessibilityLabel="Fill grayscale level"
+                      tickCount={0}
+                      endLabels={["Black", "Gray", "White"]}
+                      showValueInput={false}
+                      formatDisplay={(level) => String(Math.round(level))}
+                      parseDisplay={(text) => {
+                        const parsed = Number.parseInt(text, 10);
+                        if (Number.isNaN(parsed)) return null;
+                        return Math.min(100, Math.max(0, parsed));
+                      }}
+                      onValueChange={(fillGrayLevel) =>
+                        setDraft((current) => ({
+                          ...current,
+                          fillGrayLevel: Math.min(
+                            100,
+                            Math.max(0, fillGrayLevel),
+                          ),
+                        }))
+                      }
+                    />
+                  </View>
+                ) : null}
+
+                <View
+                  style={[
+                    styles.settingBlock,
+                    styles.compactSliderBlock,
+                    styles.fillOpacityBlock,
+                  ]}
+                >
+                  <Text style={styles.fieldLabel}>Fill opacity</Text>
+                  <SliderWithValue
+                    value={draft.fillOpacityStep}
+                    min={BOUNDARY_STEP_MIN}
+                    max={BOUNDARY_STEP_MAX}
+                    unit="%"
+                    disabled={false}
+                    accessibilityLabel="Fill opacity"
+                    tickCount={0}
+                    endLabels={["Subtle", "50%", "Strong"]}
+                    showValueInput={false}
+                    formatDisplay={(step) =>
+                      String(fillOpacityStepToDisplayPercent(step))
+                    }
+                    parseDisplay={(text) => {
+                      const parsed = Number.parseInt(text, 10);
+                      if (Number.isNaN(parsed)) {
+                        return null;
+                      }
+                      return displayPercentToFillOpacityStep(parsed);
+                    }}
+                    onValueChange={(fillOpacityStep) =>
+                      setDraft((current) => ({
+                        ...current,
+                        fillOpacityStep: clampBoundaryStep(fillOpacityStep),
+                      }))
+                    }
+                  />
+                </View>
+              </>
+            ) : null}
           </ScrollView>
+
+          <View style={styles.sectionDivider} />
 
           <View style={styles.modalActions}>
             <Pressable
@@ -544,11 +702,11 @@ const styles = StyleSheet.create({
   modalCard: {
     width: "100%",
     maxWidth: 360,
-    maxHeight: "90%",
+    maxHeight: "88%",
     borderRadius: 16,
-    paddingHorizontal: 18,
-    paddingTop: 18,
-    paddingBottom: 16,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 12,
     backgroundColor: "#111827",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.12)",
@@ -557,12 +715,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 14,
+    marginBottom: 10,
+  },
+  headerSideSpacer: {
+    width: 32,
+    height: 32,
   },
   modalTitle: {
+    flex: 1,
     fontSize: 18,
     fontFamily: "Poppins-SemiBold",
     color: "#ffffff",
+    textAlign: "center",
   },
   closeButton: {
     width: 32,
@@ -575,14 +739,15 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.14)",
   },
   scrollContent: {
-    gap: 14,
-    paddingBottom: 8,
+    gap: 10,
+    paddingTop: 6,
+    paddingBottom: 6,
   },
   featureToggleRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    minHeight: 44,
+    minHeight: 40,
   },
   featureIconBox: {
     width: 28,
@@ -650,13 +815,51 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
   settingBlock: {
-    gap: 8,
+    gap: 6,
+  },
+  compactSliderBlock: {
+    gap: 3,
+  },
+  fillOpacityBlock: {
+    marginBottom: 4,
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    marginTop: 0,
+    marginBottom: 0,
+  },
+  modeToggleWrap: {
+    flexDirection: "row",
+    borderRadius: 10,
+    backgroundColor: "rgba(255, 255, 255, 0.07)",
+    padding: 3,
+    gap: 4,
+  },
+  modeToggleButton: {
+    flex: 1,
+    minHeight: 34,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modeToggleButtonActive: {
+    backgroundColor: "rgba(251, 191, 36, 0.65)",
+  },
+  modeToggleLabel: {
+    fontSize: 12,
+    fontFamily: "Poppins-Regular",
+    color: "rgba(255,255,255,0.85)",
+  },
+  modeToggleLabelActive: {
+    color: "#ffffff",
+    fontFamily: "Poppins-SemiBold",
   },
   settingBlockDisabled: {
     opacity: 0.42,
   },
   fieldLabel: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: "Poppins-Medium",
     color: "rgba(255,255,255,0.62)",
   },
@@ -666,9 +869,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   colorSwatchSquare: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 9,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.2)",
   },
@@ -677,9 +880,9 @@ const styles = StyleSheet.create({
   },
   hexInput: {
     flex: 1,
-    height: 44,
-    borderRadius: 10,
-    paddingHorizontal: 14,
+    height: 40,
+    borderRadius: 9,
+    paddingHorizontal: 12,
     fontSize: 14,
     fontFamily: "Poppins-Medium",
     color: "#ffffff",
@@ -687,13 +890,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.12)",
   },
+  hexInputReadonly: {
+    justifyContent: "center",
+  },
+  hexReadonlyText: {
+    fontSize: 14,
+    fontFamily: "Poppins-Medium",
+    color: "#ffffff",
+  },
   hexInputDisabled: {
     color: "rgba(255,255,255,0.4)",
   },
   eyedropperButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 9,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(255,255,255,0.06)",
@@ -706,8 +917,8 @@ const styles = StyleSheet.create({
   },
   hueSlider: {
     width: "100%",
-    height: 40,
-    marginTop: 2,
+    height: 34,
+    marginTop: 0,
   },
   sliderControlRow: {
     flexDirection: "row",
@@ -720,7 +931,7 @@ const styles = StyleSheet.create({
   },
   controlSlider: {
     width: "100%",
-    height: 36,
+    height: 32,
   },
   tickRow: {
     flexDirection: "row",
@@ -737,11 +948,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     paddingHorizontal: 2,
+    marginTop: -2,
   },
   sliderEndLabel: {
     fontSize: 11,
     fontFamily: "Poppins-Regular",
-    color: "rgba(255,255,255,0.45)",
+    color: "rgba(255,255,255,0.5)",
   },
   valueFieldGroup: {
     flexDirection: "row",
@@ -770,15 +982,15 @@ const styles = StyleSheet.create({
     minWidth: 18,
   },
   modalActions: {
-    marginTop: 12,
+    marginTop: 10,
     flexDirection: "row",
     gap: 10,
     alignItems: "center",
   },
   actionButton: {
     flex: 1,
-    minHeight: 46,
-    borderRadius: 12,
+    minHeight: 42,
+    borderRadius: 11,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",

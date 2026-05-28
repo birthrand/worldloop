@@ -24,10 +24,16 @@ import { MAP_DARK_STYLE } from "@/constants/map-dark-style";
 import { WORLD_INITIAL_REGION } from "@/constants/map-regions";
 import type { MapCluster } from "@/lib/map-clusters";
 import {
+  countryNamesMatch,
   filterBoundaryPolygonsByMapContext,
   parseCountryBoundaryPolygons,
+  type CountryBoundaryPolygon,
 } from "@/lib/map-country-boundaries";
-import { useMapUiStore } from "@/store/use-map-ui-store";
+import type { MapPressCoordinate } from "@/lib/map-map-tap-hit";
+import {
+  type CountryMarkerDisplayMode,
+  useMapUiStore,
+} from "@/store/use-map-ui-store";
 import type { MapCountry } from "@/types/country";
 
 const countriesGeoJson = require("@/assets/geo/ne_50m_admin_0_countries/ne_50m_admin_0_countries.json");
@@ -40,6 +46,41 @@ export type WorldMapViewHandle = {
 
 export type MapZoomTier = "world" | "region" | "country";
 
+const MIN_REGION_DELTA = 0.5;
+const MAX_REGION_DELTA = 120;
+const MIN_LATITUDE = -85;
+const MAX_LATITUDE = 85;
+
+function normalizeLongitude(longitude: number): number {
+  if (!Number.isFinite(longitude)) return WORLD_INITIAL_REGION.longitude;
+  const wrapped = ((((longitude + 180) % 360) + 360) % 360) - 180;
+  return Object.is(wrapped, -0) ? 0 : wrapped;
+}
+
+function clampRegionDelta(delta: number, fallback: number): number {
+  if (!Number.isFinite(delta)) return fallback;
+  return Math.min(MAX_REGION_DELTA, Math.max(MIN_REGION_DELTA, delta));
+}
+
+function sanitizeRegion(region: Region, fallback: Region): Region {
+  const latitude = Number.isFinite(region.latitude)
+    ? Math.min(MAX_LATITUDE, Math.max(MIN_LATITUDE, region.latitude))
+    : fallback.latitude;
+
+  return {
+    latitude,
+    longitude: normalizeLongitude(region.longitude),
+    latitudeDelta: clampRegionDelta(
+      region.latitudeDelta,
+      fallback.latitudeDelta,
+    ),
+    longitudeDelta: clampRegionDelta(
+      region.longitudeDelta,
+      fallback.longitudeDelta,
+    ),
+  };
+}
+
 type WorldMapViewProps = {
   countries: MapCountry[];
   /** Full country list for boundary region matching (markers may be a subset). */
@@ -48,10 +89,13 @@ type WorldMapViewProps = {
   selectedName: string | null;
   focusedRegion: string | null;
   zoomTier: MapZoomTier;
+  countryMarkerMode?: CountryMarkerDisplayMode;
   onCountryPress: (country: MapCountry) => void;
   onClusterPress: (cluster: MapCluster) => void;
-  onMapPress: () => void;
+  onMapPress: (coordinate?: MapPressCoordinate) => void;
   onRegionChangeComplete?: (region: Region) => void;
+  /** When true, user cannot pan or pinch-zoom (programmatic moves still work). */
+  lockUserGestures?: boolean;
 };
 
 export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
@@ -63,10 +107,12 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
       selectedName,
       focusedRegion,
       zoomTier,
+      countryMarkerMode = "flag",
       onCountryPress,
       onClusterPress,
       onMapPress,
       onRegionChangeComplete,
+      lockUserGestures = false,
     },
     ref,
   ) {
@@ -74,8 +120,9 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
     const regionRef = useRef<Region>(WORLD_INITIAL_REGION);
 
     const animateToRegion = useCallback((region: Region, duration = 500) => {
-      regionRef.current = region;
-      mapRef.current?.animateToRegion(region, duration);
+      const safeRegion = sanitizeRegion(region, regionRef.current);
+      regionRef.current = safeRegion;
+      mapRef.current?.animateToRegion(safeRegion, duration);
     }, []);
 
     useImperativeHandle(
@@ -86,17 +133,14 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
         zoomBy: (direction) => {
           const current = regionRef.current;
           const scale = direction === "in" ? 0.65 : 1.45;
-          const next: Region = {
-            ...current,
-            latitudeDelta: Math.min(
-              120,
-              Math.max(2, current.latitudeDelta * scale),
-            ),
-            longitudeDelta: Math.min(
-              120,
-              Math.max(2, current.longitudeDelta * scale),
-            ),
-          };
+          const next = sanitizeRegion(
+            {
+              ...current,
+              latitudeDelta: current.latitudeDelta * scale,
+              longitudeDelta: current.longitudeDelta * scale,
+            },
+            WORLD_INITIAL_REGION,
+          );
           animateToRegion(next, 300);
         },
       }),
@@ -104,6 +148,7 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
     );
 
     const boundaryStyle = useMapUiStore((s) => s.boundaryStyle);
+    const showBoundaryLines = useMapUiStore((s) => s.showBoundaryLines);
 
     const allCountryBoundaries = useMemo(
       () => parseCountryBoundaryPolygons(countriesGeoJson),
@@ -117,12 +162,7 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
           focusedRegion,
           countries: boundaryCountries,
         }),
-      [
-        allCountryBoundaries,
-        boundaryCountries,
-        focusedRegion,
-        selectedName,
-      ],
+      [allCountryBoundaries, boundaryCountries, focusedRegion, selectedName],
     );
 
     const outlineStrokeWidth = resolveBoundaryStrokeWidth(
@@ -135,6 +175,17 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
     );
     const outlineFillColor = resolveBoundaryFillColor(boundaryStyle);
     const boundaryRenderKey = boundaryStyleRenderKey(boundaryStyle, zoomTier);
+    const boundariesTappable = zoomTier === "country" && !!focusedRegion;
+
+    const handleBoundaryPress = useCallback(
+      (polygon: CountryBoundaryPolygon) => {
+        const country = boundaryCountries.find((c) =>
+          countryNamesMatch(c.name, polygon.countryName),
+        );
+        if (country) onCountryPress(country);
+      },
+      [boundaryCountries, onCountryPress],
+    );
 
     return (
       <MapView
@@ -143,11 +194,29 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
         provider={PROVIDER_DEFAULT}
         initialRegion={WORLD_INITIAL_REGION}
         customMapStyle={MAP_DARK_STYLE}
-        onPress={onMapPress}
-        onRegionChangeComplete={(region) => {
-          regionRef.current = region;
-          onRegionChangeComplete?.(region);
+        onPress={(event) => {
+          const coordinate = event.nativeEvent.coordinate;
+          if (!coordinate) {
+            onMapPress(undefined);
+            return;
+          }
+
+          const { latitude, longitude } = coordinate;
+          if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+            onMapPress(undefined);
+            return;
+          }
+
+          onMapPress({ latitude, longitude });
         }}
+        onRegionChangeComplete={(region) => {
+          const safeRegion = sanitizeRegion(region, regionRef.current);
+          regionRef.current = safeRegion;
+          onRegionChangeComplete?.(safeRegion);
+        }}
+        scrollEnabled={!lockUserGestures}
+        zoomEnabled={!lockUserGestures}
+        zoomTapEnabled={!lockUserGestures}
         rotateEnabled={false}
         pitchEnabled={false}
         toolbarEnabled={false}
@@ -157,35 +226,44 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
         showsMyLocationButton={false}
         mapType={Platform.OS === "android" ? "standard" : "hybridFlyover"}
       >
-        {countryBoundaries.map((polygon) => (
+        {showBoundaryLines
+          ? countryBoundaries.map((polygon) => (
           <Polygon
             key={`${polygon.id}-${boundaryRenderKey}`}
             coordinates={polygon.coordinates}
             holes={polygon.holes}
-            tappable={false}
+            tappable={boundariesTappable}
+            onPress={
+              boundariesTappable
+                ? () => handleBoundaryPress(polygon)
+                : undefined
+            }
             strokeColor={outlineStrokeColor}
             strokeWidth={outlineStrokeWidth}
             fillColor={outlineFillColor}
             zIndex={1}
           />
-        ))}
-        {focusedRegion || countries.length > 0
-          ? countries.map((country) => (
-              <MapCountryMarker
-                key={country.name}
-                country={country}
-                selected={selectedName === country.name}
-                onPress={() => onCountryPress(country)}
-              />
             ))
-          : clusters.map((cluster) => (
+          : null}
+        {countries.map((country) => (
+          <MapCountryMarker
+            key={country.name}
+            country={country}
+            selected={selectedName === country.name}
+            displayMode={countryMarkerMode}
+            onPress={() => onCountryPress(country)}
+          />
+        ))}
+        {!focusedRegion
+          ? clusters.map((cluster) => (
               <MapPulseClusterMarker
                 key={cluster.id}
                 cluster={cluster}
                 selected={focusedRegion === cluster.region}
                 onPress={onClusterPress}
               />
-            ))}
+            ))
+          : null}
       </MapView>
     );
   },
