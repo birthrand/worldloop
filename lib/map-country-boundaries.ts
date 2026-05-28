@@ -40,6 +40,8 @@ export type BoundaryMapContext = {
   selectedCountryName: string | null;
   focusedRegion: string | null;
   countries: MapCountry[];
+  /** When true at world zoom (no country/continent focus), render all country outlines. */
+  showWorldBoundaries?: boolean;
 };
 
 /** REST Countries name → alternate Natural Earth `ADMIN` labels. */
@@ -229,16 +231,17 @@ function naturalEarthContinentMatchesRegion(
  * Scope boundaries to map context (option 1 — implicit, no extra UI):
  * - Selected country → that country only
  * - Focused continent → countries in that region
- * - No focus → hidden (cleaner world view)
+ * - No focus → hidden unless `showWorldBoundaries` (grid toggle on world view)
  */
 export function filterBoundaryPolygonsByMapContext(
   polygons: CountryBoundaryPolygon[],
   context: BoundaryMapContext,
 ): CountryBoundaryPolygon[] {
-  const { selectedCountryName, focusedRegion, countries } = context;
+  const { selectedCountryName, focusedRegion, countries, showWorldBoundaries } =
+    context;
 
   if (!selectedCountryName && !focusedRegion) {
-    return [];
+    return showWorldBoundaries ? polygons : [];
   }
 
   if (selectedCountryName) {

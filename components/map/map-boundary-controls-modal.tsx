@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import Slider from "@react-native-community/slider";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import {
   Modal,
   Pressable,
@@ -12,6 +12,7 @@ import {
 } from "react-native";
 
 import {
+  applyBoundaryStyleDraft,
   BOUNDARY_STEP_MAX,
   BOUNDARY_STEP_MIN,
   boundaryStyleHasChanges,
@@ -20,11 +21,13 @@ import {
   displayPercentToFillOpacityStep,
   displayPercentToStrokeOpacityStep,
   fillOpacityStepToDisplayPercent,
+  resolveBoundaryStrokeWidth,
   strokeOpacityStepToDisplayPercent,
   type MapBoundaryStyleSettings,
   type MapFillColorMode,
+  type MapZoomTier,
 } from "@/constants/map-boundary-style";
-import { hexToHue, hueToHex } from "@/lib/color-utils";
+import { hueToHex } from "@/lib/color-utils";
 import { useMapUiStore } from "@/store/use-map-ui-store";
 
 const ACCENT = "#fbbf24";
@@ -33,7 +36,8 @@ const TRACK_MUTED = "rgba(255,255,255,0.16)";
 const THUMB = "#ffffff";
 
 type MapBoundaryControlsModalProps = {
-  visible: boolean;
+  /** Map zoom tier used for live thickness preview labels (continent ≈ region). */
+  previewZoomTier?: MapZoomTier;
   onClose: () => void;
 };
 
@@ -140,14 +144,6 @@ function ColorField({
   }, [hue, previewHex]);
 
   const livePreview = hueToHex(liveHue);
-
-  const commitHex = (text: string) => {
-    const parsedHue = hexToHue(text);
-    if (parsedHue !== null) {
-      onHexChange(text.toUpperCase());
-      onHueChange(parsedHue);
-    }
-  };
 
   return (
     <View
@@ -304,6 +300,7 @@ function SliderWithValue({
     <View style={styles.sliderControlRow}>
       <View style={styles.sliderColumn}>
         <Slider
+          key={`${accessibilityLabel}-${value}`}
           style={styles.controlSlider}
           disabled={disabled}
           value={value}
@@ -360,42 +357,83 @@ function SliderWithValue({
 }
 
 export function MapBoundaryControlsModal({
-  visible,
+  previewZoomTier = "world",
   onClose,
 }: MapBoundaryControlsModalProps) {
   const boundaryStyle = useMapUiStore((s) => s.boundaryStyle);
   const setBoundaryStyle = useMapUiStore((s) => s.setBoundaryStyle);
   const resetBoundaryStyle = useMapUiStore((s) => s.resetBoundaryStyle);
+  const showBoundaryLines = useMapUiStore((s) => s.showBoundaryLines);
+  const setShowBoundaryLines = useMapUiStore((s) => s.setShowBoundaryLines);
 
-  const [draft, setDraft] = useState<MapBoundaryStyleSettings>(boundaryStyle);
+  const initialStyle = applyBoundaryStyleDraft(boundaryStyle);
+  const committedStyleRef = useRef(initialStyle);
+  const committedShowLinesRef = useRef(showBoundaryLines);
+  const [draft, setDraft] = useState<MapBoundaryStyleSettings>(initialStyle);
 
+  // Ensure the 2D map has polygons to preview (restored on dismiss if they were off).
   useEffect(() => {
-    if (visible) {
-      setDraft(boundaryStyle);
+    if (!committedShowLinesRef.current) {
+      setShowBoundaryLines(true);
     }
-  }, [boundaryStyle, visible]);
+  }, [setShowBoundaryLines]);
 
-  const hasChanges = boundaryStyleHasChanges(draft, boundaryStyle);
+  // Live-preview: map reflects slider changes immediately while the modal is open.
+  useEffect(() => {
+    setBoundaryStyle(applyBoundaryStyleDraft(draft));
+  }, [draft, setBoundaryStyle]);
+
+  const hasChanges = boundaryStyleHasChanges(
+    draft,
+    committedStyleRef.current,
+  );
   const boundaryEnabled = draft.strokeColorEnabled;
 
+  const previewStrokeWidth = resolveBoundaryStrokeWidth(
+    applyBoundaryStyleDraft(draft),
+    previewZoomTier,
+  );
+
+  const formatThicknessStep = useCallback((step: number) => String(step), []);
+  const formatStrokeOpacityStep = useCallback(
+    (step: number) => String(strokeOpacityStepToDisplayPercent(step)),
+    [],
+  );
+  const formatFillOpacityStep = useCallback(
+    (step: number) => String(fillOpacityStepToDisplayPercent(step)),
+    [],
+  );
+  const formatGrayLevel = useCallback(
+    (level: number) => String(Math.round(level)),
+    [],
+  );
+
+  const handleDismiss = useCallback(() => {
+    setBoundaryStyle(committedStyleRef.current);
+    setShowBoundaryLines(committedShowLinesRef.current);
+    onClose();
+  }, [onClose, setBoundaryStyle, setShowBoundaryLines]);
+
   const handleApply = () => {
-    setBoundaryStyle({
-      ...draft,
-      strokeThicknessStep: clampBoundaryStep(draft.strokeThicknessStep),
-      strokeOpacityStep: clampBoundaryStep(draft.strokeOpacityStep),
-      fillOpacityStep: clampBoundaryStep(draft.fillOpacityStep),
-      strokeWidthEnabled: draft.strokeColorEnabled,
-    });
+    const applied = applyBoundaryStyleDraft(draft);
+    setBoundaryStyle(applied);
+    committedStyleRef.current = applied;
+    committedShowLinesRef.current = showBoundaryLines;
     onClose();
   };
 
   const handleResetDefaults = () => {
-    setDraft(DEFAULT_MAP_BOUNDARY_STYLE);
+    const defaults = applyBoundaryStyleDraft(DEFAULT_MAP_BOUNDARY_STYLE);
+    setDraft(defaults);
+    setBoundaryStyle(defaults);
+    setShowBoundaryLines(true);
+    committedStyleRef.current = defaults;
+    committedShowLinesRef.current = true;
     resetBoundaryStyle();
-    // onClose();
   };
 
   const setBoundaryEnabled = (strokeColorEnabled: boolean) => {
+    setShowBoundaryLines(strokeColorEnabled);
     setDraft((current) => ({
       ...current,
       strokeColorEnabled,
@@ -405,17 +443,17 @@ export function MapBoundaryControlsModal({
 
   return (
     <Modal
-      visible={visible}
+      visible
       animationType="fade"
       transparent
-      onRequestClose={onClose}
+      onRequestClose={handleDismiss}
     >
       <View style={styles.modalOverlay}>
         <Pressable
           style={StyleSheet.absoluteFill}
           accessibilityRole="button"
           accessibilityLabel="Close boundary controls"
-          onPress={onClose}
+          onPress={handleDismiss}
         />
         <View style={styles.modalCard}>
           <View style={styles.modalHeader}>
@@ -424,7 +462,7 @@ export function MapBoundaryControlsModal({
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Close"
-              onPress={onClose}
+              onPress={handleDismiss}
               style={({ pressed }) => [
                 styles.closeButton,
                 pressed && styles.pressed,
@@ -476,7 +514,9 @@ export function MapBoundaryControlsModal({
               ]}
               pointerEvents={boundaryEnabled ? "auto" : "none"}
             >
-              <Text style={styles.fieldLabel}>Boundary thickness</Text>
+              <Text style={styles.fieldLabel}>
+                Boundary thickness ({previewStrokeWidth.toFixed(1)}px)
+              </Text>
               <SliderWithValue
                 value={draft.strokeThicknessStep}
                 min={BOUNDARY_STEP_MIN}
@@ -486,7 +526,7 @@ export function MapBoundaryControlsModal({
                 accessibilityLabel="Boundary thickness"
                 tickCount={5}
                 showValueInput={false}
-                formatDisplay={(step) => String(step)}
+                formatDisplay={formatThicknessStep}
                 parseDisplay={(text) => {
                   const parsed = Number.parseInt(text, 10);
                   if (Number.isNaN(parsed)) {
@@ -522,9 +562,7 @@ export function MapBoundaryControlsModal({
                 tickCount={0}
                 endLabels={["Subtle", "50%", "Strong"]}
                 showValueInput={false}
-                formatDisplay={(step) =>
-                  String(strokeOpacityStepToDisplayPercent(step))
-                }
+                formatDisplay={formatStrokeOpacityStep}
                 parseDisplay={(text) => {
                   const parsed = Number.parseInt(text, 10);
                   if (Number.isNaN(parsed)) {
@@ -582,7 +620,7 @@ export function MapBoundaryControlsModal({
                       tickCount={0}
                       endLabels={["Black", "Gray", "White"]}
                       showValueInput={false}
-                      formatDisplay={(level) => String(Math.round(level))}
+                      formatDisplay={formatGrayLevel}
                       parseDisplay={(text) => {
                         const parsed = Number.parseInt(text, 10);
                         if (Number.isNaN(parsed)) return null;
@@ -619,9 +657,7 @@ export function MapBoundaryControlsModal({
                     tickCount={0}
                     endLabels={["Subtle", "50%", "Strong"]}
                     showValueInput={false}
-                    formatDisplay={(step) =>
-                      String(fillOpacityStepToDisplayPercent(step))
-                    }
+                    formatDisplay={formatFillOpacityStep}
                     parseDisplay={(text) => {
                       const parsed = Number.parseInt(text, 10);
                       if (Number.isNaN(parsed)) {

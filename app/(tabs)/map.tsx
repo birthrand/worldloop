@@ -20,6 +20,7 @@ import {
 import type { Region } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { type GlobeCameraViewState } from "@/components/map/globe-view";
 import { MapCanvas, type MapCanvasHandle } from "@/components/map/map-canvas";
 import { MapControls } from "@/components/map/map-controls";
 import { MapCountryPreviewCard } from "@/components/map/map-country-preview-card";
@@ -27,16 +28,19 @@ import { MapFeaturedChips } from "@/components/map/map-featured-chips";
 import { MapFilterChips } from "@/components/map/map-filter-chips";
 import { MapOnboardingSheet } from "@/components/map/map-onboarding-sheet";
 import { MapRegionChrome } from "@/components/map/map-region-chrome";
+import { MapSpotlightChrome } from "@/components/map/map-spotlight-chrome";
 import { MapSearchRow } from "@/components/map/map-search-row";
 import { RandomCountryFab } from "@/components/map/random-country-fab";
 import { type MapZoomTier } from "@/components/map/world-map-view";
 import {
   regionForClusterFocus,
   regionForMapCountry,
+  WORLD_INITIAL_REGION,
 } from "@/constants/map-regions";
 import { adjacentContinent, CONTINENTS } from "@/constants/regions";
-import { getMapDisplayLatLng } from "@/lib/map-country";
+import { useMapMarkerReveal } from "@/hooks/use-map-marker-reveal";
 import { buildMapClusters, type MapCluster } from "@/lib/map-clusters";
+import { getMapDisplayLatLng } from "@/lib/map-country";
 import { parseCountryBoundaryPolygons } from "@/lib/map-country-boundaries";
 import {
   findClusterAtWorldCoordinate,
@@ -47,8 +51,10 @@ import {
   pickRandomMapCountry,
 } from "@/lib/map-random-pick";
 import {
+  GLOBE_DETAIL_CAMERA_DISTANCE,
   MAP_COUNTRY_ZOOM_LATITUDE_DELTA,
   REGION_FOCUS_INITIAL_DELTA,
+  resolveRegionMarkerCountries,
 } from "@/lib/map-region-markers";
 import {
   isGlobeMapUi,
@@ -82,6 +88,10 @@ export default function MapScreen() {
   const mapRef = useRef<MapCanvasHandle>(null);
   const zoomTierRef = useRef<MapZoomTier>("world");
   const isMapAnimatingRef = useRef(false);
+  const [isMapAnimating, setIsMapAnimating] = useState(false);
+  const mapMarkerCountriesRef = useRef<MapCountry[]>([]);
+  const frozenMapMarkersRef = useRef<MapCountry[] | null>(null);
+  const [markerRefreshToken, setMarkerRefreshToken] = useState(0);
   /** Blocks world-zoom reset while animating into a continent/country focus. */
   const suppressWorldResetRef = useRef(false);
   const mapAnimationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -95,6 +105,11 @@ export default function MapScreen() {
     region: string;
     anchor: [number, number];
   } | null>(null);
+  const pendingGlobeFocusNameRef = useRef<string | null>(null);
+  /** Continent to center on the globe after 2D → 3D when no country is selected. */
+  const pendingGlobeRegionFocusRef = useRef<string | null>(null);
+  /** Country to focus on the 2D map after 3D → 2D crossfade completes. */
+  const pendingFlatFocusNameRef = useRef<string | null>(null);
 
   const status = useMapStore((s) => s.status);
   const error = useMapStore((s) => s.error);
@@ -107,6 +122,7 @@ export default function MapScreen() {
   const setActiveChip = useMapStore((s) => s.setActiveChip);
   const setMapMode = useMapStore((s) => s.setMapMode);
   const focusCountryOnGlobe = useMapStore((s) => s.focusCountryOnGlobe);
+  const focusLatLngOnGlobe = useMapStore((s) => s.focusLatLngOnGlobe);
   const clearPendingExternalFocus = useMapStore(
     (s) => s.clearPendingExternalFocus,
   );
@@ -116,6 +132,7 @@ export default function MapScreen() {
   const pendingExternalFocusMode = useMapStore(
     (s) => s.pendingExternalFocusMode,
   );
+  const globeCamera = useMapStore((s) => s.globeCamera);
 
   const focusedRegion = useMapUiStore((s) => s.focusedRegion);
   const spotlightCountryName = useMapUiStore((s) => s.spotlightCountryName);
@@ -133,31 +150,59 @@ export default function MapScreen() {
     useState<MapViewTransition>("idle");
   const [isNextCountryLoading, setIsNextCountryLoading] = useState(false);
   const [hasRegionZoomStarted, setHasRegionZoomStarted] = useState(false);
+  const [globeCameraDistance, setGlobeCameraDistance] = useState(
+    GLOBE_DETAIL_CAMERA_DISTANCE + 2,
+  );
+  const [globeViewCenter, setGlobeViewCenter] = useState({
+    latitude: 0,
+    longitude: -30,
+  });
+  const [lastMapRegion, setLastMapRegion] = useState(WORLD_INITIAL_REGION);
   const is3d = isGlobeMapUi(mapMode, mapViewTransition);
+
+  useEffect(() => {
+    if (pendingExternalFocusName && !is3d) {
+      setIsMapAnimating(true);
+    }
+  }, [is3d, pendingExternalFocusName]);
 
   const handleMapModeToggle = useCallback(() => {
     if (mapMode === "3d") {
+      pendingFlatFocusNameRef.current =
+        selectedCountry?.name ?? spotlightCountryName ?? null;
+      pendingGlobeFocusNameRef.current = null;
+      pendingGlobeRegionFocusRef.current = null;
+      setMapMode("2d");
       setMapViewTransition("enteringFlat");
       return;
     }
+
+    const countryFocus =
+      selectedCountry?.name ?? spotlightCountryName ?? null;
+    pendingGlobeFocusNameRef.current = countryFocus;
+    pendingGlobeRegionFocusRef.current =
+      countryFocus || !focusedRegion ? null : focusedRegion;
+
     setMapMode("3d");
     setMapViewTransition("enteringGlobe");
-  }, [mapMode, setMapMode]);
+  }, [
+    focusedRegion,
+    mapMode,
+    selectedCountry?.name,
+    setMapMode,
+    spotlightCountryName,
+  ]);
 
   const handleGlobeTransitionComplete = useCallback(() => {
     setMapViewTransition("ready");
   }, []);
-
-  const handleFlatTransitionComplete = useCallback(() => {
-    setMapMode("2d");
-    setMapViewTransition("idle");
-  }, [setMapMode]);
   const featuredShortcut = useMapUiStore((s) => s.featuredShortcut);
 
   const clusters = useMemo(() => buildMapClusters(countries), [countries]);
 
   const navigableContinents = useMemo(
-    () => CONTINENTS.filter((region) => clusters.some((c) => c.region === region)),
+    () =>
+      CONTINENTS.filter((region) => clusters.some((c) => c.region === region)),
     [clusters],
   );
 
@@ -175,8 +220,7 @@ export default function MapScreen() {
 
     if (!focusedRegion) {
       if (is3d) {
-        const pinName =
-          spotlightCountryName ?? selectedCountry?.name ?? null;
+        const pinName = spotlightCountryName ?? selectedCountry?.name ?? null;
         if (!pinName) return [];
         const pin = countries.find((c) => c.name === pinName) ?? null;
         return pin ? [pin] : [];
@@ -187,16 +231,16 @@ export default function MapScreen() {
     const base = countries.filter((c) => c.region === focusedRegion);
     const visible = filterMapCountriesByChip(base, activeChip);
 
-    // Region scope: show all visible countries immediately on region entry.
-    const effectiveTier = is3d ? "region" : zoomTier;
-    if (effectiveTier === "country" || hasRegionZoomStarted) {
-      return visible;
-    }
-    return visible;
+    const isDetailZoom = is3d
+      ? globeCameraDistance <= GLOBE_DETAIL_CAMERA_DISTANCE
+      : zoomTier === "country" || hasRegionZoomStarted;
+
+    return resolveRegionMarkerCountries(visible, isDetailZoom);
   }, [
     activeChip,
     countries,
     focusedRegion,
+    globeCameraDistance,
     hasRegionZoomStarted,
     is3d,
     selectedCountry?.name,
@@ -204,10 +248,37 @@ export default function MapScreen() {
     zoomTier,
   ]);
 
+  const isDetailZoom = is3d
+    ? globeCameraDistance <= GLOBE_DETAIL_CAMERA_DISTANCE
+    : zoomTier === "country" || hasRegionZoomStarted;
+
+  const markerReveal = useMapMarkerReveal({
+    candidateCountries: pinCountries,
+    viewportCenter: is3d
+      ? globeViewCenter
+      : {
+          latitude: lastMapRegion.latitude,
+          longitude: lastMapRegion.longitude,
+        },
+    focusedRegion,
+    isDetailZoom,
+    enabled: !!focusedRegion && !spotlightCountryName,
+    suspendReveal: isMapAnimating,
+  });
+
   const mapMarkerCountries = useMemo(() => {
-    if (!spotlightCountryName) return pinCountries;
-    return pinCountries.filter((c) => c.name === spotlightCountryName);
-  }, [pinCountries, spotlightCountryName]);
+    const base = spotlightCountryName
+      ? pinCountries.filter((c) => c.name === spotlightCountryName)
+      : markerReveal.countriesToRender;
+    return base;
+  }, [markerReveal.countriesToRender, pinCountries, spotlightCountryName]);
+
+  mapMarkerCountriesRef.current = mapMarkerCountries;
+
+  const mapMarkersForCanvas =
+    isMapAnimating && frozenMapMarkersRef.current
+      ? frozenMapMarkersRef.current
+      : mapMarkerCountries;
 
   const highlightedCountryName =
     selectedCountry?.name ?? spotlightCountryName ?? null;
@@ -241,6 +312,44 @@ export default function MapScreen() {
     }
   }, [focusedRegion]);
 
+  useEffect(() => {
+    // After 2D → 3D, pan once the globe is interactive and the camera handle exists.
+    // Keep pending until focus succeeds — clearing early caused a no-op when the
+    // camera registered a frame after transition became "ready".
+    if (mapMode !== "3d" || mapViewTransition !== "ready" || !globeCamera) {
+      return;
+    }
+
+    const focusName = pendingGlobeFocusNameRef.current;
+    if (focusName) {
+      focusCountryOnGlobe(focusName, 900);
+      pendingGlobeFocusNameRef.current = null;
+      pendingGlobeRegionFocusRef.current = null;
+      return;
+    }
+
+    const focusRegion = pendingGlobeRegionFocusRef.current;
+    if (!focusRegion) {
+      return;
+    }
+
+    const cluster = clusters.find((c) => c.region === focusRegion);
+    pendingGlobeRegionFocusRef.current = null;
+    if (!cluster) {
+      return;
+    }
+
+    const [lat, lng] = cluster.center;
+    focusLatLngOnGlobe(lat, lng, 900);
+  }, [
+    clusters,
+    focusCountryOnGlobe,
+    focusLatLngOnGlobe,
+    globeCamera,
+    mapMode,
+    mapViewTransition,
+  ]);
+
   const focusGlobeCountry = useCallback(
     (pick: MapCountry, duration = 650) => {
       selectCountry(pick.name);
@@ -255,17 +364,29 @@ export default function MapScreen() {
     return "country";
   }, []);
 
-  const animateMapToRegion = useCallback((region: Region, duration = 500) => {
+  const beginProgrammaticMapFlight = useCallback((duration: number) => {
+    frozenMapMarkersRef.current = mapMarkerCountriesRef.current;
     isMapAnimatingRef.current = true;
+    setIsMapAnimating(true);
     if (mapAnimationTimerRef.current) {
       clearTimeout(mapAnimationTimerRef.current);
     }
     mapAnimationTimerRef.current = setTimeout(() => {
       isMapAnimatingRef.current = false;
+      frozenMapMarkersRef.current = null;
+      setIsMapAnimating(false);
+      setMarkerRefreshToken((token) => token + 1);
       mapAnimationTimerRef.current = null;
     }, duration + 150);
-    mapRef.current?.animateToRegion(region, duration);
   }, []);
+
+  const animateMapToRegion = useCallback(
+    (region: Region, duration = 500) => {
+      beginProgrammaticMapFlight(duration);
+      mapRef.current?.animateToRegion(region, duration);
+    },
+    [beginProgrammaticMapFlight],
+  );
 
   const clearPendingRegionSwitch = useCallback(() => {
     if (pendingRegionSwitchTimerRef.current) {
@@ -288,13 +409,11 @@ export default function MapScreen() {
     clearPendingRegionSwitch();
   }, [clearPendingRegionSwitch]);
 
-  const resolveNearestRegionByCenter = useCallback(
-    (region: Region): string | null => {
+  const resolveNearestRegionByLatLng = useCallback(
+    (centerLat: number, centerLng: number): string | null => {
       if (clusters.length === 0) return null;
 
-      const centerLat = region.latitude;
-      const centerLng = region.longitude;
-      let nearest: (typeof clusters)[number] | null = null;
+      let nearest: MapCluster | null = null;
       let best = Number.POSITIVE_INFINITY;
 
       for (const cluster of clusters) {
@@ -312,6 +431,12 @@ export default function MapScreen() {
     [clusters],
   );
 
+  const resolveNearestRegionByCenter = useCallback(
+    (region: Region): string | null =>
+      resolveNearestRegionByLatLng(region.latitude, region.longitude),
+    [resolveNearestRegionByLatLng],
+  );
+
   useEffect(() => {
     return () => {
       clearPendingRegionSwitch();
@@ -320,35 +445,6 @@ export default function MapScreen() {
       }
     };
   }, [clearPendingRegionSwitch]);
-
-  const focusCountry = useCallback(
-    (country: MapCountry) => {
-      if (spotlightCountryName) {
-        selectCountry(country.name);
-        if (is3d) {
-          focusCountryOnGlobe(country.name, 450);
-        } else {
-          animateMapToRegion(regionForMapCountry(country), 500);
-        }
-        return;
-      }
-
-      if (is3d) {
-        focusGlobeCountry(country, 450);
-        return;
-      }
-      selectCountry(country.name);
-      animateMapToRegion(regionForMapCountry(country), 500);
-    },
-    [
-      animateMapToRegion,
-      focusCountryOnGlobe,
-      focusGlobeCountry,
-      is3d,
-      selectCountry,
-      spotlightCountryName,
-    ],
-  );
 
   const handleClusterPress = useCallback(
     (cluster: MapCluster) => {
@@ -363,13 +459,16 @@ export default function MapScreen() {
       zoomTierRef.current = "region";
       setZoomTier("region");
 
+      const focusRegion = regionForClusterFocus(cluster);
+      setLastMapRegion(focusRegion);
+
       if (is3d) {
         const [lat, lng] = cluster.center;
         useMapStore.getState().focusLatLngOnGlobe(lat, lng, 650);
         return;
       }
 
-      animateMapToRegion(regionForClusterFocus(cluster), 650);
+      animateMapToRegion(focusRegion, 650);
     },
     [
       animateMapToRegion,
@@ -384,23 +483,44 @@ export default function MapScreen() {
     ],
   );
 
-  const handleRegionChangeComplete = useCallback(
-    (region: Region) => {
-      if (is3d) return;
-
-      const nextTier = computeZoomTier(region.latitudeDelta);
-
-      if (isMapAnimatingRef.current) {
-        if (zoomTierRef.current !== nextTier) {
-          // Mid-animation frames can still look like "world" zoom — don't hide pins.
-          if (suppressWorldResetRef.current && nextTier === "world") {
-            return;
-          }
-          zoomTierRef.current = nextTier;
-          setZoomTier(nextTier);
-        }
+  /** Globe camera updates zoom/detail only — continent exploration stays in UI store until explicit exit. */
+  const handleGlobeCameraViewChange = useCallback(
+    (state: GlobeCameraViewState) => {
+      // Globe may still mount during crossfade — ignore camera ticks unless 3D is active.
+      if (mapMode !== "3d" || mapViewTransition !== "ready") {
         return;
       }
+
+      setGlobeCameraDistance(state.distance);
+      setGlobeViewCenter({
+        latitude: state.centerLat,
+        longitude: state.centerLng,
+      });
+
+      if (
+        useMapUiStore.getState().focusedRegion &&
+        state.zoomTier === "country"
+      ) {
+        setHasRegionZoomStarted(true);
+      }
+    },
+    [mapMode, mapViewTransition, setHasRegionZoomStarted],
+  );
+
+  const handleRegionChangeComplete = useCallback(
+    (region: Region) => {
+      // Programmatic fly-to (continent recenter, country focus) fires many region
+      // updates — skip viewport writes or marker reveal restarts in a tight loop.
+      if (!isMapAnimatingRef.current) {
+        setLastMapRegion(region);
+      }
+      if (is3d) return;
+
+      if (isMapAnimatingRef.current) {
+        return;
+      }
+
+      const nextTier = computeZoomTier(region.latitudeDelta);
 
       // Release post-focus guard once interaction has settled on non-world zoom.
       // Without this, zooming back out can keep region scope latched.
@@ -490,13 +610,8 @@ export default function MapScreen() {
     ],
   );
 
-  const flyMapToCountry = useCallback(
+  const focusCountryOnFlatMap = useCallback(
     (pick: MapCountry, duration = 650) => {
-      if (is3d) {
-        focusCountryOnGlobe(pick.name, duration);
-        return;
-      }
-
       setDisplayMode("explore");
       suppressWorldResetRef.current = true;
       setFocusedRegion(pick.region);
@@ -511,14 +626,51 @@ export default function MapScreen() {
     },
     [
       animateMapToRegion,
-      focusCountryOnGlobe,
-      is3d,
       lockExplicitRegion,
       setDisplayMode,
       setFocusedRegion,
       setHasRegionZoomStarted,
     ],
   );
+
+  const flyMapToCountry = useCallback(
+    (pick: MapCountry, duration = 650) => {
+      if (is3d) {
+        // Slower globe pan for spotlight/random — avoids abrupt jumps.
+        const globeDuration = Math.max(duration, 1100);
+        focusCountryOnGlobe(pick.name, globeDuration);
+        return;
+      }
+
+      focusCountryOnFlatMap(pick, duration);
+    },
+    [focusCountryOnFlatMap, focusCountryOnGlobe, is3d],
+  );
+
+  const handleFlatTransitionComplete = useCallback(() => {
+    const focusName = pendingFlatFocusNameRef.current;
+    pendingFlatFocusNameRef.current = null;
+
+    setMapMode("2d");
+    setMapViewTransition("idle");
+
+    if (!focusName || countries.length === 0) {
+      return;
+    }
+
+    const pick = countries.find((c) => c.name === focusName) ?? null;
+    if (!pick) {
+      return;
+    }
+
+    const hadPreview =
+      useMapStore.getState().selectedCountry?.name === focusName;
+    if (hadPreview) {
+      selectCountry(pick.name);
+    }
+
+    focusCountryOnFlatMap(pick, 650);
+  }, [countries, focusCountryOnFlatMap, selectCountry, setMapMode]);
 
   const applyPendingExternalMapFocus = useCallback(() => {
     const { pendingExternalFocusName: pendingName, pendingExternalFocusMode } =
@@ -527,6 +679,8 @@ export default function MapScreen() {
 
     const pick = countries.find((c) => c.name === pendingName) ?? null;
     if (!pick) return;
+
+    setIsMapAnimating(true);
 
     if (pendingExternalFocusMode === "spotlight") {
       selectCountry(null);
@@ -588,6 +742,35 @@ export default function MapScreen() {
     ],
   );
 
+  const focusCountry = useCallback(
+    (country: MapCountry) => {
+      if (spotlightCountryName) {
+        if (country.name === spotlightCountryName) {
+          selectCountry(country.name);
+          void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          return;
+        }
+        spotlightOnMap(country);
+        return;
+      }
+
+      if (is3d) {
+        focusGlobeCountry(country, 450);
+        return;
+      }
+      selectCountry(country.name);
+      animateMapToRegion(regionForMapCountry(country), 500);
+    },
+    [
+      animateMapToRegion,
+      focusGlobeCountry,
+      is3d,
+      selectCountry,
+      spotlightCountryName,
+      spotlightOnMap,
+    ],
+  );
+
   const advanceToCountryPreview = useCallback(
     (pick: MapCountry) => {
       selectCountry(pick.name);
@@ -627,34 +810,10 @@ export default function MapScreen() {
       return;
     }
 
-    if (is3d) {
-      setActiveChip("all");
-      setFeaturedShortcut("forYou");
-      focusGlobeCountry(pick);
-      return;
-    }
-
     setActiveChip("all");
     setFeaturedShortcut("forYou");
-    setDisplayMode("explore");
-    setFocusedRegion(pick.region);
-    lockExplicitRegion(pick.region, getMapDisplayLatLng(pick));
-    zoomTierRef.current = "region";
-    setZoomTier("region");
-    selectCountry(pick.name);
-    animateMapToRegion(regionForMapCountry(pick, 45), 650);
-  }, [
-    animateMapToRegion,
-    countries,
-    focusGlobeCountry,
-    is3d,
-    selectCountry,
-    setActiveChip,
-    setDisplayMode,
-    setFeaturedShortcut,
-    setFocusedRegion,
-    lockExplicitRegion,
-  ]);
+    spotlightOnMap(pick);
+  }, [countries, setActiveChip, setFeaturedShortcut, spotlightOnMap]);
 
   const handleNewActivityPress = useCallback(async () => {
     if (countries.length === 0) return;
@@ -672,34 +831,10 @@ export default function MapScreen() {
 
     if (!pick) return;
 
-    if (is3d) {
-      setActiveChip("all");
-      setFeaturedShortcut("newActivity");
-      focusGlobeCountry(pick);
-      return;
-    }
-
     setActiveChip("all");
     setFeaturedShortcut("newActivity");
-    setDisplayMode("explore");
-    setFocusedRegion(pick.region);
-    lockExplicitRegion(pick.region, getMapDisplayLatLng(pick));
-    zoomTierRef.current = "region";
-    setZoomTier("region");
-    selectCountry(pick.name);
-    animateMapToRegion(regionForMapCountry(pick, 45), 650);
-  }, [
-    animateMapToRegion,
-    countries,
-    focusGlobeCountry,
-    is3d,
-    selectCountry,
-    setActiveChip,
-    setDisplayMode,
-    setFeaturedShortcut,
-    setFocusedRegion,
-    lockExplicitRegion,
-  ]);
+    spotlightOnMap(pick);
+  }, [countries, setActiveChip, setFeaturedShortcut, spotlightOnMap]);
 
   const handleRandomCountry = useCallback(async () => {
     if (countries.length === 0) return;
@@ -794,14 +929,68 @@ export default function MapScreen() {
     setSpotlightCountry,
   ]);
 
+  const recenterOnFocusedContinent = useCallback(
+    (cluster: MapCluster) => {
+      const flightDuration = 650;
+
+      beginProgrammaticMapFlight(flightDuration);
+      suppressWorldResetRef.current = true;
+      clearPendingRegionSwitch();
+      lockExplicitRegion(cluster.region, cluster.center);
+
+      const focusRegion = regionForClusterFocus(cluster);
+      setLastMapRegion(focusRegion);
+
+      if (is3d) {
+        const [lat, lng] = cluster.center;
+        if (Number.isFinite(lat) && Number.isFinite(lng)) {
+          focusLatLngOnGlobe(lat, lng, flightDuration);
+        }
+        return;
+      }
+
+      mapRef.current?.animateToRegion(focusRegion, flightDuration);
+    },
+    [
+      beginProgrammaticMapFlight,
+      clearPendingRegionSwitch,
+      focusLatLngOnGlobe,
+      is3d,
+      lockExplicitRegion,
+    ],
+  );
+
   const handleBackToContinent = useCallback(() => {
     if (!focusedRegion) return;
 
     const cluster = clusters.find((c) => c.region === focusedRegion);
     if (!cluster) return;
 
-    handleClusterPress(cluster);
-  }, [clusters, focusedRegion, handleClusterPress]);
+    recenterOnFocusedContinent(cluster);
+  }, [clusters, focusedRegion, recenterOnFocusedContinent]);
+
+  const recenterOnSpotlightCountry = useCallback(() => {
+    if (!spotlightCountryName || countries.length === 0) return;
+
+    const pick =
+      countries.find((c) => c.name === spotlightCountryName) ?? null;
+    if (!pick) return;
+
+    flyMapToCountry(pick, 650);
+  }, [countries, flyMapToCountry, spotlightCountryName]);
+
+  const handleBackToContinentFromSpotlight = useCallback(() => {
+    if (!focusedRegion) return;
+
+    setSpotlightCountry(null);
+    selectCountry(null);
+    handleBackToContinent();
+  }, [
+    focusedRegion,
+    handleBackToContinent,
+    selectCountry,
+    setSpotlightCountry,
+  ]);
 
   const navigateContinent = useCallback(
     (direction: "prev" | "next") => {
@@ -831,23 +1020,14 @@ export default function MapScreen() {
   }, [navigateContinent]);
 
   const dismissPreview = useCallback(() => {
+    const countryName = useMapStore.getState().selectedCountry?.name ?? null;
     selectCountry(null);
-  }, [selectCountry]);
-
-  const deselectCountry = useCallback(() => {
-    suppressWorldResetRef.current = false;
-    clearExplicitRegionLock();
-    selectCountry(null);
-    setSpotlightCountry(null);
-    setHasRegionZoomStarted(false);
-    resetGlobalPulse();
-  }, [
-    clearExplicitRegionLock,
-    resetGlobalPulse,
-    selectCountry,
-    setHasRegionZoomStarted,
-    setSpotlightCountry,
-  ]);
+    // 3D / world-level 2D only show a pin while spotlight or preview is active.
+    const focusedRegion = useMapUiStore.getState().focusedRegion;
+    if (countryName && (is3d || !focusedRegion)) {
+      setSpotlightCountry(countryName);
+    }
+  }, [is3d, selectCountry, setSpotlightCountry]);
 
   const handleMapPress = useCallback(
     (coordinate?: MapPressCoordinate) => {
@@ -874,23 +1054,29 @@ export default function MapScreen() {
         }
       }
 
-      if (!spotlightCountryName && !focusedRegion) {
+      if (spotlightCountryName) {
+        selectCountry(null);
+        setSpotlightCountry(null);
         return;
       }
 
-      deselectCountry();
+      // Continent exploration exits via Back to World only (2D and 3D).
+      if (focusedRegion) {
+        return;
+      }
     },
     [
       allBoundaryPolygons,
       clusters,
       countries,
-      deselectCountry,
       dismissPreview,
       focusedRegion,
       handleClusterPress,
       is3d,
       selectedCountry,
       spotlightCountryName,
+      selectCountry,
+      setSpotlightCountry,
     ],
   );
 
@@ -905,13 +1091,21 @@ export default function MapScreen() {
     selectedCountry === null &&
     spotlightCountryName === null;
 
-  const showRegionChrome = !isPreviewOpen && !!focusedRegion;
+  const showSpotlightChrome = !isPreviewOpen && !!spotlightCountryName;
+  const showRegionChrome =
+    !isPreviewOpen && !!focusedRegion && !spotlightCountryName;
+  const showMapChrome = showSpotlightChrome || showRegionChrome;
   const showFlagToggle = mapMarkerCountries.length > 0;
 
   const regionChromeBottom = Math.max(insets.bottom, 16);
-  const randomFabBottom = showRegionChrome
-    ? regionChromeBottom + 100
-    : regionChromeBottom + 88;
+  const mapChromeClearance =
+    showSpotlightChrome && focusedRegion ? 132 : showMapChrome ? 100 : 88;
+  const mapOverlayBottom = regionChromeBottom + mapChromeClearance;
+
+  const spotlightCountry = useMemo(() => {
+    if (!spotlightCountryName) return null;
+    return countries.find((c) => c.name === spotlightCountryName) ?? null;
+  }, [countries, spotlightCountryName]);
 
   return (
     <View style={styles.screen}>
@@ -919,17 +1113,22 @@ export default function MapScreen() {
 
       <MapCanvas
         ref={mapRef}
-        countries={mapMarkerCountries}
+        countries={mapMarkersForCanvas}
         boundaryCountries={countries}
         clusters={clusters}
         selectedName={highlightedCountryName}
         focusedRegion={focusedRegion}
         zoomTier={is3d ? "region" : zoomTier}
         countryMarkerMode={countryMarkerMode}
+        markerPresentation={markerReveal.presentation}
+        markerRevealGeneration={markerReveal.revealGeneration}
         mapViewTransition={mapViewTransition}
         onGlobeTransitionComplete={handleGlobeTransitionComplete}
         onFlatTransitionComplete={handleFlatTransitionComplete}
+        onGlobeCameraViewChange={handleGlobeCameraViewChange}
         lockUserGestures={isPreviewOpen}
+        suspendMarkerSnapshot={isMapAnimating}
+        markerRefreshToken={markerRefreshToken}
         onCountryPress={focusCountry}
         onClusterPress={handleClusterPress}
         onMapPress={handleMapPress}
@@ -1005,10 +1204,21 @@ export default function MapScreen() {
           </View>
         ) : null}
 
-        {showRegionChrome && focusedRegion ? (
+        {showSpotlightChrome && spotlightCountry ? (
+          <MapSpotlightChrome
+            countryName={spotlightCountry.name}
+            focusedRegion={focusedRegion}
+            bottom={regionChromeBottom}
+            onCountryPress={recenterOnSpotlightCountry}
+            onContinentPress={
+              focusedRegion ? handleBackToContinentFromSpotlight : undefined
+            }
+            onWorldPress={handleBackToWorld}
+          />
+        ) : showRegionChrome && focusedRegion ? (
           <MapRegionChrome
             focusedRegion={focusedRegion}
-            bottom={Math.max(insets.bottom, 16)}
+            bottom={regionChromeBottom}
             onContinentPress={handleBackToContinent}
             onPreviousContinent={handlePreviousContinent}
             onNextContinent={handleNextContinent}
@@ -1027,10 +1237,11 @@ export default function MapScreen() {
               onZoomOut={() => mapRef.current?.zoomBy("out")}
               showFlagToggle={showFlagToggle}
               showBoundaryControls
+              bottom={mapOverlayBottom}
             />
 
             <RandomCountryFab
-              bottom={randomFabBottom}
+              bottom={mapOverlayBottom}
               onPress={() => void handleRandomCountry()}
             />
           </>

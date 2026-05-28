@@ -1,10 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Image } from "expo-image";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -16,7 +14,6 @@ import { fetchCountryByName } from "@/lib/api";
 import { formatPopulation, getCountryImages } from "@/lib/format-country";
 import { mapCountryToCountry } from "@/lib/map-country";
 import { openCountryInExplore } from "@/lib/open-country-in-explore";
-import { useSavedCountriesStore } from "@/store/use-saved-countries-store";
 import type { Country, MapCountry } from "@/types/country";
 
 type MapCountryPreviewCardProps = {
@@ -42,9 +39,6 @@ export function MapCountryPreviewCard({
   isNextCountryLoading = false,
   onDismiss,
 }: MapCountryPreviewCardProps) {
-  const toggleSaved = useSavedCountriesStore((s) => s.toggleSaved);
-  const isSaved = useSavedCountriesStore((s) => s.isSaved(country.name));
-
   const [detail, setDetail] = useState<Country | null>(null);
   const [detailStatus, setDetailStatus] = useState<
     "idle" | "loading" | "error"
@@ -378,77 +372,4 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.88,
   },
-  previewBlock: {
-    gap: 10,
-  },
-  previewTitle: {
-    fontSize: 13,
-    fontFamily: "Poppins-SemiBold",
-    color: "rgba(255,255,255,0.9)",
-  },
-  previewSkeletonRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  previewSkeleton: {
-    width: 72,
-    height: 72,
-    borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.06)",
-  },
-  previewRow: {
-    gap: 10,
-    alignItems: "center",
-    paddingVertical: 2,
-  },
-  previewThumbWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 16,
-    overflow: "hidden",
-    backgroundColor: "rgba(255,255,255,0.04)",
-  },
-  previewThumb: {
-    width: "100%",
-    height: "100%",
-  },
-  previewTrailingPad: {
-    width: 8,
-  },
 });
-
-function ScrollRowPreview({
-  images,
-  onPress,
-}: {
-  images: string[];
-  onPress: () => void;
-}) {
-  return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.previewRow}
-    >
-      {images.map((uri) => (
-        <Pressable
-          key={uri}
-          accessibilityRole="button"
-          accessibilityLabel="Open country feed"
-          onPress={onPress}
-          style={({ pressed }) => [
-            styles.previewThumbWrap,
-            pressed && styles.pressed,
-          ]}
-        >
-          <Image
-            source={{ uri }}
-            style={styles.previewThumb}
-            contentFit="cover"
-          />
-        </Pressable>
-      ))}
-      <View style={styles.previewTrailingPad} />
-    </ScrollView>
-  );
-}

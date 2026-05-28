@@ -8,6 +8,7 @@ import type { MapCluster } from "@/lib/map-clusters";
 type GlobeLabelOverlayProps = {
   labels: GlobeLabel[];
   positions: GlobeLabelScreenPosition[];
+  focusedRegion?: string | null;
   onContinentPress?: (cluster: MapCluster) => void;
   /** Region id → cluster for continent tap targets. */
   continentClustersByRegion?: Map<string, MapCluster>;
@@ -20,6 +21,7 @@ const SELECTED_OFFSET_Y = 10;
 type LabelItemProps = {
   label: GlobeLabel;
   position: GlobeLabelScreenPosition;
+  selected: boolean;
   onContinentPress?: (cluster: MapCluster) => void;
   cluster?: MapCluster;
 };
@@ -27,6 +29,7 @@ type LabelItemProps = {
 const GlobeLabelItem = memo(function GlobeLabelItem({
   label,
   position,
+  selected,
   onContinentPress,
   cluster,
 }: LabelItemProps) {
@@ -42,6 +45,7 @@ const GlobeLabelItem = memo(function GlobeLabelItem({
       <Text
         style={[
           styles.continentText,
+          selected && styles.continentTextSelected,
           isAntarcticaLabel ? styles.antarcticaText : null,
         ]}
         numberOfLines={1}
@@ -86,6 +90,7 @@ const GlobeLabelItem = memo(function GlobeLabelItem({
 export function GlobeLabelOverlay({
   labels,
   positions,
+  focusedRegion = null,
   onContinentPress,
   continentClustersByRegion,
 }: GlobeLabelOverlayProps) {
@@ -111,6 +116,11 @@ export function GlobeLabelOverlay({
             key={label.id}
             label={label}
             position={position}
+            selected={
+              label.type === "continent" &&
+              !!focusedRegion &&
+              regionKey === focusedRegion
+            }
             onContinentPress={onContinentPress}
             cluster={cluster}
           />
@@ -148,11 +158,17 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
   },
+  continentTextSelected: {
+    fontSize: 12,
+    color: "#fbbf24",
+    textShadowColor: "rgba(251, 191, 36, 0.45)",
+    textShadowRadius: 6,
+  },
   antarcticaText: {
     color: "#000000",
   },
   selectedText: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: "Poppins-SemiBold",
     color: "#ffffff",
     textAlign: "center",

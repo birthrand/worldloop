@@ -11,3 +11,15 @@ export function latLngToVector3(
   const y = radius * Math.cos(phi);
   return [x, y, z];
 }
+
+/** Inverse of `latLngToVector3` for a point on a unit sphere (Y-up). */
+export function vector3ToLatLng(
+  x: number,
+  y: number,
+  z: number,
+): [lat: number, lng: number] {
+  const lat = (Math.asin(Math.max(-1, Math.min(1, y))) * 180) / Math.PI;
+  const thetaDeg = (Math.atan2(z, -x) * 180) / Math.PI;
+  const lng = ((thetaDeg % 360) + 360) % 360 - 180;
+  return [lat, lng];
+}

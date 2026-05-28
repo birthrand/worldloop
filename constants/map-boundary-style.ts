@@ -1,6 +1,6 @@
 import { hexToRgb, hslToRgb } from "@/lib/color-utils";
 
-type MapZoomTier = "world" | "region" | "country";
+export type MapZoomTier = "world" | "region" | "country";
 export type MapFillColorMode = "hue" | "grayscale";
 
 export type MapBoundaryStyleSettings = {
@@ -45,7 +45,8 @@ export const DEFAULT_MAP_BOUNDARY_STYLE: MapBoundaryStyleSettings = {
   strokeColorHex: null,
   strokeWidthEnabled: true,
   strokeThicknessStep: 1,
-  strokeOpacityStep: 3,
+  /** Soft (25%) — subtle borders that stay out of the way. */
+  strokeOpacityStep: 2,
   fillEnabled: false,
   fillOpacityStep: 2,
   fillColorMode: "hue",
@@ -56,7 +57,7 @@ export const DEFAULT_MAP_BOUNDARY_STYLE: MapBoundaryStyleSettings = {
 
 const STROKE_WIDTH_RANGE: Record<MapZoomTier, { min: number; max: number }> = {
   world: { min: 0.9, max: 2.6 },
-  region: { min: 0.7, max: 1.8 },
+  region: { min: 0.4, max: 1.2 },
   country: { min: 0.5, max: 1.2 },
 };
 
@@ -261,8 +262,11 @@ export function resolveBoundaryStrokeColor(
 
   const rgb =
     (settings.strokeColorHex && hexToRgb(settings.strokeColorHex)) ||
-    hslToRgb(settings.strokeColorHue, 0.85, 0.58);
-  const opacity = resolveBoundaryStrokeOpacity(settings.strokeOpacityStep);
+    hslToRgb(settings.strokeColorHue, 0.55, 0.62);
+  const baseOpacity = resolveBoundaryStrokeOpacity(settings.strokeOpacityStep);
+  const tierMultiplier =
+    _zoomTier === "country" ? 1 : _zoomTier === "region" ? 0.88 : 0.75;
+  const opacity = baseOpacity * tierMultiplier;
   return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
 }
 
@@ -306,6 +310,19 @@ export function resolveBoundaryFillColor(
     ? Math.min(1, baseOpacity * (1 + ((100 - grayLevel) / 100) * 0.5))
     : baseOpacity;
   return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
+}
+
+/** Clamp steps and align width toggle before persisting or live-previewing. */
+export function applyBoundaryStyleDraft(
+  draft: MapBoundaryStyleSettings,
+): MapBoundaryStyleSettings {
+  return normalizeBoundaryStyle({
+    ...draft,
+    strokeThicknessStep: clampBoundaryStep(draft.strokeThicknessStep),
+    strokeOpacityStep: clampBoundaryStep(draft.strokeOpacityStep),
+    fillOpacityStep: clampBoundaryStep(draft.fillOpacityStep),
+    strokeWidthEnabled: draft.strokeColorEnabled,
+  });
 }
 
 export function boundaryStyleHasChanges(

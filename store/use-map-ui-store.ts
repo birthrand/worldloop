@@ -68,6 +68,8 @@ type MapUiState = {
   /** When false, country/continent boundary polygons are hidden on the 2D map. */
   showBoundaryLines: boolean;
   boundaryStyle: MapBoundaryStyleSettings;
+  /** Bumped on every boundary style write so 2D polygons remount on RN Maps. */
+  boundaryStyleRevision: number;
   dismissMapOnboarding: () => void;
   setDisplayMode: (mode: MapDisplayMode) => void;
   setFocusedRegion: (region: string | null) => void;
@@ -92,6 +94,7 @@ export const useMapUiStore = create<MapUiState>()(
       countryMarkerMode: "flag",
       showBoundaryLines: true,
       boundaryStyle: DEFAULT_MAP_BOUNDARY_STYLE,
+      boundaryStyleRevision: 0,
 
       dismissMapOnboarding: () => set({ hasSeenMapOnboarding: true }),
       setDisplayMode: (mode) => set({ displayMode: mode }),
@@ -104,9 +107,16 @@ export const useMapUiStore = create<MapUiState>()(
           countryMarkerMode: nextCountryMarkerDisplayMode(state.countryMarkerMode),
         })),
       setShowBoundaryLines: (show) => set({ showBoundaryLines: show }),
-      setBoundaryStyle: (style) => set({ boundaryStyle: style }),
+      setBoundaryStyle: (style) =>
+        set((state) => ({
+          boundaryStyle: normalizeBoundaryStyle(style),
+          boundaryStyleRevision: state.boundaryStyleRevision + 1,
+        })),
       resetBoundaryStyle: () =>
-        set({ boundaryStyle: DEFAULT_MAP_BOUNDARY_STYLE }),
+        set((state) => ({
+          boundaryStyle: DEFAULT_MAP_BOUNDARY_STYLE,
+          boundaryStyleRevision: state.boundaryStyleRevision + 1,
+        })),
 
       resetGlobalPulse: () =>
         set({

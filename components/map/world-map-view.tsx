@@ -12,8 +12,8 @@ import MapView, {
   type Region,
 } from "react-native-maps";
 
+import { MapContinentFocusLayers } from "@/components/map/map-continent-focus-layers";
 import { MapCountryMarker } from "@/components/map/map-country-marker";
-import { MapPulseClusterMarker } from "@/components/map/map-pulse-cluster-marker";
 import {
   boundaryStyleRenderKey,
   resolveBoundaryFillColor,
@@ -22,7 +22,6 @@ import {
 } from "@/constants/map-boundary-style";
 import { MAP_DARK_STYLE } from "@/constants/map-dark-style";
 import { WORLD_INITIAL_REGION } from "@/constants/map-regions";
-import type { MapCluster } from "@/lib/map-clusters";
 import {
   countryNamesMatch,
   filterBoundaryPolygonsByMapContext,
@@ -30,9 +29,10 @@ import {
   type CountryBoundaryPolygon,
 } from "@/lib/map-country-boundaries";
 import type { MapPressCoordinate } from "@/lib/map-map-tap-hit";
+import type { MapMarkerPresentation } from "@/lib/map-region-markers";
 import {
-  type CountryMarkerDisplayMode,
   useMapUiStore,
+  type CountryMarkerDisplayMode,
 } from "@/store/use-map-ui-store";
 import type { MapCountry } from "@/types/country";
 
@@ -85,17 +85,19 @@ type WorldMapViewProps = {
   countries: MapCountry[];
   /** Full country list for boundary region matching (markers may be a subset). */
   boundaryCountries: MapCountry[];
-  clusters: MapCluster[];
   selectedName: string | null;
   focusedRegion: string | null;
   zoomTier: MapZoomTier;
   countryMarkerMode?: CountryMarkerDisplayMode;
+  markerPresentation?: MapMarkerPresentation;
+  markerRevealGeneration?: number;
   onCountryPress: (country: MapCountry) => void;
-  onClusterPress: (cluster: MapCluster) => void;
   onMapPress: (coordinate?: MapPressCoordinate) => void;
   onRegionChangeComplete?: (region: Region) => void;
   /** When true, user cannot pan or pinch-zoom (programmatic moves still work). */
   lockUserGestures?: boolean;
+  suspendMarkerSnapshot?: boolean;
+  markerRefreshToken?: number;
 };
 
 export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
@@ -103,19 +105,22 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
     {
       countries,
       boundaryCountries,
-      clusters,
       selectedName,
       focusedRegion,
       zoomTier,
       countryMarkerMode = "flag",
+      markerPresentation = "full",
+      markerRevealGeneration = 0,
       onCountryPress,
-      onClusterPress,
       onMapPress,
       onRegionChangeComplete,
       lockUserGestures = false,
+      suspendMarkerSnapshot = false,
+      markerRefreshToken = 0,
     },
     ref,
   ) {
+    const keepSingleMarkerLive = countries.length === 1;
     const mapRef = useRef<MapView>(null);
     const regionRef = useRef<Region>(WORLD_INITIAL_REGION);
 
@@ -148,6 +153,7 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
     );
 
     const boundaryStyle = useMapUiStore((s) => s.boundaryStyle);
+    const boundaryStyleRevision = useMapUiStore((s) => s.boundaryStyleRevision);
     const showBoundaryLines = useMapUiStore((s) => s.showBoundaryLines);
 
     const allCountryBoundaries = useMemo(
@@ -155,14 +161,24 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
       [],
     );
 
+    const showWorldBoundaries =
+      showBoundaryLines && !focusedRegion && !selectedName;
+
     const countryBoundaries = useMemo(
       () =>
         filterBoundaryPolygonsByMapContext(allCountryBoundaries, {
           selectedCountryName: selectedName,
           focusedRegion,
           countries: boundaryCountries,
+          showWorldBoundaries,
         }),
-      [allCountryBoundaries, boundaryCountries, focusedRegion, selectedName],
+      [
+        allCountryBoundaries,
+        boundaryCountries,
+        focusedRegion,
+        selectedName,
+        showWorldBoundaries,
+      ],
     );
 
     const outlineStrokeWidth = resolveBoundaryStrokeWidth(
@@ -226,23 +242,30 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
         showsMyLocationButton={false}
         mapType={Platform.OS === "android" ? "standard" : "hybridFlyover"}
       >
+        {showBoundaryLines ? (
+          <MapContinentFocusLayers
+            focusedRegion={focusedRegion}
+            allPolygons={allCountryBoundaries}
+            boundaryCountries={boundaryCountries}
+          />
+        ) : null}
         {showBoundaryLines
           ? countryBoundaries.map((polygon) => (
-          <Polygon
-            key={`${polygon.id}-${boundaryRenderKey}`}
-            coordinates={polygon.coordinates}
-            holes={polygon.holes}
-            tappable={boundariesTappable}
-            onPress={
-              boundariesTappable
-                ? () => handleBoundaryPress(polygon)
-                : undefined
-            }
-            strokeColor={outlineStrokeColor}
-            strokeWidth={outlineStrokeWidth}
-            fillColor={outlineFillColor}
-            zIndex={1}
-          />
+              <Polygon
+                key={`${polygon.id}-${boundaryRenderKey}-${boundaryStyleRevision}`}
+                coordinates={polygon.coordinates}
+                holes={polygon.holes}
+                tappable={boundariesTappable}
+                onPress={
+                  boundariesTappable
+                    ? () => handleBoundaryPress(polygon)
+                    : undefined
+                }
+                strokeColor={outlineStrokeColor}
+                strokeWidth={outlineStrokeWidth}
+                fillColor={outlineFillColor}
+                zIndex={1}
+              />
             ))
           : null}
         {countries.map((country) => (
@@ -251,19 +274,14 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
             country={country}
             selected={selectedName === country.name}
             displayMode={countryMarkerMode}
+            presentation={markerPresentation}
+            revealGeneration={markerRevealGeneration}
+            keepLive={keepSingleMarkerLive}
+            suspendSnapshot={suspendMarkerSnapshot}
+            refreshToken={markerRefreshToken}
             onPress={() => onCountryPress(country)}
           />
         ))}
-        {!focusedRegion
-          ? clusters.map((cluster) => (
-              <MapPulseClusterMarker
-                key={cluster.id}
-                cluster={cluster}
-                selected={focusedRegion === cluster.region}
-                onPress={onClusterPress}
-              />
-            ))
-          : null}
       </MapView>
     );
   },

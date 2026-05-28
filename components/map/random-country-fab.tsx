@@ -6,19 +6,19 @@ type RandomCountryFabProps = {
   bottom?: number;
 };
 
-export function RandomCountryFab({ onPress, bottom = 98 }: RandomCountryFabProps) {
+export function RandomCountryFab({
+  onPress,
+  bottom = 98,
+}: RandomCountryFabProps) {
   return (
-    <View
-      style={[styles.wrap, { bottom }]}
-      pointerEvents="box-none"
-    >
+    <View style={[styles.wrap, { bottom }]} pointerEvents="box-none">
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Pick a random country"
         onPress={onPress}
         style={({ pressed }) => [styles.fab, pressed && styles.pressed]}
       >
-        <Ionicons name="dice-outline" size={22} color="#0b132b" />
+        <Ionicons name="dice-outline" size={28} color="#0b132b" />
       </Pressable>
     </View>
   );

@@ -5,7 +5,6 @@ import {
   countryToMapCountry,
   isValidLatLng,
 } from "@/lib/map-country";
-import { useMapUiStore } from "@/store/use-map-ui-store";
 import type { Country, MapCountry } from "@/types/country";
 
 export type MapFilterChip =
@@ -79,13 +78,6 @@ function applyPendingExternalSelection(
 
 function withValidCoordinates(countries: MapCountry[]): MapCountry[] {
   return countries.filter((c) => isValidLatLng(c.latlng));
-}
-
-function apply3dUiDefaults() {
-  useMapUiStore.setState({
-    countryMarkerMode: "hidden",
-    showBoundaryLines: false,
-  });
 }
 
 /** Population chip: top 20% by population. Other chips are visual-only in v1. */
@@ -198,21 +190,12 @@ export const useMapStore = create<MapState>((set, get) => ({
 
   setActiveChip: (chip) => set({ activeChip: chip }),
 
-  setMapMode: (mode) => {
-    if (mode === "3d") {
-      apply3dUiDefaults();
-    }
-    set({ mapMode: mode });
-  },
+  setMapMode: (mode) => set({ mapMode: mode }),
 
   toggleMapMode: () =>
-    set((state) => {
-      const nextMode = state.mapMode === "3d" ? "2d" : "3d";
-      if (nextMode === "3d") {
-        apply3dUiDefaults();
-      }
-      return { mapMode: nextMode };
-    }),
+    set((state) => ({
+      mapMode: state.mapMode === "3d" ? "2d" : "3d",
+    })),
 
   registerGlobeCamera: (handle) => {
     set({ globeCamera: handle });

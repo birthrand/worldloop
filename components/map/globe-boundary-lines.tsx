@@ -70,14 +70,18 @@ export function GlobeBoundaryLines({
 
   const zoomTier = resolveGlobeZoomTier(selectedName, focusedRegion);
 
+  const showWorldBoundaries =
+    showBoundaryLines && !focusedRegion && !selectedName;
+
   const countryBoundaries = useMemo(() => {
     const all = parseCountryBoundaryPolygons(countriesGeoJson);
     return filterBoundaryPolygonsByMapContext(all, {
       selectedCountryName: selectedName,
       focusedRegion,
       countries: boundaryCountries,
+      showWorldBoundaries,
     });
-  }, [boundaryCountries, focusedRegion, selectedName]);
+  }, [boundaryCountries, focusedRegion, selectedName, showWorldBoundaries]);
 
   const strokeColor = resolveBoundaryStrokeColor(boundaryStyle, zoomTier);
   const styleKey = boundaryStyleRenderKey(boundaryStyle, zoomTier);
