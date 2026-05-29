@@ -2,11 +2,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import Animated, { SlideInDown, SlideOutDown } from "react-native-reanimated";
 
 import { FlagBadge } from "@/components/explore/flag-badge";
 import { continentDisplayLabel } from "@/constants/regions";
@@ -29,7 +31,20 @@ type MapCountryPreviewCardProps = {
 const FLAG_WIDTH = 56;
 const FLAG_HEIGHT = 38;
 const COUNTRY_NAME_FONT_SIZE = 17;
+const COUNTRY_NAME_LINE_HEIGHT = 20;
 const COUNTRY_NAME_MIN_FONT_SIZE = 14;
+const ACCENT = "#fbbf24";
+const ACCENT_DARK = "#0b132b";
+
+const PREVIEW_CARD_ENTER = SlideInDown.springify()
+  .damping(20)
+  .stiffness(150)
+  .mass(0.85);
+
+const PREVIEW_CARD_EXIT = SlideOutDown.springify()
+  .damping(24)
+  .stiffness(200)
+  .mass(0.75);
 
 export function MapCountryPreviewCard({
   country,
@@ -87,13 +102,19 @@ export function MapCountryPreviewCard({
         : "Updating…");
 
   return (
-    <View style={[styles.card, { paddingBottom: bottomInset - 16 }]}>
+    <Animated.View
+      entering={PREVIEW_CARD_ENTER}
+      exiting={PREVIEW_CARD_EXIT}
+      style={[styles.card, { paddingBottom: Math.max(bottomInset - 16, 0) }]}
+    >
       <View style={styles.topRow}>
         <View style={styles.titleTextWrap}>
           <Text
             style={styles.countryName}
-            numberOfLines={2}
+            numberOfLines={3}
             ellipsizeMode="tail"
+            includeFontPadding={false}
+            textAlignVertical="center"
             adjustsFontSizeToFit
             minimumFontScale={
               COUNTRY_NAME_MIN_FONT_SIZE / COUNTRY_NAME_FONT_SIZE
@@ -103,18 +124,20 @@ export function MapCountryPreviewCard({
           </Text>
         </View>
 
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Close country preview"
-          onPress={onDismiss}
-          hitSlop={12}
-          style={({ pressed }) => [
-            styles.closeButton,
-            pressed && styles.closeButtonPressed,
-          ]}
-        >
-          <Ionicons name="close" size={22} color="#cbd5e1" />
-        </Pressable>
+        <View style={styles.closeSlot}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Close country preview"
+            onPress={onDismiss}
+            hitSlop={12}
+            style={({ pressed }) => [
+              styles.closeButton,
+              pressed && styles.closeButtonPressed,
+            ]}
+          >
+            <Ionicons name="close" size={18} color="#64748b" />
+          </Pressable>
+        </View>
       </View>
 
       <View style={styles.sectionDivider} />
@@ -231,14 +254,15 @@ export function MapCountryPreviewCard({
           onPress={() => openCountryInExplore(countryForActions)}
           style={({ pressed }) => [
             styles.actionSegment,
-            pressed && styles.pressed,
+            styles.exploreSegment,
+            pressed && styles.explorePressed,
           ]}
         >
-          <Text style={styles.actionLabel}>Explore</Text>
-          <Ionicons name="arrow-forward" size={16} color="#ffffff" />
+          <Text style={styles.exploreLabel}>Explore</Text>
+          <Ionicons name="arrow-forward" size={16} color={ACCENT_DARK} />
         </Pressable>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -279,6 +303,18 @@ const styles = StyleSheet.create({
     backgroundColor: "#121826",
     borderTopWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.08)",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000000",
+        shadowOffset: { width: 0, height: -6 },
+        shadowOpacity: 0.38,
+        shadowRadius: 18,
+      },
+      android: {
+        elevation: 16,
+      },
+      default: {},
+    }),
   },
   sectionDivider: {
     height: StyleSheet.hairlineWidth,
@@ -287,31 +323,38 @@ const styles = StyleSheet.create({
   },
   topRow: {
     flexDirection: "row",
-    // justifyContent: "center",
-    alignItems: "center",
-    gap: 6,
+    alignItems: "flex-start",
+    gap: 4,
   },
   titleTextWrap: {
     flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
     minWidth: 0,
   },
   countryName: {
     fontSize: COUNTRY_NAME_FONT_SIZE,
-    lineHeight: 21,
+    lineHeight: COUNTRY_NAME_LINE_HEIGHT,
     fontFamily: "Poppins-SemiBold",
     color: "#ffffff",
   },
-  closeButton: {
-    width: 40,
-    height: 40,
+  closeSlot: {
+    height: COUNTRY_NAME_LINE_HEIGHT,
+    width: 28,
     flexShrink: 0,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 12,
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
+  },
+  closeButton: {
+    width: COUNTRY_NAME_LINE_HEIGHT,
+    height: COUNTRY_NAME_LINE_HEIGHT,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 10,
   },
   closeButtonPressed: {
-    opacity: 0.6,
+    backgroundColor: "rgba(255, 255, 255, 0.06)",
+    opacity: 0.85,
   },
   metaRow: {
     flexDirection: "row",
@@ -352,7 +395,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 14,
     lineHeight: 17,
-    fontFamily: "Poppins-SemiBold",
+    fontFamily: "Poppins-Regular",
     color: "#ffffff",
     flexShrink: 1,
   },
@@ -413,6 +456,19 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Poppins-Medium",
     color: "#ffffff",
+  },
+  exploreSegment: {
+    flex: 1.2,
+    backgroundColor: ACCENT,
+  },
+  exploreLabel: {
+    fontSize: 13,
+    fontFamily: "Poppins-SemiBold",
+    color: ACCENT_DARK,
+  },
+  explorePressed: {
+    opacity: 0.88,
+    backgroundColor: "#f59e0b",
   },
   actionLoading: {
     opacity: 0.45,

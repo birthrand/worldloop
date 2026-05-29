@@ -1,11 +1,11 @@
 import { create } from "zustand";
 
 import { CONTINENTS } from "@/constants/regions";
+import { fetchFeedCountries } from "@/lib/api";
 import {
   filterCountriesForExploreRegion,
   normalizeCountriesRegions,
 } from "@/lib/app-region";
-import { fetchFeedCountries } from "@/lib/api";
 import { fetchExploreRegionCountries } from "@/lib/explore-region-countries";
 import { prefetchFeedHeroImages } from "@/lib/prefetch-feed-heroes";
 import type { Country } from "@/types/country";
@@ -361,11 +361,7 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
         const nextCountries =
           (state.sortOrder ?? DEFAULT_FEED_SORT_ORDER) === "random"
             ? appended
-            : sortCountries(
-                appended,
-                state.sortField,
-                state.sortOrder,
-              );
+            : sortCountries(appended, state.sortField, state.sortOrder);
         const snapshotTail = state.forYouSnapshot
           ? sortCountries(
               [...state.forYouSnapshot.countries, ...uniqueNew],
@@ -399,25 +395,55 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
   },
 
   setSort: (field, order) => {
-    set((state) => ({
-      sortField: field,
-      sortOrder: order,
-      countries: sortCountries(state.countries, field, order),
-      currentIndex: 0,
-    }));
+    set((state) => {
+      const sortedCountries = sortCountries(state.countries, field, order);
+      return {
+        sortField: field,
+        sortOrder: order,
+        countries: sortedCountries,
+        currentIndex: 0,
+        ...(state.forYouSnapshot
+          ? {
+              forYouSnapshot: {
+                ...state.forYouSnapshot,
+                countries: sortCountries(
+                  state.forYouSnapshot.countries,
+                  field,
+                  order,
+                ),
+              },
+            }
+          : {}),
+      };
+    });
   },
 
   clearSort: () => {
-    set((state) => ({
-      sortField: DEFAULT_FEED_SORT_FIELD,
-      sortOrder: DEFAULT_FEED_SORT_ORDER,
-      countries: sortCountries(
+    set((state) => {
+      const sortedCountries = sortCountries(
         state.countries,
         DEFAULT_FEED_SORT_FIELD,
         DEFAULT_FEED_SORT_ORDER,
-      ),
-      currentIndex: 0,
-    }));
+      );
+      return {
+        sortField: DEFAULT_FEED_SORT_FIELD,
+        sortOrder: DEFAULT_FEED_SORT_ORDER,
+        countries: sortedCountries,
+        currentIndex: 0,
+        ...(state.forYouSnapshot
+          ? {
+              forYouSnapshot: {
+                ...state.forYouSnapshot,
+                countries: sortCountries(
+                  state.forYouSnapshot.countries,
+                  DEFAULT_FEED_SORT_FIELD,
+                  DEFAULT_FEED_SORT_ORDER,
+                ),
+              },
+            }
+          : {}),
+      };
+    });
   },
 
   setCurrentIndex: (index: number) => {
@@ -445,7 +471,9 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
       return;
     }
 
-    const tail = forYouSnapshot.countries.filter((c) => c.name !== country.name);
+    const tail = forYouSnapshot.countries.filter(
+      (c) => c.name !== country.name,
+    );
 
     set({
       countries: [country, ...tail],

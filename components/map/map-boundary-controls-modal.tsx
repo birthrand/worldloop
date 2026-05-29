@@ -369,6 +369,7 @@ export function MapBoundaryControlsModal({
   const initialStyle = applyBoundaryStyleDraft(boundaryStyle);
   const committedStyleRef = useRef(initialStyle);
   const committedShowLinesRef = useRef(showBoundaryLines);
+  const hasToggledShowLinesRef = useRef(false);
   const [draft, setDraft] = useState<MapBoundaryStyleSettings>(initialStyle);
 
   // Ensure the 2D map has polygons to preview (restored on dismiss if they were off).
@@ -418,7 +419,11 @@ export function MapBoundaryControlsModal({
     const applied = applyBoundaryStyleDraft(draft);
     setBoundaryStyle(applied);
     committedStyleRef.current = applied;
-    committedShowLinesRef.current = showBoundaryLines;
+    if (hasToggledShowLinesRef.current) {
+      committedShowLinesRef.current = showBoundaryLines;
+    } else {
+      setShowBoundaryLines(committedShowLinesRef.current);
+    }
     onClose();
   };
 
@@ -429,10 +434,12 @@ export function MapBoundaryControlsModal({
     setShowBoundaryLines(true);
     committedStyleRef.current = defaults;
     committedShowLinesRef.current = true;
+    hasToggledShowLinesRef.current = true;
     resetBoundaryStyle();
   };
 
   const setBoundaryEnabled = (strokeColorEnabled: boolean) => {
+    hasToggledShowLinesRef.current = true;
     setShowBoundaryLines(strokeColorEnabled);
     setDraft((current) => ({
       ...current,

@@ -262,9 +262,14 @@ export function createGlobeOrbitControls() {
       const distance = Math.sqrt(dx * dx + dy * dy);
 
       internals.dollyEnd = distance;
-      this.dollyOut(
-        Math.pow(internals.dollyEnd / internals.dollyStart, scope.zoomSpeed),
-      );
+
+      if (internals.dollyStart > 0) {
+        const ratio = internals.dollyEnd / internals.dollyStart;
+        if (Number.isFinite(ratio) && ratio > 0) {
+          this.dollyOut(Math.pow(ratio, scope.zoomSpeed));
+        }
+      }
+
       internals.dollyStart = internals.dollyEnd;
     },
 

@@ -15,8 +15,8 @@ type MapCountryFocusPillProps = {
 const PILL_HEIGHT = 44;
 
 function shortCountryName(name: string): string {
-  if (name.length <= 2) return name;
-  return `${name.slice(0, 2)}...`;
+  if (name.length <= 10) return name;
+  return `${name.slice(0, 10)}…`;
 }
 
 export function MapCountryFocusPill({

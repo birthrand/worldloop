@@ -183,7 +183,7 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
           }
         }),
       );
-    }, [finishGlobeEnter, flatDimOpacity, globeOpacity]);
+    }, [finishGlobeEnter]);
 
     const handleGlobePainted = useCallback(() => {
       if (mapViewTransition !== "enteringGlobe" || globePaintedRef.current) {
@@ -212,7 +212,7 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
       }, 2500);
 
       return () => clearTimeout(fallback);
-    }, [flatDimOpacity, globeOpacity, mapViewTransition, startGlobeFadeIn]);
+    }, [mapViewTransition, startGlobeFadeIn]);
 
     const startFlatFadeIn = useCallback(() => {
       flatDimOpacity.value = withSequence(
@@ -227,7 +227,7 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
           }
         }),
       );
-    }, [finishFlatEnter, flatDimOpacity, globeOpacity]);
+    }, [finishFlatEnter]);
 
     useEffect(() => {
       if (mapViewTransition !== "enteringFlat") {
@@ -240,7 +240,7 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
       globeOpacity.value = 1;
       flatDimOpacity.value = 0;
       startFlatFadeIn();
-    }, [flatDimOpacity, globeOpacity, mapViewTransition, startFlatFadeIn]);
+    }, [mapViewTransition, startFlatFadeIn]);
 
     useEffect(() => {
       if (mapViewTransition === "ready" && mapMode === "3d") {
@@ -251,7 +251,7 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
         globeOpacity.value = 0;
         flatDimOpacity.value = 0;
       }
-    }, [flatDimOpacity, globeOpacity, mapMode, mapViewTransition]);
+    }, [mapMode, mapViewTransition]);
 
     const globeLayerStyle = useAnimatedStyle(() => ({
       opacity: globeOpacity.value,
@@ -266,7 +266,7 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
         duration: MAP_CONTINENT_FOCUS_FADE_MS,
         easing: Easing.inOut(Easing.ease),
       });
-    }, [continentFocusBlend, focusedRegion]);
+    }, [focusedRegion]);
 
     const continentFocusScrimStyle = useAnimatedStyle(() => ({
       opacity: continentFocusBlend.value * MAP_SCRIM_MAX_OPACITY,

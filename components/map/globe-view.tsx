@@ -1,8 +1,8 @@
 import {
   Canvas,
-  type ThreeEvent,
   useFrame,
   useThree,
+  type ThreeEvent,
 } from "@react-three/fiber/native";
 import {
   forwardRef,
@@ -25,14 +25,14 @@ import {
   type GlobePinScreenPosition,
 } from "@/components/map/globe-pin-projector";
 import {
-  createGlobeOrbitControls,
-  type GlobeOrbitControls,
-} from "@/lib/globe-orbit-controls";
-import {
   buildGlobeVisibleLabels,
   globeLabelPositionsChanged,
   type GlobeLabelScreenPosition,
 } from "@/lib/globe-labels";
+import {
+  createGlobeOrbitControls,
+  type GlobeOrbitControls,
+} from "@/lib/globe-orbit-controls";
 import {
   projectLatLngToScreen,
   type GlobeScreenPosition,
@@ -110,7 +110,11 @@ function slerpUnitVectors(
 ): THREE.Vector3 {
   slerpScratchQuatA.setFromUnitVectors(SLERP_REFERENCE, from);
   slerpScratchQuatB.setFromUnitVectors(SLERP_REFERENCE, to);
-  slerpScratchQuat.slerpQuaternions(slerpScratchQuatA, slerpScratchQuatB, alpha);
+  slerpScratchQuat.slerpQuaternions(
+    slerpScratchQuatA,
+    slerpScratchQuatB,
+    alpha,
+  );
   return target.copy(SLERP_REFERENCE).applyQuaternion(slerpScratchQuat);
 }
 
@@ -207,11 +211,10 @@ function GlobeScene({
       event.stopPropagation();
       const normal = event.point.clone().normalize();
       const latitude = THREE.MathUtils.radToDeg(Math.asin(normal.y));
-      const thetaDeg = THREE.MathUtils.radToDeg(Math.atan2(normal.z, -normal.x));
-      const longitude = THREE.MathUtils.euclideanModulo(
-        thetaDeg,
-        360,
-      ) - 180;
+      const thetaDeg = THREE.MathUtils.radToDeg(
+        Math.atan2(normal.z, -normal.x),
+      );
+      const longitude = THREE.MathUtils.euclideanModulo(thetaDeg, 360) - 180;
       onGlobeSurfacePress({ latitude, longitude });
     },
     [controls.functions, onGlobeSurfacePress],
@@ -436,7 +439,7 @@ function GlobeScene({
         />
       </mesh>
       <mesh
-        onClick={handleGlobeSurfacePress}
+        // onClick={handleGlobeSurfacePress}
         onPointerDown={handleGlobeSurfacePress}
       >
         <sphereGeometry args={[GLOBE_RADIUS * 1.01, 64, 64]} />

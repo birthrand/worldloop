@@ -91,7 +91,7 @@ export function MapContinentFocusLayers({
         }
       },
     );
-  }, [blend, focusedRegion]);
+  }, [focusedRegion]);
 
   useEffect(() => {
     if (previewRegion && !focusedRegion) {
@@ -121,7 +121,7 @@ export function MapContinentFocusLayers({
         }
       },
     );
-  }, [focusedRegion, previewBlend, previewRegion]);
+  }, [focusedRegion, previewRegion]);
 
   useAnimatedReaction(
     () => blend.value,

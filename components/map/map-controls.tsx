@@ -269,29 +269,27 @@ export function MapControls({
             {showDisplayStack ? (
               <View style={styles.stack}>
                 {showFlagToggle ? (
-                  <>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={countryMarkerModeLabel(
-                        countryMarkerMode,
-                      )}
-                      onPress={handleCycleCountryMarkerMode}
-                      style={({ pressed }) => [
-                        styles.control,
-                        pressed && styles.pressed,
-                      ]}
-                    >
-                      <Ionicons
-                        name={markerModeIcon}
-                        size={18}
-                        color={markerModeColor}
-                      />
-                    </Pressable>
-                    <View style={styles.divider} />
-                  </>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={countryMarkerModeLabel(
+                      countryMarkerMode,
+                    )}
+                    onPress={handleCycleCountryMarkerMode}
+                    style={({ pressed }) => [
+                      styles.control,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Ionicons
+                      name={markerModeIcon}
+                      size={18}
+                      color={markerModeColor}
+                    />
+                  </Pressable>
                 ) : null}
                 {showBoundaryControls ? (
                   <>
+                    {showFlagToggle ? <View style={styles.divider} /> : null}
                     <Pressable
                       accessibilityRole="togglebutton"
                       accessibilityState={{ checked: showBoundaryLines }}

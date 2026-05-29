@@ -1,6 +1,10 @@
 import type { Region } from "react-native-maps";
 
 import { getMapDisplayLatLng, isValidLatLng } from "@/lib/map-country";
+import {
+  isGlobeYellowPinsVisible,
+  useMapUiStore,
+} from "@/store/use-map-ui-store";
 import type { MapCountry } from "@/types/country";
 
 /** Toggle to `true` to log map FAB / flight / selection diagnostics (dev only by default). */
@@ -43,22 +47,34 @@ export function summarizeCountry(country: MapCountry | null | undefined) {
   };
 }
 
+/** Current country pin / flag display preference (from persisted map UI store). */
+export function summarizeFlagVisibility() {
+  const countryMarkerMode = useMapUiStore.getState().countryMarkerMode;
+  return {
+    countryMarkerMode,
+    flagsVisible: countryMarkerMode === "flag",
+    globePinsVisible: isGlobeYellowPinsVisible(countryMarkerMode),
+    markersHidden: countryMarkerMode === "hidden",
+  };
+}
+
 export function logMapDebug(
   scope: MapDebugScope,
   event: string,
   data?: Record<string, unknown>,
 ): void {
   if (!MAP_DEBUG_ENABLED) return;
-  if (data) {
-    console.log(`[map:${scope}] ${event}`, data);
-  } else {
-    console.log(`[map:${scope}] ${event}`);
-  }
+  const payload = { ...summarizeFlagVisibility(), ...data };
+  console.log(`[map:${scope}] ${event}`, payload);
 }
 
 type ErrorUtilsLike = {
-  getGlobalHandler?: () => ((error: unknown, isFatal?: boolean) => void) | undefined;
-  setGlobalHandler?: (handler: (error: unknown, isFatal?: boolean) => void) => void;
+  getGlobalHandler?: () =>
+    | ((error: unknown, isFatal?: boolean) => void)
+    | undefined;
+  setGlobalHandler?: (
+    handler: (error: unknown, isFatal?: boolean) => void,
+  ) => void;
 };
 
 let mapDebugErrorHandlerInstalled = false;
@@ -80,6 +96,7 @@ export function installMapDebugErrorHandler(): void {
   errorUtils.setGlobalHandler((error, isFatal) => {
     const err = error as { name?: string; message?: string; stack?: string };
     console.log("[map:fatal] global JS error", {
+      ...summarizeFlagVisibility(),
       isFatal,
       name: err?.name,
       message: err?.message,

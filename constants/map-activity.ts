@@ -1,17 +1,22 @@
 import type { MapCountry } from "@/types/country";
 export type MapClusterActivity = "rising" | "quiet";
 
-export function getClusterActivity(countries: MapCountry[]): MapClusterActivity {
-  // Rising: cluster contains any country in the top 20% by population (within cluster).
-  const sorted = [...countries].sort((a, b) => b.population - a.population);
+export function getClusterActivity(
+  clusterCountries: MapCountry[],
+  globalCountries: MapCountry[],
+): MapClusterActivity {
+  if (clusterCountries.length === 0) return "quiet";
+
+  // Rising: cluster contains any country in the global top 20% by population.
+  const sorted = [...globalCountries].sort(
+    (a, b) => b.population - a.population,
+  );
   const topCount = Math.max(1, Math.ceil(sorted.length * 0.2));
   const topNames = new Set(sorted.slice(0, topCount).map((c) => c.name));
 
-  if (countries.some((c) => topNames.has(c.name))) {
-    return "rising";
-  }
-
-  return "quiet";
+  return clusterCountries.some((c) => topNames.has(c.name))
+    ? "rising"
+    : "quiet";
 }
 
 export function getActivityVisual(activity: MapClusterActivity) {
@@ -35,4 +40,3 @@ export function getActivityVisual(activity: MapClusterActivity) {
       };
   }
 }
-

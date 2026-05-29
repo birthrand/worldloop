@@ -12,8 +12,8 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { resolveFlagCdnUrl } from "@/lib/flag-url";
-import { logMapDebug } from "@/lib/map-debug";
 import { cca2FromFlagUrl, getMapDisplayLatLng } from "@/lib/map-country";
+import { logMapDebug } from "@/lib/map-debug";
 import {
   type MapMarkerPresentation,
   MAP_FOCUS_TRANSITION_2D_MS,
@@ -118,7 +118,7 @@ function FlagPinBody({
       }),
     );
     return () => cancelAnimation(pulse);
-  }, [focusTransitioning, pulse]);
+  }, [focusTransitioning]);
 
   const pinAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: focusTransitioning ? pulse.value : 1 }],
@@ -178,7 +178,7 @@ export const MapCountryMarker = memo(function MapCountryMarker({
   const isEntering =
     presentation === "entering" && !selected && !focusTransitioning;
   const fadeOpacity = useSharedValue(0);
-  const fadeScale = useSharedValue(0.85);
+  const fadeScale = useSharedValue(1);
   const prevRevealGenerationRef = useRef(revealGeneration);
 
   useEffect(() => {
@@ -205,10 +205,9 @@ export const MapCountryMarker = memo(function MapCountryMarker({
     }
 
     fadeOpacity.value = withTiming(targetOpacity, { duration: 200 });
+    fadeScale.value = withTiming(1, { duration: 200 });
   }, [
     deemphasized,
-    fadeOpacity,
-    fadeScale,
     isEntering,
     revealGeneration,
     selected,
