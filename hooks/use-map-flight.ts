@@ -15,6 +15,11 @@ type UseMapFlightParams = {
   onActiveChange?: (active: boolean) => void;
 };
 
+export type FlightCancelOptions = {
+  /** When true, stale timers/runId are cleared without firing active=false. */
+  keepActive?: boolean;
+};
+
 export type MapFlightController = {
   /**
    * Run an ordered phase sequence (e.g. world -> continent -> country).
@@ -22,7 +27,7 @@ export type MapFlightController = {
    */
   flyTo: (phases: FlightPhase[], onComplete?: () => void) => void;
   /** Cancel pending phases and mark the current flight stale. */
-  cancel: () => void;
+  cancel: (options?: FlightCancelOptions) => void;
   isActive: () => boolean;
 };
 
@@ -60,18 +65,25 @@ export function useMapFlight({
     [onActiveChange],
   );
 
-  const cancel = useCallback(() => {
-    const cancelledRunId = runIdRef.current;
-    const wasActive = activeRef.current;
-    clearTimers();
-    runIdRef.current += 1;
-    setActive(false);
-    logMapDebug("flight", "cancel", {
-      cancelledRunId,
-      nextRunId: runIdRef.current,
-      wasActive,
-    });
-  }, [clearTimers, setActive]);
+  const cancel = useCallback(
+    (options?: FlightCancelOptions) => {
+      const cancelledRunId = runIdRef.current;
+      const wasActive = activeRef.current;
+      const keepActive = options?.keepActive === true;
+      clearTimers();
+      runIdRef.current += 1;
+      if (!keepActive) {
+        setActive(false);
+      }
+      logMapDebug("flight", "cancel", {
+        cancelledRunId,
+        nextRunId: runIdRef.current,
+        wasActive,
+        keepActive,
+      });
+    },
+    [clearTimers, setActive],
+  );
 
   const flyTo = useCallback(
     (phases: FlightPhase[], onComplete?: () => void) => {
@@ -131,7 +143,10 @@ export function useMapFlight({
         elapsed += phase.duration + PHASE_GAP_MS;
       });
 
-      const totalDuration = Math.max(0, elapsed - PHASE_GAP_MS + SETTLE_BUFFER_MS);
+      const totalDuration = Math.max(
+        0,
+        elapsed - PHASE_GAP_MS + SETTLE_BUFFER_MS,
+      );
       const completeId = setTimeout(() => {
         if (runIdRef.current !== runId) {
           logMapDebug("flight", "complete skipped (stale run)", {

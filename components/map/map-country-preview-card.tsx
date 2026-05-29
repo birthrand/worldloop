@@ -230,18 +230,16 @@ export function MapCountryPreviewCard({
               accessibilityRole="button"
               accessibilityLabel="Shuffle to another country"
               accessibilityHint="Picks another country in this region and flies the map there"
+              accessibilityState={{ disabled: isNextCountryLoading }}
+              disabled={isNextCountryLoading}
               onPress={onNextCountry}
               style={({ pressed }) => [
                 styles.actionSegment,
                 isNextCountryLoading && styles.actionLoading,
-                pressed && styles.pressed,
+                pressed && !isNextCountryLoading && styles.pressed,
               ]}
             >
-              {isNextCountryLoading ? (
-                <ActivityIndicator size="small" color="#ffffff" />
-              ) : (
-                <Ionicons name="shuffle" size={18} color="#ffffff" />
-              )}
+              <Ionicons name="shuffle" size={18} color="#ffffff" />
               <Text style={styles.actionLabel}>Shuffle</Text>
             </Pressable>
             <View style={styles.actionDivider} />
@@ -458,7 +456,6 @@ const styles = StyleSheet.create({
     color: "#ffffff",
   },
   exploreSegment: {
-    flex: 1.2,
     backgroundColor: ACCENT,
   },
   exploreLabel: {

@@ -14,13 +14,12 @@ import MapView, {
 
 import { MapContinentFocusLayers } from "@/components/map/map-continent-focus-layers";
 import { MapCountryMarker } from "@/components/map/map-country-marker";
-import { MAP_CONTINENT_FOCUS_POLYGON_Z } from "@/constants/map-continent-focus";
 import {
   boundaryStyleRenderKey,
-  resolveBoundaryFillColor,
   resolveBoundaryStrokeColor,
   resolveBoundaryStrokeWidth,
 } from "@/constants/map-boundary-style";
+import { MAP_CONTINENT_FOCUS_POLYGON_Z } from "@/constants/map-continent-focus";
 import { MAP_DARK_STYLE } from "@/constants/map-dark-style";
 import { WORLD_INITIAL_REGION } from "@/constants/map-regions";
 import {
@@ -93,6 +92,7 @@ type WorldMapViewProps = {
   selectedName: string | null;
   focusTransitionName?: string | null;
   focusedRegion: string | null;
+  continentOverlayRegion?: string | null;
   previewRegion?: string | null;
   zoomTier: MapZoomTier;
   countryMarkerMode?: CountryMarkerDisplayMode;
@@ -118,6 +118,7 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
       selectedName,
       focusTransitionName = null,
       focusedRegion,
+      continentOverlayRegion = focusedRegion,
       previewRegion = null,
       zoomTier,
       countryMarkerMode = "flag",
@@ -143,7 +144,11 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
       const input = summarizeRegion(region);
       const safeRegion = sanitizeRegion(region, regionRef.current);
       const output = summarizeRegion(safeRegion);
-      if (!input.finite || input.lat !== output.lat || input.latDelta !== output.latDelta) {
+      if (
+        !input.finite ||
+        input.lat !== output.lat ||
+        input.latDelta !== output.latDelta
+      ) {
         logMapDebug("camera", "world-map-view region sanitized", {
           duration,
           input,
@@ -234,7 +239,8 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
       boundaryStyle,
       zoomTier,
     );
-    const outlineFillColor = resolveBoundaryFillColor(boundaryStyle);
+    /** Country outlines are stroke-only; continent overlay uses fill settings. */
+    const outlineFillColor = "rgba(0,0,0,0)";
     const boundaryRenderKey = boundaryStyleRenderKey(boundaryStyle, zoomTier);
     const boundariesTappable = zoomTier === "country" && !!focusedRegion;
     const boundaryZIndex = focusedRegion
@@ -301,15 +307,13 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
         showsMyLocationButton={false}
         mapType={Platform.OS === "android" ? "standard" : "hybridFlyover"}
       >
-        {showBoundaryLines ? (
-          <MapContinentFocusLayers
-            focusedRegion={focusedRegion}
-            selectedCountryName={selectedName}
-            previewRegion={previewRegion}
-            allPolygons={allCountryBoundaries}
-            boundaryCountries={boundaryCountries}
-          />
-        ) : null}
+        <MapContinentFocusLayers
+          focusedRegion={continentOverlayRegion}
+          selectedCountryName={selectedName}
+          previewRegion={previewRegion}
+          allPolygons={allCountryBoundaries}
+          boundaryCountries={boundaryCountries}
+        />
         {showBoundaryLines
           ? countryBoundaries.map((polygon) => (
               <Polygon

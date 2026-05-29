@@ -15,6 +15,9 @@ import {
   useMapUiStore,
 } from "@/store/use-map-ui-store";
 
+/** Re-enable when reset / zoom rail UX is finalized. */
+const MAP_ZOOM_RESET_CONTROLS_ENABLED = false;
+
 type MapControlsProps = {
   mapMode: MapMode;
   mapViewTransition: MapViewTransition;
@@ -228,43 +231,45 @@ export function MapControls({
               </Pressable>
             </View>
 
-            <View style={styles.stack}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Reset to world view"
-                onPress={onReset}
-                style={({ pressed }) => [
-                  styles.control,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <Ionicons name="refresh-outline" size={20} color="#ffffff" />
-              </Pressable>
-              <View style={styles.divider} />
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Zoom in"
-                onPress={onZoomIn}
-                style={({ pressed }) => [
-                  styles.control,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <Ionicons name="add" size={20} color="#ffffff" />
-              </Pressable>
-              <View style={styles.divider} />
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Zoom out"
-                onPress={onZoomOut}
-                style={({ pressed }) => [
-                  styles.control,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <Ionicons name="remove" size={20} color="#ffffff" />
-              </Pressable>
-            </View>
+            {MAP_ZOOM_RESET_CONTROLS_ENABLED ? (
+              <View style={styles.stack}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Reset to world view"
+                  onPress={onReset}
+                  style={({ pressed }) => [
+                    styles.control,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Ionicons name="refresh-outline" size={20} color="#ffffff" />
+                </Pressable>
+                <View style={styles.divider} />
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Zoom in"
+                  onPress={onZoomIn}
+                  style={({ pressed }) => [
+                    styles.control,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Ionicons name="add" size={20} color="#ffffff" />
+                </Pressable>
+                <View style={styles.divider} />
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Zoom out"
+                  onPress={onZoomOut}
+                  style={({ pressed }) => [
+                    styles.control,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Ionicons name="remove" size={20} color="#ffffff" />
+                </Pressable>
+              </View>
+            ) : null}
 
             {showDisplayStack ? (
               <View style={styles.stack}>

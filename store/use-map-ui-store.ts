@@ -4,6 +4,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 
 import {
   DEFAULT_MAP_BOUNDARY_STYLE,
+  migrateLegacyFillColorToAmber,
   normalizeBoundaryStyle,
   type MapBoundaryStyleSettings,
 } from "@/constants/map-boundary-style";
@@ -112,7 +113,9 @@ export const useMapUiStore = create<MapUiState>()(
       setCountryMarkerMode: (mode) => set({ countryMarkerMode: mode }),
       cycleCountryMarkerMode: () =>
         set((state) => ({
-          countryMarkerMode: nextCountryMarkerDisplayMode(state.countryMarkerMode),
+          countryMarkerMode: nextCountryMarkerDisplayMode(
+            state.countryMarkerMode,
+          ),
         })),
       setShowBoundaryLines: (show) => set({ showBoundaryLines: show }),
       setBoundaryStyle: (style) =>
@@ -132,7 +135,7 @@ export const useMapUiStore = create<MapUiState>()(
     }),
     {
       name: "worldloop-map-ui",
-      version: 2,
+      version: 3,
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         hasSeenMapOnboarding: state.hasSeenMapOnboarding,
@@ -141,7 +144,7 @@ export const useMapUiStore = create<MapUiState>()(
         showBoundaryLines: state.showBoundaryLines,
         boundaryStyle: state.boundaryStyle,
       }),
-      migrate: (persistedState) => {
+      migrate: (persistedState, version) => {
         const persisted = persistedState as
           | (Partial<MapUiState> & { showCountryFlags?: boolean })
           | undefined;
@@ -151,9 +154,16 @@ export const useMapUiStore = create<MapUiState>()(
           focusedRegion: _focusedRegion,
           featuredShortcut: _featuredShortcut,
           showCountryFlags,
+          boundaryStyle: persistedBoundaryStyle,
           ...settings
         } = persisted;
-        return settings;
+
+        let boundaryStyle = normalizeBoundaryStyle(persistedBoundaryStyle);
+        if (version < 3) {
+          boundaryStyle = migrateLegacyFillColorToAmber(boundaryStyle);
+        }
+
+        return { ...settings, boundaryStyle };
       },
       merge: (persistedState, currentState) => {
         const persisted = persistedState as
@@ -174,10 +184,11 @@ export const useMapUiStore = create<MapUiState>()(
             persisted?.countryMarkerMode,
             persisted?.showCountryFlags,
           ),
-          boundaryStyle: normalizeBoundaryStyle(persisted?.boundaryStyle),
+          boundaryStyle: migrateLegacyFillColorToAmber(
+            normalizeBoundaryStyle(persisted?.boundaryStyle),
+          ),
         };
       },
     },
   ),
 );
-

@@ -105,6 +105,7 @@ export default function MapScreen() {
         selectedName={map.selectedMapName}
         focusTransitionName={map.focusTransitionCountryName}
         focusedRegion={map.focusedRegion}
+        continentOverlayRegion={map.continentOverlayRegion}
         previewRegion={map.previewRegion}
         tapRippleAt={map.tapRippleAt}
         tapRippleToken={map.tapRippleToken}
@@ -116,7 +117,7 @@ export default function MapScreen() {
         onGlobeTransitionComplete={map.handleGlobeTransitionComplete}
         onFlatTransitionComplete={map.handleFlatTransitionComplete}
         onGlobeCameraViewChange={map.handleGlobeCameraViewChange}
-        lockUserGestures={previewOverlayActive}
+        lockUserGestures={previewOverlayActive || map.isMapAnimating}
         suspendMarkerSnapshot={map.isMapAnimating}
         markerRefreshToken={map.markerRefreshToken}
         onCountryPress={map.handleCountryPress}

@@ -17,6 +17,7 @@ import { StyleSheet, View } from "react-native";
 import * as THREE from "three";
 
 import { GlobeBoundaryLines } from "@/components/map/globe-boundary-lines";
+import { GlobeContinentFocusLayers } from "@/components/map/globe-continent-focus-layers";
 import { GlobeCountryPin } from "@/components/map/globe-country-pin";
 import { GlobeLabelOverlay } from "@/components/map/globe-label-overlay";
 import { GlobeLabelProjector } from "@/components/map/globe-label-projector";
@@ -159,6 +160,7 @@ type GlobeSceneProps = {
   selectedName: string | null;
   focusTransitionName: string | null;
   focusedRegion: string | null;
+  previewRegion?: string | null;
   showGlobePins: boolean;
   onCountryPress: (country: MapCountry) => void;
   controls: GlobeOrbitControls;
@@ -179,6 +181,7 @@ function GlobeScene({
   selectedName,
   focusTransitionName,
   focusedRegion,
+  previewRegion = null,
   showGlobePins,
   onCountryPress,
   controls,
@@ -451,6 +454,13 @@ function GlobeScene({
         />
       </mesh>
 
+      <GlobeContinentFocusLayers
+        focusedRegion={focusedRegion}
+        previewRegion={previewRegion}
+        selectedCountryName={selectedName}
+        boundaryCountries={boundaryCountries}
+      />
+
       <GlobeBoundaryLines
         boundaryCountries={boundaryCountries}
         selectedName={selectedName}
@@ -524,6 +534,7 @@ type GlobeViewProps = {
   selectedName: string | null;
   focusTransitionName?: string | null;
   focusedRegion: string | null;
+  previewRegion?: string | null;
   countryMarkerMode?: CountryMarkerDisplayMode;
   onClusterPress: (cluster: MapCluster) => void;
   onCountryPress: (country: MapCountry) => void;
@@ -543,6 +554,7 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
       selectedName,
       focusTransitionName = null,
       focusedRegion,
+      previewRegion = null,
       countryMarkerMode = "flag",
       onClusterPress,
       onCountryPress,
@@ -682,6 +694,7 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
             selectedName={selectedName}
             focusTransitionName={focusTransitionName}
             focusedRegion={focusedRegion}
+            previewRegion={previewRegion}
             showGlobePins={showGlobePins}
             onCountryPress={onCountryPress}
             controls={controls}

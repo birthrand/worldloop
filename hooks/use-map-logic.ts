@@ -13,6 +13,7 @@ import type { Region } from "react-native-maps";
 
 import { type GlobeCameraViewState } from "@/components/map/globe-view";
 import { type MapCanvasHandle } from "@/components/map/map-canvas";
+import { syncFillEnabledToContinentOverlay } from "@/constants/map-boundary-style";
 import {
   regionForClusterFocus,
   regionForMapCountry,
@@ -20,7 +21,12 @@ import {
 } from "@/constants/map-regions";
 import { useContinentIntent } from "@/hooks/use-continent-intent";
 import { useMapFlight } from "@/hooks/use-map-flight";
-import { useMapMarkerReveal } from "@/hooks/use-map-marker-reveal";
+import {
+  CROSS_REGION_OVERLAY_LAG_MS,
+  CROSS_REGION_REVEAL_EXTRA_DELAY_MS,
+  MARKER_REGION_SWAP_CLEAR_DELAY_MS,
+  useMapMarkerReveal,
+} from "@/hooks/use-map-marker-reveal";
 import { deriveCameraZoomState } from "@/lib/map-camera-zoom";
 import { buildMapClusters, type MapCluster } from "@/lib/map-clusters";
 import { getMapDisplayLatLng, isValidLatLng } from "@/lib/map-country";
@@ -114,6 +120,7 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
   const randomPickGenerationRef = useRef(0);
   /** Timestamp of the last accepted random-FAB tap — throttles rapid taps. */
   const lastRandomFabTapAtRef = useRef(0);
+  const lastShuffleTapAtRef = useRef(0);
   const shufflePickGenerationRef = useRef(0);
   /** Monotonic id — only the latest navigation intent may drive the camera. */
   const navigationIntentIdRef = useRef(0);
@@ -121,6 +128,28 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
   const exploreHandoffSuppressMarkersRef = useRef(false);
   const [exploreHandoffSuppressMarkers, setExploreHandoffSuppressMarkers] =
     useState(false);
+  const [markerPrepareSwapToken, setMarkerPrepareSwapToken] = useState(0);
+  const [suppressMarkersForRegionSwap, setSuppressMarkersForRegionSwap] =
+    useState(false);
+  /** Keeps marker reveal frozen until deferred focusedRegion commits (2D cross-region). */
+  const [holdRevealForCrossRegion, setHoldRevealForCrossRegion] =
+    useState(false);
+  const [markerRegionClearDelayMs, setMarkerRegionClearDelayMs] = useState(
+    MARKER_REGION_SWAP_CLEAR_DELAY_MS,
+  );
+  /** Defers focusedRegion commit until marker removal has settled (2D cross-region). */
+  const continentNavSwapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  /**
+   * 2D cross-region continent nav: fly first, commit focusedRegion only after
+   * the camera settles. Updating focusedRegion during animateToRegion remounts
+   * continent polygons and crashes react-native-maps on iOS.
+   */
+  const pendingCrossRegionFocusRef = useRef<{
+    cluster: MapCluster;
+    intentId: number;
+  } | null>(null);
   const [markerRefreshToken, setMarkerRefreshToken] = useState(0);
   /** Blocks world-zoom reset while animating into a continent/country focus. */
   const suppressWorldResetRef = useRef(false);
@@ -199,9 +228,17 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
   const resetExperience = useExperienceStore((s) => s.resetExperience);
 
   const focusedRegion = useMapUiStore((s) => s.focusedRegion);
+  /** Lags continent focus polygons behind focusedRegion after cross-region flights. */
+  const [continentOverlayRegion, setContinentOverlayRegion] = useState<
+    string | null
+  >(focusedRegion);
+  const continentOverlayLagTimerRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
   const setDisplayMode = useMapUiStore((s) => s.setDisplayMode);
   const setFocusedRegion = useMapUiStore((s) => s.setFocusedRegion);
   const setFeaturedShortcut = useMapUiStore((s) => s.setFeaturedShortcut);
+  const setBoundaryStyle = useMapUiStore((s) => s.setBoundaryStyle);
   const resetGlobalPulse = useMapUiStore((s) => s.resetGlobalPulse);
   const hasSeenMapOnboarding = useMapUiStore((s) => s.hasSeenMapOnboarding);
   const hasSeenRandomCountryHint = useMapUiStore(
@@ -348,9 +385,17 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
     isDetailZoom,
     enabled: !!focusedRegion,
     // Freeze marker mounts during flat flights — marker churn overlapping
-    // animateToRegion crashes react-native-maps on iOS.
-    paused: isMapAnimating && !is3d,
+    // animateToRegion crashes react-native-maps on iOS. Also hold through the
+    // gap after flyTo settles when focusedRegion is still deferred (cross-region).
+    paused: !is3d && (isMapAnimating || holdRevealForCrossRegion),
+    prepareSwapToken: markerPrepareSwapToken,
+    regionClearDelayMs: markerRegionClearDelayMs,
   });
+
+  useEffect(() => {
+    if (continentOverlayLagTimerRef.current) return;
+    setContinentOverlayRegion(focusedRegion);
+  }, [focusedRegion]);
 
   const mapMarkerCountries = useMemo(() => {
     const withSelected = withRequiredMapMarker(
@@ -374,7 +419,9 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
   ]);
 
   // Density adapts live during flights — no frozen snapshot.
-  const mapMarkersForCanvas = mapMarkerCountries;
+  const mapMarkersForCanvas = suppressMarkersForRegionSwap
+    ? []
+    : mapMarkerCountries;
 
   // Drop the lingering deselected pin once the camera leaves its region
   // (world reset or a different continent), so it doesn't stick around.
@@ -476,6 +523,7 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
       isMapAnimatingRef.current = active;
       setIsMapAnimating(active);
       if (!active) {
+        setIsPreviewShufflePending(false);
         setFocusTransitionCountryName(null);
         endExperienceTransition();
         setMarkerRefreshToken((token) => token + 1);
@@ -526,26 +574,37 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
     onActiveChange: handleFlightActiveChange,
   });
 
-  /** Stops any active flight (flat phases or globe settle) and clears the busy flag. */
-  const cancelCameraFlight = useCallback(() => {
-    logMapDebug("camera", "cancelCameraFlight", {
-      hadGlobeSettleTimer: !!globeSettleTimerRef.current,
-      flightWasActive: flight.isActive(),
-    });
-    flight.cancel();
+  /** Stops flight timers without clearing animating (for retargeting). */
+  const cancelFlightPhases = useCallback(() => {
+    flight.cancel({ keepActive: true });
     if (globeSettleTimerRef.current) {
       clearTimeout(globeSettleTimerRef.current);
       globeSettleTimerRef.current = null;
     }
-    isMapAnimatingRef.current = false;
-    setIsMapAnimating(false);
   }, [flight]);
 
-  const animateMapToRegion = useCallback(
-    (region: Region, duration = 500) => {
-      flight.flyTo([{ region, duration }]);
+  /** Stops any active flight (flat phases or globe settle) and clears the busy flag. */
+  const cancelCameraFlight = useCallback(
+    (options?: { keepAnimating?: boolean }) => {
+      const keepAnimating = options?.keepAnimating === true;
+      logMapDebug("camera", "cancelCameraFlight", {
+        hadGlobeSettleTimer: !!globeSettleTimerRef.current,
+        flightWasActive: flight.isActive(),
+        keepAnimating,
+      });
+      if (keepAnimating) {
+        cancelFlightPhases();
+      } else {
+        flight.cancel();
+        if (globeSettleTimerRef.current) {
+          clearTimeout(globeSettleTimerRef.current);
+          globeSettleTimerRef.current = null;
+        }
+        isMapAnimatingRef.current = false;
+        setIsMapAnimating(false);
+      }
     },
-    [flight],
+    [cancelFlightPhases, flight],
   );
 
   const clearPendingRegionSwitch = useCallback(() => {
@@ -625,6 +684,17 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
   useEffect(() => {
     return () => {
       clearPendingRegionSwitch();
+      if (continentNavSwapTimerRef.current) {
+        clearTimeout(continentNavSwapTimerRef.current);
+        continentNavSwapTimerRef.current = null;
+      }
+      pendingCrossRegionFocusRef.current = null;
+      if (continentOverlayLagTimerRef.current) {
+        clearTimeout(continentOverlayLagTimerRef.current);
+        continentOverlayLagTimerRef.current = null;
+      }
+      setSuppressMarkersForRegionSwap(false);
+      setHoldRevealForCrossRegion(false);
       flightCancelRef.current();
       if (globeSettleTimerRef.current) {
         clearTimeout(globeSettleTimerRef.current);
@@ -635,46 +705,257 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional unmount-only cleanup
   }, []);
 
-  const commitClusterFocus = useCallback(
-    (cluster: MapCluster) => {
-      clearPendingRegionSwitch();
-      clearCountrySelection();
-      setFeaturedShortcut(null);
-      setDisplayMode("explore");
-      suppressWorldResetRef.current = true;
-      setFocusedRegion(cluster.region);
-      lockExplicitRegion(cluster.region, cluster.center);
-
-      const focusRegion = regionForClusterFocus(cluster);
-      setLastMapRegion(focusRegion);
-
-      if (is3d) {
-        const [lat, lng] = cluster.center;
-        if (Number.isFinite(lat) && Number.isFinite(lng)) {
-          useMapStore.getState().focusLatLngOnGlobe(lat, lng, 650);
-        }
-        return;
-      }
-
-      animateMapToRegion(focusRegion, 650);
-    },
-    [
-      animateMapToRegion,
-      clearCountrySelection,
-      clearPendingRegionSwitch,
-      is3d,
-      setDisplayMode,
-      setFocusedRegion,
-      setFeaturedShortcut,
-      lockExplicitRegion,
-    ],
-  );
+  const onContinentCommitRef = useRef<(cluster: MapCluster) => void>(() => {});
 
   const { previewRegion, requestContinentFocus, cancelIntent } =
     useContinentIntent({
-      onCommit: commitClusterFocus,
+      onCommit: (cluster) => onContinentCommitRef.current(cluster),
       focusedRegion,
     });
+
+  type ContinentNavOptions = {
+    /** Default true. False for same-continent recenter. */
+    updateFocusedRegion?: boolean;
+    /** Default true. False when caller already cleared (preview exit). */
+    clearSelection?: boolean;
+    duration?: number;
+    /** Optional globe camera distance (preview exit uses region framing). */
+    globeDistance?: number;
+    source?: string;
+  };
+
+  const commitContinentNavigation = useCallback(
+    (cluster: MapCluster, options: ContinentNavOptions = {}) => {
+      const {
+        updateFocusedRegion = true,
+        clearSelection = true,
+        duration = 650,
+        globeDistance,
+        source = "unknown",
+      } = options;
+
+      navigationIntentIdRef.current += 1;
+      const intentId = navigationIntentIdRef.current;
+      pendingCrossRegionFocusRef.current = null;
+      setHoldRevealForCrossRegion(false);
+      setMarkerRegionClearDelayMs(MARKER_REGION_SWAP_CLEAR_DELAY_MS);
+
+      logMapDebug("intent", "commitContinentNavigation start", {
+        intentId,
+        region: cluster.region,
+        source,
+        updateFocusedRegion,
+        clearSelection,
+      });
+
+      cancelIntent();
+
+      if (continentNavSwapTimerRef.current) {
+        clearTimeout(continentNavSwapTimerRef.current);
+        continentNavSwapTimerRef.current = null;
+      }
+
+      const previousRegion = useMapUiStore.getState().focusedRegion;
+      const isCrossRegion2d =
+        !is3d &&
+        updateFocusedRegion &&
+        previousRegion !== null &&
+        previousRegion !== cluster.region;
+
+      if (clearSelection) {
+        clearCountrySelection();
+        setFeaturedShortcut(null);
+      }
+      setDisplayMode("explore");
+      suppressWorldResetRef.current = true;
+      clearPendingRegionSwitch();
+
+      const focusRegion = regionForClusterFocus(cluster);
+
+      const commitRegionAndFly = () => {
+        if (navigationIntentIdRef.current !== intentId) {
+          logMapDebug("intent", "continent commit skipped (superseded)", {
+            intentId,
+            currentIntentId: navigationIntentIdRef.current,
+          });
+          return;
+        }
+
+        isMapAnimatingRef.current = true;
+        setIsMapAnimating(true);
+
+        const commitFocusedRegion = () => {
+          if (!updateFocusedRegion) return;
+          if (navigationIntentIdRef.current !== intentId) return;
+          const pending = pendingCrossRegionFocusRef.current;
+          if (pending && pending.intentId !== intentId) return;
+          const afterCrossRegionFlight = !!pending;
+          pendingCrossRegionFocusRef.current = null;
+          setSuppressMarkersForRegionSwap(false);
+          setHoldRevealForCrossRegion(false);
+          setFocusedRegion(cluster.region);
+          logMapDebug("intent", "focusedRegion updated", {
+            intentId,
+            region: cluster.region,
+            afterCrossRegionFlight,
+          });
+
+          if (afterCrossRegionFlight) {
+            setMarkerRegionClearDelayMs(
+              MARKER_REGION_SWAP_CLEAR_DELAY_MS +
+                CROSS_REGION_REVEAL_EXTRA_DELAY_MS,
+            );
+            if (continentOverlayLagTimerRef.current) {
+              clearTimeout(continentOverlayLagTimerRef.current);
+            }
+            continentOverlayLagTimerRef.current = setTimeout(() => {
+              continentOverlayLagTimerRef.current = null;
+              setContinentOverlayRegion(cluster.region);
+              logMapDebug("intent", "continent overlay region committed", {
+                intentId,
+                region: cluster.region,
+                lagMs: CROSS_REGION_OVERLAY_LAG_MS,
+              });
+            }, CROSS_REGION_OVERLAY_LAG_MS);
+            return;
+          }
+
+          if (continentOverlayLagTimerRef.current) {
+            clearTimeout(continentOverlayLagTimerRef.current);
+            continentOverlayLagTimerRef.current = null;
+          }
+          setContinentOverlayRegion(cluster.region);
+        };
+
+        // Commit focusedRegion BEFORE the flight (transaction order:
+        // focusedRegion → reveal reset → flyTo), exactly like country nav. This
+        // remounts continent polygons in their own commit, never overlapping the
+        // animateToRegion that follows on the next interaction frame. Cross-region
+        // markers were already cleared by the prepare-swap token, so committing
+        // here cannot churn pins against the camera move.
+        if (updateFocusedRegion) {
+          commitFocusedRegion();
+        }
+
+        lockExplicitRegion(cluster.region, cluster.center);
+        setLastMapRegion(focusRegion);
+
+        if (is3d) {
+          if (globeSettleTimerRef.current) {
+            clearTimeout(globeSettleTimerRef.current);
+          }
+          globeSettleTimerRef.current = setTimeout(() => {
+            globeSettleTimerRef.current = null;
+            handleFlightActiveChange(false);
+          }, duration + 300);
+
+          const [lat, lng] = cluster.center;
+          if (Number.isFinite(lat) && Number.isFinite(lng)) {
+            logMapDebug("camera", "continent globe flyTo start", {
+              intentId,
+              region: cluster.region,
+              duration,
+              globeDistance: globeDistance ?? null,
+            });
+            if (globeDistance !== undefined) {
+              focusLatLngOnGlobe(lat, lng, duration, globeDistance);
+            } else {
+              focusLatLngOnGlobe(lat, lng, duration);
+            }
+          }
+          return;
+        }
+
+        InteractionManager.runAfterInteractions(() => {
+          requestAnimationFrame(() => {
+            if (navigationIntentIdRef.current !== intentId) {
+              logMapDebug(
+                "intent",
+                "deferred continent flight skipped (superseded)",
+                {
+                  intentId,
+                  currentIntentId: navigationIntentIdRef.current,
+                },
+              );
+              return;
+            }
+            logMapDebug("camera", "continent flyTo start", {
+              intentId,
+              region: cluster.region,
+              duration,
+              focusRegion: summarizeRegion(focusRegion),
+            });
+            flight.flyTo([{ region: focusRegion, duration }]);
+          });
+        });
+      };
+
+      if (isCrossRegion2d) {
+        pendingCrossRegionFocusRef.current = { cluster, intentId };
+        setHoldRevealForCrossRegion(true);
+        setSuppressMarkersForRegionSwap(true);
+        // Continent retargets must keep animating=true — firing animating=false
+        // here unpauses the reveal mid-swap and resurrects the stale region's pins.
+        cancelCameraFlight({ keepAnimating: true });
+        isMapAnimatingRef.current = true;
+        setIsMapAnimating(true);
+        setMarkerPrepareSwapToken((token) => token + 1);
+        logMapDebug("intent", "cross-region swap — waiting for marker clear", {
+          intentId,
+          previousRegion,
+          nextRegion: cluster.region,
+          clearDelayMs: MARKER_REGION_SWAP_CLEAR_DELAY_MS,
+        });
+
+        continentNavSwapTimerRef.current = setTimeout(() => {
+          continentNavSwapTimerRef.current = null;
+          commitRegionAndFly();
+        }, MARKER_REGION_SWAP_CLEAR_DELAY_MS);
+        return;
+      }
+
+      isMapAnimatingRef.current = true;
+      setIsMapAnimating(true);
+      cancelCameraFlight({ keepAnimating: true });
+      commitRegionAndFly();
+    },
+    [
+      cancelCameraFlight,
+      cancelIntent,
+      clearCountrySelection,
+      clearPendingRegionSwitch,
+      flight,
+      focusLatLngOnGlobe,
+      handleFlightActiveChange,
+      is3d,
+      lockExplicitRegion,
+      setDisplayMode,
+      setFeaturedShortcut,
+      setFocusedRegion,
+    ],
+  );
+
+  const commitClusterFocus = useCallback(
+    (cluster: MapCluster) => {
+      commitContinentNavigation(cluster, { source: "cluster" });
+    },
+    [commitContinentNavigation],
+  );
+
+  onContinentCommitRef.current = commitClusterFocus;
+
+  // Migrate legacy overlay fill color when continent focus/preview is active.
+  useEffect(() => {
+    const { boundaryStyle } = useMapUiStore.getState();
+    const nextStyle = syncFillEnabledToContinentOverlay(
+      focusedRegion,
+      previewRegion,
+      boundaryStyle,
+    );
+    if (nextStyle) {
+      setBoundaryStyle(nextStyle);
+    }
+  }, [focusedRegion, previewRegion, setBoundaryStyle]);
 
   const resolveCountryFlightDuration = useCallback(
     (source: Exclude<SelectionSource, null>, useGlobeCamera: boolean) => {
@@ -740,7 +1021,16 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
         previousCountry: summarizeCountry(activeCountry),
       });
       cancelIntent();
-      cancelCameraFlight();
+      isMapAnimatingRef.current = true;
+      setIsMapAnimating(true);
+      cancelCameraFlight({ keepAnimating: true });
+      logMapDebug(
+        "intent",
+        "applyCountryIntent armed animating before cancel",
+        {
+          intentId,
+        },
+      );
       // A fresh focus supersedes any lingering deselected pin.
       setLingeringDeselectedName(null);
       // "Back to continent" is offered only when we were already exploring a region.
@@ -781,9 +1071,6 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
         });
         // The flat flight controller doesn't drive the globe — track the
         // settle window manually so pulse/transition end like a flat flight.
-        flight.cancel();
-        isMapAnimatingRef.current = true;
-        setIsMapAnimating(true);
         if (globeSettleTimerRef.current) {
           clearTimeout(globeSettleTimerRef.current);
         }
@@ -844,13 +1131,6 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
         clusterRegion: cluster?.region ?? null,
         deferExploreRegionMarkers,
       });
-
-      // Mark animating NOW (synchronously) so the marker reveal pauses on the
-      // very next render — before the deferred camera move runs. Otherwise the
-      // region's batched pin reveal keeps mounting and collides with
-      // animateToRegion, crashing react-native-maps on iOS.
-      isMapAnimatingRef.current = true;
-      setIsMapAnimating(true);
 
       // Defer the camera move until React has committed this intent's marker
       // changes (paused reveal + new selection). Starting animateToRegion in the
@@ -1419,8 +1699,21 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
   const handleNextCountry = useCallback(async () => {
     if (!activeCountry || countries.length === 0) return;
 
+    if (
+      !shouldAcceptRandomFabTap({
+        isMapAnimating: isMapAnimatingRef.current,
+        nowMs: Date.now(),
+        lastTapAtMs: lastShuffleTapAtRef.current,
+      })
+    ) {
+      logMapDebug("shuffle", "tap ignored — flight in progress or cooldown");
+      return;
+    }
+    lastShuffleTapAtRef.current = Date.now();
+
     const generation = ++shufflePickGenerationRef.current;
     setIsPreviewShufflePending(true);
+
     try {
       const pool = await buildMapRandomPool({
         countries,
@@ -1439,8 +1732,9 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
           generation,
           shufflePickGenerationRef.current,
         )
-      )
+      ) {
         return;
+      }
 
       const pick =
         pickRandomMapCountry(pool, activeCountry.name) ??
@@ -1448,8 +1742,17 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
       if (!pick) return;
 
       advanceToCountryPreview(pick);
+    } catch (err) {
+      logMapDebug("shuffle", "error", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      isMapAnimatingRef.current = false;
+      setIsMapAnimating(false);
     } finally {
-      if (generation === shufflePickGenerationRef.current) {
+      if (
+        generation === shufflePickGenerationRef.current &&
+        !isMapAnimatingRef.current
+      ) {
         setIsPreviewShufflePending(false);
       }
     }
@@ -1496,32 +1799,13 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
 
   const recenterOnFocusedContinent = useCallback(
     (cluster: MapCluster) => {
-      const flightDuration = 650;
-
-      suppressWorldResetRef.current = true;
-      clearPendingRegionSwitch();
-      lockExplicitRegion(cluster.region, cluster.center);
-
-      const focusRegion = regionForClusterFocus(cluster);
-      setLastMapRegion(focusRegion);
-
-      if (is3d) {
-        const [lat, lng] = cluster.center;
-        if (Number.isFinite(lat) && Number.isFinite(lng)) {
-          focusLatLngOnGlobe(lat, lng, flightDuration);
-        }
-        return;
-      }
-
-      flight.flyTo([{ region: focusRegion, duration: flightDuration }]);
+      commitContinentNavigation(cluster, {
+        updateFocusedRegion: false,
+        clearSelection: false,
+        source: "recenter",
+      });
     },
-    [
-      clearPendingRegionSwitch,
-      flight,
-      focusLatLngOnGlobe,
-      is3d,
-      lockExplicitRegion,
-    ],
+    [commitContinentNavigation],
   );
 
   const handleBackToContinent = useCallback(() => {
@@ -1538,35 +1822,14 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
       const cluster = clusters.find((c) => c.region === region);
       if (!cluster) return;
 
-      cancelIntent();
-      setFocusedRegion(region);
-      suppressWorldResetRef.current = true;
-      clearPendingRegionSwitch();
-      lockExplicitRegion(cluster.region, cluster.center);
-
-      const focusRegion = regionForClusterFocus(cluster);
-      setLastMapRegion(focusRegion);
-
-      if (is3d) {
-        const [lat, lng] = cluster.center;
-        if (Number.isFinite(lat) && Number.isFinite(lng)) {
-          focusLatLngOnGlobe(lat, lng, duration, GLOBE_REGION_CAMERA_DISTANCE);
-        }
-        return;
-      }
-
-      flight.flyTo([{ region: focusRegion, duration }]);
+      commitContinentNavigation(cluster, {
+        clearSelection: false,
+        duration,
+        globeDistance: GLOBE_REGION_CAMERA_DISTANCE,
+        source: "preview-exit",
+      });
     },
-    [
-      cancelIntent,
-      clearPendingRegionSwitch,
-      clusters,
-      flight,
-      focusLatLngOnGlobe,
-      is3d,
-      lockExplicitRegion,
-      setFocusedRegion,
-    ],
+    [clusters, commitContinentNavigation],
   );
 
   /** Close preview sheet and keep the country focused (camera already there). */
@@ -1695,6 +1958,7 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
     activeCountry,
     activeChip,
     focusedRegion,
+    continentOverlayRegion,
     previewRegion,
     previewDismissToContinent,
     focusTransitionCountryName,

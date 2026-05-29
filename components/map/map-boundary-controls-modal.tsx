@@ -1,6 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import Slider from "@react-native-community/slider";
-import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   Modal,
   Pressable,
@@ -24,7 +30,6 @@ import {
   resolveBoundaryStrokeWidth,
   strokeOpacityStepToDisplayPercent,
   type MapBoundaryStyleSettings,
-  type MapFillColorMode,
   type MapZoomTier,
 } from "@/constants/map-boundary-style";
 import { hueToHex } from "@/lib/color-utils";
@@ -230,52 +235,6 @@ type SliderWithValueProps = {
   showValueInput?: boolean;
 };
 
-type FillColorModeToggleProps = {
-  mode: MapFillColorMode;
-  disabled?: boolean;
-  onModeChange: (mode: MapFillColorMode) => void;
-};
-
-function FillColorModeToggle({
-  mode,
-  disabled = false,
-  onModeChange,
-}: FillColorModeToggleProps) {
-  return (
-    <View
-      style={[styles.modeToggleWrap, disabled && styles.settingBlockDisabled]}
-      pointerEvents={disabled ? "none" : "auto"}
-    >
-      {(["hue", "grayscale"] as const).map((option) => {
-        const active = option === mode;
-        return (
-          <Pressable
-            key={option}
-            accessibilityRole="button"
-            accessibilityState={{ selected: active, disabled }}
-            accessibilityLabel={`Fill color mode ${option}`}
-            onPress={() => onModeChange(option)}
-            style={({ pressed }) => [
-              styles.modeToggleButton,
-              active && styles.modeToggleButtonActive,
-              pressed && !disabled && styles.pressed,
-            ]}
-          >
-            <Text
-              style={[
-                styles.modeToggleLabel,
-                active && styles.modeToggleLabelActive,
-              ]}
-            >
-              {option === "hue" ? "Hue" : "Grayscale"}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
 function SliderWithValue({
   value,
   min,
@@ -384,10 +343,7 @@ export function MapBoundaryControlsModal({
     setBoundaryStyle(applyBoundaryStyleDraft(draft));
   }, [draft, setBoundaryStyle]);
 
-  const hasChanges = boundaryStyleHasChanges(
-    draft,
-    committedStyleRef.current,
-  );
+  const hasChanges = boundaryStyleHasChanges(draft, committedStyleRef.current);
   const boundaryEnabled = draft.strokeColorEnabled;
 
   const previewStrokeWidth = resolveBoundaryStrokeWidth(
@@ -400,12 +356,8 @@ export function MapBoundaryControlsModal({
     (step: number) => String(strokeOpacityStepToDisplayPercent(step)),
     [],
   );
-  const formatFillOpacityStep = useCallback(
+  const formatOverlayOpacityStep = useCallback(
     (step: number) => String(fillOpacityStepToDisplayPercent(step)),
-    [],
-  );
-  const formatGrayLevel = useCallback(
-    (level: number) => String(Math.round(level)),
     [],
   );
 
@@ -446,6 +398,10 @@ export function MapBoundaryControlsModal({
       strokeColorEnabled,
       strokeWidthEnabled: strokeColorEnabled,
     }));
+  };
+
+  const setOverlayEnabled = (fillEnabled: boolean) => {
+    setDraft((current) => ({ ...current, fillEnabled }));
   };
 
   return (
@@ -490,14 +446,6 @@ export function MapBoundaryControlsModal({
               label="Boundary"
               enabled={boundaryEnabled}
               onChange={setBoundaryEnabled}
-            />
-            <FeatureToggleRow
-              icon={<FillPatternIcon />}
-              label="Fill"
-              enabled={draft.fillEnabled}
-              onChange={(fillEnabled) =>
-                setDraft((current) => ({ ...current, fillEnabled }))
-              }
             />
 
             <ColorField
@@ -586,101 +534,50 @@ export function MapBoundaryControlsModal({
               />
             </View>
 
-            {draft.fillEnabled ? (
-              <>
-                <View style={styles.sectionDivider} />
+            <View style={styles.sectionGroupDivider} />
 
-                <ColorField
-                  label="Fill color"
-                  hue={draft.fillColorHue}
-                  colorHex={draft.fillColorHex}
-                  disabled={draft.fillColorMode !== "hue"}
-                  onHueChange={(fillColorHue) =>
-                    setDraft((current) => ({ ...current, fillColorHue }))
-                  }
-                  onHexChange={(fillColorHex) =>
-                    setDraft((current) => ({ ...current, fillColorHex }))
+            <FeatureToggleRow
+              icon={<FillPatternIcon />}
+              label="Overlay"
+              enabled={draft.fillEnabled}
+              onChange={setOverlayEnabled}
+            />
+
+            {draft.fillEnabled ? (
+              <View
+                style={[
+                  styles.settingBlock,
+                  styles.compactSliderBlock,
+                  styles.fillOpacityBlock,
+                ]}
+              >
+                <Text style={styles.fieldLabel}>Overlay opacity</Text>
+                <SliderWithValue
+                  value={draft.fillOpacityStep}
+                  min={BOUNDARY_STEP_MIN}
+                  max={BOUNDARY_STEP_MAX}
+                  unit="%"
+                  disabled={false}
+                  accessibilityLabel="Overlay opacity"
+                  tickCount={0}
+                  endLabels={["Subtle", "50%", "Strong"]}
+                  showValueInput={false}
+                  formatDisplay={formatOverlayOpacityStep}
+                  parseDisplay={(text) => {
+                    const parsed = Number.parseInt(text, 10);
+                    if (Number.isNaN(parsed)) {
+                      return null;
+                    }
+                    return displayPercentToFillOpacityStep(parsed);
+                  }}
+                  onValueChange={(fillOpacityStep) =>
+                    setDraft((current) => ({
+                      ...current,
+                      fillOpacityStep: clampBoundaryStep(fillOpacityStep),
+                    }))
                   }
                 />
-
-                <View style={styles.settingBlock}>
-                  <Text style={styles.fieldLabel}>Fill color mode</Text>
-                  <FillColorModeToggle
-                    mode={draft.fillColorMode}
-                    disabled={false}
-                    onModeChange={(fillColorMode) =>
-                      setDraft((current) => ({ ...current, fillColorMode }))
-                    }
-                  />
-                </View>
-
-                {draft.fillColorMode === "grayscale" ? (
-                  <View style={styles.settingBlock}>
-                    <Text style={styles.fieldLabel}>Grayscale level</Text>
-                    <SliderWithValue
-                      value={draft.fillGrayLevel}
-                      min={0}
-                      max={100}
-                      unit="%"
-                      disabled={false}
-                      accessibilityLabel="Fill grayscale level"
-                      tickCount={0}
-                      endLabels={["Black", "Gray", "White"]}
-                      showValueInput={false}
-                      formatDisplay={formatGrayLevel}
-                      parseDisplay={(text) => {
-                        const parsed = Number.parseInt(text, 10);
-                        if (Number.isNaN(parsed)) return null;
-                        return Math.min(100, Math.max(0, parsed));
-                      }}
-                      onValueChange={(fillGrayLevel) =>
-                        setDraft((current) => ({
-                          ...current,
-                          fillGrayLevel: Math.min(
-                            100,
-                            Math.max(0, fillGrayLevel),
-                          ),
-                        }))
-                      }
-                    />
-                  </View>
-                ) : null}
-
-                <View
-                  style={[
-                    styles.settingBlock,
-                    styles.compactSliderBlock,
-                    styles.fillOpacityBlock,
-                  ]}
-                >
-                  <Text style={styles.fieldLabel}>Fill opacity</Text>
-                  <SliderWithValue
-                    value={draft.fillOpacityStep}
-                    min={BOUNDARY_STEP_MIN}
-                    max={BOUNDARY_STEP_MAX}
-                    unit="%"
-                    disabled={false}
-                    accessibilityLabel="Fill opacity"
-                    tickCount={0}
-                    endLabels={["Subtle", "50%", "Strong"]}
-                    showValueInput={false}
-                    formatDisplay={formatFillOpacityStep}
-                    parseDisplay={(text) => {
-                      const parsed = Number.parseInt(text, 10);
-                      if (Number.isNaN(parsed)) {
-                        return null;
-                      }
-                      return displayPercentToFillOpacityStep(parsed);
-                    }}
-                    onValueChange={(fillOpacityStep) =>
-                      setDraft((current) => ({
-                        ...current,
-                        fillOpacityStep: clampBoundaryStep(fillOpacityStep),
-                      }))
-                    }
-                  />
-                </View>
-              </>
+              </View>
             ) : null}
           </ScrollView>
 
@@ -872,31 +769,12 @@ const styles = StyleSheet.create({
     marginTop: 0,
     marginBottom: 0,
   },
-  modeToggleWrap: {
-    flexDirection: "row",
-    borderRadius: 10,
-    backgroundColor: "rgba(255, 255, 255, 0.07)",
-    padding: 3,
-    gap: 4,
-  },
-  modeToggleButton: {
-    flex: 1,
-    minHeight: 34,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modeToggleButtonActive: {
-    backgroundColor: "rgba(251, 191, 36, 0.65)",
-  },
-  modeToggleLabel: {
-    fontSize: 12,
-    fontFamily: "Poppins-Regular",
-    color: "rgba(255,255,255,0.85)",
-  },
-  modeToggleLabelActive: {
-    color: "#ffffff",
-    fontFamily: "Poppins-SemiBold",
+  /** Separates Boundary vs Overlay groups (offsets scroll gap so spacing stays tight). */
+  sectionGroupDivider: {
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    marginTop: -2,
+    marginBottom: -4,
   },
   settingBlockDisabled: {
     opacity: 0.42,

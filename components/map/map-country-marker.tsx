@@ -40,11 +40,14 @@ const FlagImage = memo(function FlagImage({
   flagUri,
   style,
   loaded,
+  keepVisibleWhileLoading,
   onLoad,
 }: {
   flagUri: string;
   style: object;
   loaded: boolean;
+  /** Focal pin — avoid opacity-0 snapshots while the CDN image loads. */
+  keepVisibleWhileLoading?: boolean;
   onLoad: () => void;
 }) {
   return (
@@ -52,7 +55,7 @@ const FlagImage = memo(function FlagImage({
       source={{ uri: flagUri }}
       recyclingKey={flagUri}
       cachePolicy="memory-disk"
-      style={[style, !loaded && styles.flagHidden]}
+      style={[style, !loaded && !keepVisibleWhileLoading && styles.flagHidden]}
       contentFit="cover"
       onLoadEnd={onLoad}
       onError={(event) => {
@@ -135,6 +138,7 @@ function FlagPinBody({
             flagUri={flagUri}
             style={flagStyle}
             loaded={flagLoaded}
+            keepVisibleWhileLoading={selected || focusTransitioning}
             onLoad={onFlagLoad}
           />
         ) : (

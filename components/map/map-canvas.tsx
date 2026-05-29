@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 import { StyleSheet, View } from "react-native";
+import type { Region } from "react-native-maps";
 import Animated, {
   Easing,
   runOnJS,
@@ -16,7 +17,6 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
-import type { Region } from "react-native-maps";
 
 import {
   GlobeView,
@@ -29,20 +29,20 @@ import {
   type MapZoomTier,
   type WorldMapViewHandle,
 } from "@/components/map/world-map-view";
-import type { MapCluster } from "@/lib/map-clusters";
-import type { MapPressCoordinate } from "@/lib/map-map-tap-hit";
 import {
   MAP_CONTINENT_FOCUS_FADE_MS,
   MAP_SCRIM_MAX_OPACITY,
 } from "@/constants/map-continent-focus";
+import type { MapCluster } from "@/lib/map-clusters";
+import type { MapPressCoordinate } from "@/lib/map-map-tap-hit";
+import type { MapMarkerPresentation } from "@/lib/map-region-markers";
 import {
   GLOBE_CROSSFADE_MS,
   MAP_DIM_HOLD_MS,
-  type MapViewTransition,
   shouldShowFlatMapMarkers,
   shouldShowGlobeLayer,
+  type MapViewTransition,
 } from "@/lib/map-view-transition";
-import type { MapMarkerPresentation } from "@/lib/map-region-markers";
 import { useMapStore } from "@/store/use-map-store";
 import type { CountryMarkerDisplayMode } from "@/store/use-map-ui-store";
 import type { MapCountry } from "@/types/country";
@@ -61,6 +61,8 @@ type MapCanvasProps = {
   selectedName: string | null;
   focusTransitionName?: string | null;
   focusedRegion: string | null;
+  /** Continent focus fill/scrim — may lag focusedRegion after cross-region flights. */
+  continentOverlayRegion?: string | null;
   previewRegion?: string | null;
   tapRippleAt?: MapPressCoordinate | null;
   tapRippleToken?: number;
@@ -93,6 +95,7 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
       selectedName,
       focusTransitionName = null,
       focusedRegion,
+      continentOverlayRegion = focusedRegion,
       previewRegion = null,
       tapRippleAt = null,
       tapRippleToken = 0,
@@ -124,7 +127,9 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
       y: number;
     } | null>(null);
 
-    const globeOpacity = useSharedValue(shouldShowGlobeLayer(mapMode, mapViewTransition) ? 1 : 0);
+    const globeOpacity = useSharedValue(
+      shouldShowGlobeLayer(mapMode, mapViewTransition) ? 1 : 0,
+    );
     const flatDimOpacity = useSharedValue(0);
     const continentFocusBlend = useSharedValue(focusedRegion ? 1 : 0);
 
@@ -313,6 +318,7 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
       selectedName,
       focusTransitionName,
       focusedRegion,
+      continentOverlayRegion,
       previewRegion,
       zoomTier,
       countryMarkerMode: showFlatMarkers ? countryMarkerMode : "hidden",
@@ -359,6 +365,7 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
               selectedName={selectedName}
               focusTransitionName={focusTransitionName}
               focusedRegion={focusedRegion}
+              previewRegion={previewRegion}
               countryMarkerMode={countryMarkerMode}
               onClusterPress={onClusterPress}
               onCountryPress={onCountryPress}
