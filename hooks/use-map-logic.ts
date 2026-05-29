@@ -30,7 +30,7 @@ import {
 import { deriveCameraZoomState } from "@/lib/map-camera-zoom";
 import { buildMapClusters, type MapCluster } from "@/lib/map-clusters";
 import { getMapDisplayLatLng, isValidLatLng } from "@/lib/map-country";
-import { parseCountryBoundaryPolygons } from "@/lib/map-country-boundaries";
+import { getCountryBoundaryPolygons } from "@/lib/map-country-boundaries";
 import {
   installMapDebugErrorHandler,
   logMapDebug,
@@ -286,10 +286,7 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
 
   const clusters = useMemo(() => buildMapClusters(countries), [countries]);
 
-  const allBoundaryPolygons = useMemo(
-    () => parseCountryBoundaryPolygons(countriesGeoJson),
-    [],
-  );
+  const allBoundaryPolygons = getCountryBoundaryPolygons(countriesGeoJson);
 
   const activeCountryName = activeCountry?.name ?? null;
   const focalMarkerName =

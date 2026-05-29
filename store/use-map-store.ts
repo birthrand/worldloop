@@ -1,7 +1,9 @@
 import { create } from "zustand";
 
-import { normalizeCountryRegion } from "@/lib/app-region";
+import { CLIENT_CACHE_KEYS, CLIENT_CACHE_TTL } from "@/constants/client-cache";
 import { fetchMapCountries } from "@/lib/api";
+import { normalizeCountryRegion } from "@/lib/app-region";
+import { getClientCache, staleWhileRevalidate } from "@/lib/client-cache";
 import { countryToMapCountry, isValidLatLng } from "@/lib/map-country";
 import {
   useIdentityStore,
@@ -44,7 +46,7 @@ type MapState = {
   activeChip: MapFilterChip;
   mapMode: MapMode;
   globeCamera: GlobeCameraHandle | null;
-  loadMapCountries: () => Promise<void>;
+  loadMapCountries: (options?: { force?: boolean }) => Promise<void>;
   focusCountryFromExternal: (
     name: string,
     fallback?: Country,
@@ -104,8 +106,10 @@ export const useMapStore = create<MapState>((set, get) => ({
   mapMode: "2d",
   globeCamera: null,
 
-  loadMapCountries: async () => {
-    if (get().mapCountriesFullyLoaded) {
+  loadMapCountries: async (options) => {
+    const force = options?.force ?? false;
+
+    if (!force && get().mapCountriesFullyLoaded) {
       return;
     }
     if (mapCountriesLoadPromise) {
@@ -113,21 +117,51 @@ export const useMapStore = create<MapState>((set, get) => ({
     }
 
     mapCountriesLoadPromise = (async () => {
-      set({ status: "loading", error: null });
+      const cacheKey = CLIENT_CACHE_KEYS.mapCountries;
+      const diskCache = await getClientCache<MapCountry[]>(cacheKey);
 
-      try {
-        const { data } = await fetchMapCountries();
-        const nextCountries = withValidCoordinates(data);
+      if (diskCache.data) {
         set({
-          countries: nextCountries,
+          countries: withValidCoordinates(diskCache.data),
           status: "idle",
           error: null,
           mapCountriesFullyLoaded: true,
         });
+      } else {
+        set({ status: "loading", error: null });
+      }
+
+      try {
+        await staleWhileRevalidate({
+          key: cacheKey,
+          ttlSeconds: CLIENT_CACHE_TTL.mapCountries,
+          force,
+          fetcher: () => fetchMapCountries().then((response) => response.data),
+          onCached: (data) => {
+            if (!diskCache.data) {
+              set({
+                countries: withValidCoordinates(data),
+                status: "idle",
+                error: null,
+                mapCountriesFullyLoaded: true,
+              });
+            }
+          },
+          onFetched: (data) => {
+            set({
+              countries: withValidCoordinates(data),
+              status: "idle",
+              error: null,
+              mapCountriesFullyLoaded: true,
+            });
+          },
+        });
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Failed to load map countries";
-        set({ status: "error", error: message });
+        if (get().countries.length === 0) {
+          const message =
+            err instanceof Error ? err.message : "Failed to load map countries";
+          set({ status: "error", error: message });
+        }
       } finally {
         mapCountriesLoadPromise = null;
       }

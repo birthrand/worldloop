@@ -198,6 +198,17 @@ export function parseCountryBoundaryPolygons(
   return polygons;
 }
 
+let parsedCountryBoundaries: CountryBoundaryPolygon[] | null = null;
+
+export function getCountryBoundaryPolygons(
+  geoJson: GeoJsonFeatureCollection,
+): CountryBoundaryPolygon[] {
+  if (!parsedCountryBoundaries) {
+    parsedCountryBoundaries = parseCountryBoundaryPolygons(geoJson);
+  }
+  return parsedCountryBoundaries;
+}
+
 export function countryNamesMatch(
   apiCountryName: string,
   geoAdminName: string | null,

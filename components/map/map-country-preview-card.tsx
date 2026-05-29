@@ -11,8 +11,10 @@ import {
 import Animated, { SlideInDown, SlideOutDown } from "react-native-reanimated";
 
 import { FlagBadge } from "@/components/explore/flag-badge";
+import { CLIENT_CACHE_KEYS, CLIENT_CACHE_TTL } from "@/constants/client-cache";
 import { continentDisplayLabel } from "@/constants/regions";
 import { fetchCountryByName } from "@/lib/api";
+import { getClientCache, staleWhileRevalidate } from "@/lib/client-cache";
 import { formatPopulation } from "@/lib/format-country";
 import { mapCountryToCountry } from "@/lib/map-country";
 import { openCountryInExplore } from "@/lib/open-country-in-explore";
@@ -63,22 +65,51 @@ export function MapCountryPreviewCard({
 
   useEffect(() => {
     let cancelled = false;
-    setDetailStatus("loading");
-    setDetailError(null);
 
-    void fetchCountryByName(country.name)
-      .then((data) => {
-        if (cancelled) return;
-        setDetail(data);
+    const loadDetail = async () => {
+      setDetailError(null);
+
+      const cacheKey = CLIENT_CACHE_KEYS.countryDetail(country.name);
+      const diskCache = await getClientCache<Country>(cacheKey);
+
+      if (cancelled) return;
+
+      if (diskCache.data) {
+        setDetail(diskCache.data);
         setDetailStatus("idle");
-      })
-      .catch((err) => {
+      } else {
+        setDetail(null);
+        setDetailStatus("loading");
+      }
+
+      try {
+        await staleWhileRevalidate({
+          key: cacheKey,
+          ttlSeconds: CLIENT_CACHE_TTL.countryDetail,
+          fetcher: () => fetchCountryByName(country.name),
+          onCached: (data) => {
+            if (cancelled) return;
+            setDetail(data);
+            setDetailStatus("idle");
+          },
+          onFetched: (data) => {
+            if (cancelled) return;
+            setDetail(data);
+            setDetailStatus("idle");
+          },
+        });
+      } catch (err) {
         if (cancelled) return;
-        setDetailStatus("error");
-        setDetailError(
-          err instanceof Error ? err.message : "Could not load fun fact",
-        );
-      });
+        if (!diskCache.data) {
+          setDetailStatus("error");
+          setDetailError(
+            err instanceof Error ? err.message : "Could not load fun fact",
+          );
+        }
+      }
+    };
+
+    void loadDetail();
 
     return () => {
       cancelled = true;

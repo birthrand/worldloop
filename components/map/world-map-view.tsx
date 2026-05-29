@@ -32,7 +32,7 @@ import { WORLD_INITIAL_REGION } from "@/constants/map-regions";
 import {
   countryNamesMatch,
   filterBoundaryPolygonsByMapContext,
-  parseCountryBoundaryPolygons,
+  getCountryBoundaryPolygons,
   type CountryBoundaryPolygon,
 } from "@/lib/map-country-boundaries";
 import { logMapDebug, summarizeRegion } from "@/lib/map-debug";
@@ -213,10 +213,7 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
     const boundaryStyleRevision = useMapUiStore((s) => s.boundaryStyleRevision);
     const showBoundaryLines = useMapUiStore((s) => s.showBoundaryLines);
 
-    const allCountryBoundaries = useMemo(
-      () => parseCountryBoundaryPolygons(countriesGeoJson),
-      [],
-    );
+    const allCountryBoundaries = getCountryBoundaryPolygons(countriesGeoJson);
 
     const showWorldBoundaries =
       showBoundaryLines && !focusedRegion && !selectedName;

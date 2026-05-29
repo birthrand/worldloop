@@ -18,7 +18,7 @@ import { buildGlobeBoundaryFills } from "@/lib/globe-boundary-fills";
 import { parseCssColorToThree } from "@/lib/globe-boundary-lines";
 import {
   filterBoundaryPolygonsByMapContext,
-  parseCountryBoundaryPolygons,
+  getCountryBoundaryPolygons,
   type CountryBoundaryPolygon,
 } from "@/lib/map-country-boundaries";
 import { useMapUiStore } from "@/store/use-map-ui-store";
@@ -94,10 +94,7 @@ export function GlobeContinentFocusLayers({
   const [renderBlend, setRenderBlend] = useState(0);
   const [renderPreviewBlend, setRenderPreviewBlend] = useState(0);
 
-  const allCountryBoundaries = useMemo(
-    () => parseCountryBoundaryPolygons(countriesGeoJson),
-    [],
-  );
+  const allCountryBoundaries = getCountryBoundaryPolygons(countriesGeoJson);
 
   useEffect(() => {
     if (focusedRegion) {

@@ -13,7 +13,7 @@ import {
 } from "@/lib/globe-boundary-lines";
 import {
   filterBoundaryPolygonsByMapContext,
-  parseCountryBoundaryPolygons,
+  getCountryBoundaryPolygons,
 } from "@/lib/map-country-boundaries";
 import { useMapUiStore } from "@/store/use-map-ui-store";
 import type { MapCountry } from "@/types/country";
@@ -82,7 +82,7 @@ export function GlobeBoundaryLines({
     showBoundaryLines && !focusedRegion && !highlightCountryName;
 
   const countryBoundaries = useMemo(() => {
-    const all = parseCountryBoundaryPolygons(countriesGeoJson);
+    const all = getCountryBoundaryPolygons(countriesGeoJson);
     return filterBoundaryPolygonsByMapContext(all, {
       selectedCountryName: highlightCountryName,
       focusedRegion,

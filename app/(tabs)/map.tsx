@@ -174,7 +174,7 @@ export default function MapScreen() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Retry loading map"
-              onPress={() => void map.loadMapCountries()}
+              onPress={() => void map.loadMapCountries({ force: true })}
               style={({ pressed }) => [
                 styles.retryButton,
                 pressed && styles.pressed,
