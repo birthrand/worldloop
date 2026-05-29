@@ -47,7 +47,7 @@ export type BoundaryMapContext = {
 /** REST Countries name → alternate Natural Earth `ADMIN` labels. */
 const GEO_ADMIN_ALIASES_BY_API_NAME: Record<string, readonly string[]> = {
   "United States": ["United States of America"],
-  "Czechia": ["Czechia", "Czech Republic"],
+  Czechia: ["Czechia", "Czech Republic"],
   "Cape Verde": ["Cabo Verde"],
   "Ivory Coast": ["Côte d'Ivoire", "Cote d'Ivoire"],
   Eswatini: ["eSwatini", "Swaziland"],
@@ -89,9 +89,7 @@ function toLatLng([longitude, latitude]: number[]): LatLng {
 }
 
 function toRingPoints(ring: number[][]): LatLng[] {
-  return ring
-    .filter((point) => point.length >= 2)
-    .map(toLatLng);
+  return ring.filter((point) => point.length >= 2).map(toLatLng);
 }
 
 /**
@@ -230,8 +228,8 @@ function naturalEarthContinentMatchesRegion(
 
 /**
  * Scope boundaries to map context (option 1 — implicit, no extra UI):
- * - Selected country (no continent focus) → that country only
- * - Focused continent → countries in that region (even when a country is selected)
+ * - Selected country → that country only (even when a continent is focused)
+ * - Focused continent (no country selected) → countries in that region
  * - No focus → hidden unless `showWorldBoundaries` (grid toggle on world view)
  */
 export function filterBoundaryPolygonsByMapContext(
@@ -243,6 +241,12 @@ export function filterBoundaryPolygonsByMapContext(
 
   if (!selectedCountryName && !focusedRegion) {
     return showWorldBoundaries ? polygons : [];
+  }
+
+  if (selectedCountryName) {
+    return polygons.filter((polygon) =>
+      countryNamesMatch(selectedCountryName, polygon.countryName),
+    );
   }
 
   if (focusedRegion) {
@@ -265,12 +269,6 @@ export function filterBoundaryPolygonsByMapContext(
         focusedRegion,
       );
     });
-  }
-
-  if (selectedCountryName) {
-    return polygons.filter((polygon) =>
-      countryNamesMatch(selectedCountryName, polygon.countryName),
-    );
   }
 
   return [];

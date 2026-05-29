@@ -18,6 +18,7 @@ import * as THREE from "three";
 
 import { GlobeBoundaryLines } from "@/components/map/globe-boundary-lines";
 import { GlobeContinentFocusLayers } from "@/components/map/globe-continent-focus-layers";
+import { GlobeCountryFocusLayers } from "@/components/map/globe-country-focus-layers";
 import { GlobeCountryPin } from "@/components/map/globe-country-pin";
 import { GlobeLabelOverlay } from "@/components/map/globe-label-overlay";
 import { GlobeLabelProjector } from "@/components/map/globe-label-projector";
@@ -461,9 +462,15 @@ function GlobeScene({
         boundaryCountries={boundaryCountries}
       />
 
+      <GlobeCountryFocusLayers
+        selectedCountryName={selectedName}
+        focusTransitionName={focusTransitionName}
+      />
+
       <GlobeBoundaryLines
         boundaryCountries={boundaryCountries}
         selectedName={selectedName}
+        focusTransitionName={focusTransitionName}
         focusedRegion={focusedRegion}
       />
 

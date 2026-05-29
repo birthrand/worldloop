@@ -12,6 +12,7 @@ export const MAP_DEBUG_ENABLED = __DEV__;
 
 export type MapDebugScope =
   | "fab"
+  | "shuffle"
   | "flight"
   | "selection"
   | "intent"

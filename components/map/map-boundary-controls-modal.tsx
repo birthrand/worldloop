@@ -25,13 +25,12 @@ import {
   clampBoundaryStep,
   DEFAULT_MAP_BOUNDARY_STYLE,
   displayPercentToFillOpacityStep,
-  displayPercentToStrokeOpacityStep,
   fillOpacityStepToDisplayPercent,
   resolveBoundaryStrokeWidth,
-  strokeOpacityStepToDisplayPercent,
   type MapBoundaryStyleSettings,
   type MapZoomTier,
 } from "@/constants/map-boundary-style";
+import { resolveCountryFocusBoundaryStrokeWidth } from "@/constants/map-country-focus";
 import { hueToHex } from "@/lib/color-utils";
 import { useMapUiStore } from "@/store/use-map-ui-store";
 
@@ -95,28 +94,65 @@ function FillPatternIcon() {
   );
 }
 
-type FeatureToggleRowProps = {
+function CountryHighlightIcon({ color }: { color: string }) {
+  return (
+    <View style={styles.featureIconBox}>
+      <View
+        style={[styles.countryHighlightSwatch, { backgroundColor: color }]}
+      />
+    </View>
+  );
+}
+
+type CollapsibleStyleSectionProps = {
   icon: ReactNode;
   label: string;
   enabled: boolean;
-  onChange: (enabled: boolean) => void;
+  expanded: boolean;
+  onToggleEnabled: (enabled: boolean) => void;
+  onToggleExpanded: () => void;
+  children: ReactNode;
 };
 
-function FeatureToggleRow({
+function CollapsibleStyleSection({
   icon,
   label,
   enabled,
-  onChange,
-}: FeatureToggleRowProps) {
+  expanded,
+  onToggleEnabled,
+  onToggleExpanded,
+  children,
+}: CollapsibleStyleSectionProps) {
   return (
-    <View style={styles.featureToggleRow}>
-      {icon}
-      <Text style={styles.featureToggleLabel}>{label}</Text>
-      <SettingSwitch
-        value={enabled}
-        accessibilityLabel={`${label} toggle`}
-        onValueChange={onChange}
-      />
+    <View style={styles.collapsibleSection}>
+      <View style={styles.collapsibleHeader}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ expanded }}
+          accessibilityLabel={`${expanded ? "Collapse" : "Expand"} ${label} settings`}
+          onPress={onToggleExpanded}
+          style={({ pressed }) => [
+            styles.collapsibleHeaderMain,
+            pressed && styles.pressed,
+          ]}
+        >
+          {icon}
+          <Text style={styles.featureToggleLabel}>{label}</Text>
+          <Ionicons
+            name={expanded ? "chevron-up" : "chevron-down"}
+            size={16}
+            color="rgba(255,255,255,0.55)"
+          />
+        </Pressable>
+        <SettingSwitch
+          value={enabled}
+          accessibilityLabel={`${label} toggle`}
+          onValueChange={onToggleEnabled}
+        />
+      </View>
+      {expanded ? (
+        <View style={styles.collapsibleContent}>{children}</View>
+      ) : null}
     </View>
   );
 }
@@ -315,6 +351,8 @@ function SliderWithValue({
   );
 }
 
+type BoundaryStyleSection = "boundary" | "overlay" | "country";
+
 export function MapBoundaryControlsModal({
   previewZoomTier = "world",
   onClose,
@@ -329,7 +367,27 @@ export function MapBoundaryControlsModal({
   const committedStyleRef = useRef(initialStyle);
   const committedShowLinesRef = useRef(showBoundaryLines);
   const hasToggledShowLinesRef = useRef(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollToEndAfterCountryExpandRef = useRef(false);
   const [draft, setDraft] = useState<MapBoundaryStyleSettings>(initialStyle);
+  const [expandedSection, setExpandedSection] =
+    useState<BoundaryStyleSection | null>("boundary");
+
+  const toggleSection = useCallback((section: BoundaryStyleSection) => {
+    setExpandedSection((current) => {
+      const nextExpanded = current === section ? null : section;
+      if (section === "country" && nextExpanded === "country") {
+        scrollToEndAfterCountryExpandRef.current = true;
+      }
+      return nextExpanded;
+    });
+  }, []);
+
+  const handleScrollContentSizeChange = useCallback(() => {
+    if (!scrollToEndAfterCountryExpandRef.current) return;
+    scrollToEndAfterCountryExpandRef.current = false;
+    scrollRef.current?.scrollToEnd({ animated: true });
+  }, []);
 
   // Ensure the 2D map has polygons to preview (restored on dismiss if they were off).
   useEffect(() => {
@@ -345,18 +403,22 @@ export function MapBoundaryControlsModal({
 
   const hasChanges = boundaryStyleHasChanges(draft, committedStyleRef.current);
   const boundaryEnabled = draft.strokeColorEnabled;
+  const countryHighlightEnabled = draft.countryHighlightEnabled;
 
   const previewStrokeWidth = resolveBoundaryStrokeWidth(
     applyBoundaryStyleDraft(draft),
     previewZoomTier,
   );
+  const previewCountryStrokeWidth = resolveCountryFocusBoundaryStrokeWidth(
+    applyBoundaryStyleDraft(draft),
+  );
 
   const formatThicknessStep = useCallback((step: number) => String(step), []);
-  const formatStrokeOpacityStep = useCallback(
-    (step: number) => String(strokeOpacityStepToDisplayPercent(step)),
+  const formatOverlayOpacityStep = useCallback(
+    (step: number) => String(fillOpacityStepToDisplayPercent(step)),
     [],
   );
-  const formatOverlayOpacityStep = useCallback(
+  const formatCountryFillOpacityStep = useCallback(
     (step: number) => String(fillOpacityStepToDisplayPercent(step)),
     [],
   );
@@ -404,6 +466,10 @@ export function MapBoundaryControlsModal({
     setDraft((current) => ({ ...current, fillEnabled }));
   };
 
+  const setCountryHighlightEnabled = (enabled: boolean) => {
+    setDraft((current) => ({ ...current, countryHighlightEnabled: enabled }));
+  };
+
   return (
     <Modal
       visible
@@ -438,118 +504,89 @@ export function MapBoundaryControlsModal({
           <View style={styles.sectionDivider} />
 
           <ScrollView
+            ref={scrollRef}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
+            onContentSizeChange={handleScrollContentSizeChange}
           >
-            <FeatureToggleRow
+            <CollapsibleStyleSection
               icon={<BoundaryOutlineIcon />}
               label="Boundary"
               enabled={boundaryEnabled}
-              onChange={setBoundaryEnabled}
-            />
-
-            <ColorField
-              label="Boundary color"
-              hue={draft.strokeColorHue}
-              colorHex={draft.strokeColorHex}
-              disabled={!boundaryEnabled}
-              onHueChange={(strokeColorHue) =>
-                setDraft((current) => ({ ...current, strokeColorHue }))
-              }
-              onHexChange={(strokeColorHex) =>
-                setDraft((current) => ({ ...current, strokeColorHex }))
-              }
-            />
-
-            <View
-              style={[
-                styles.settingBlock,
-                styles.compactSliderBlock,
-                !boundaryEnabled && styles.settingBlockDisabled,
-              ]}
-              pointerEvents={boundaryEnabled ? "auto" : "none"}
+              expanded={expandedSection === "boundary"}
+              onToggleEnabled={setBoundaryEnabled}
+              onToggleExpanded={() => toggleSection("boundary")}
             >
-              <Text style={styles.fieldLabel}>
-                Boundary thickness ({previewStrokeWidth.toFixed(1)}px)
-              </Text>
-              <SliderWithValue
-                value={draft.strokeThicknessStep}
-                min={BOUNDARY_STEP_MIN}
-                max={BOUNDARY_STEP_MAX}
-                unit="px"
+              <ColorField
+                label="Boundary color"
+                hue={draft.strokeColorHue}
+                colorHex={draft.strokeColorHex}
                 disabled={!boundaryEnabled}
-                accessibilityLabel="Boundary thickness"
-                tickCount={5}
-                showValueInput={false}
-                formatDisplay={formatThicknessStep}
-                parseDisplay={(text) => {
-                  const parsed = Number.parseInt(text, 10);
-                  if (Number.isNaN(parsed)) {
-                    return null;
-                  }
-                  return clampBoundaryStep(parsed);
-                }}
-                onValueChange={(strokeThicknessStep) =>
-                  setDraft((current) => ({
-                    ...current,
-                    strokeThicknessStep: clampBoundaryStep(strokeThicknessStep),
-                  }))
+                onHueChange={(strokeColorHue) =>
+                  setDraft((current) => ({ ...current, strokeColorHue }))
+                }
+                onHexChange={(strokeColorHex) =>
+                  setDraft((current) => ({ ...current, strokeColorHex }))
                 }
               />
-            </View>
 
-            <View
-              style={[
-                styles.settingBlock,
-                styles.compactSliderBlock,
-                !boundaryEnabled && styles.settingBlockDisabled,
-              ]}
-              pointerEvents={boundaryEnabled ? "auto" : "none"}
-            >
-              <Text style={styles.fieldLabel}>Line opacity</Text>
-              <SliderWithValue
-                value={draft.strokeOpacityStep}
-                min={BOUNDARY_STEP_MIN}
-                max={BOUNDARY_STEP_MAX}
-                unit="%"
-                disabled={!boundaryEnabled}
-                accessibilityLabel="Boundary line opacity"
-                tickCount={0}
-                endLabels={["Subtle", "50%", "Strong"]}
-                showValueInput={false}
-                formatDisplay={formatStrokeOpacityStep}
-                parseDisplay={(text) => {
-                  const parsed = Number.parseInt(text, 10);
-                  if (Number.isNaN(parsed)) {
-                    return null;
+              <View
+                style={[
+                  styles.settingBlock,
+                  styles.compactSliderBlock,
+                  !boundaryEnabled && styles.settingBlockDisabled,
+                ]}
+                pointerEvents={boundaryEnabled ? "auto" : "none"}
+              >
+                <Text style={styles.fieldLabel}>
+                  Boundary thickness ({previewStrokeWidth.toFixed(1)}px)
+                </Text>
+                <SliderWithValue
+                  value={draft.strokeThicknessStep}
+                  min={BOUNDARY_STEP_MIN}
+                  max={BOUNDARY_STEP_MAX}
+                  unit="px"
+                  disabled={!boundaryEnabled}
+                  accessibilityLabel="Boundary thickness"
+                  tickCount={5}
+                  showValueInput={false}
+                  formatDisplay={formatThicknessStep}
+                  parseDisplay={(text) => {
+                    const parsed = Number.parseInt(text, 10);
+                    if (Number.isNaN(parsed)) {
+                      return null;
+                    }
+                    return clampBoundaryStep(parsed);
+                  }}
+                  onValueChange={(strokeThicknessStep) =>
+                    setDraft((current) => ({
+                      ...current,
+                      strokeThicknessStep:
+                        clampBoundaryStep(strokeThicknessStep),
+                    }))
                   }
-                  return displayPercentToStrokeOpacityStep(parsed);
-                }}
-                onValueChange={(strokeOpacityStep) =>
-                  setDraft((current) => ({
-                    ...current,
-                    strokeOpacityStep: clampBoundaryStep(strokeOpacityStep),
-                  }))
-                }
-              />
-            </View>
+                />
+              </View>
+            </CollapsibleStyleSection>
 
             <View style={styles.sectionGroupDivider} />
 
-            <FeatureToggleRow
+            <CollapsibleStyleSection
               icon={<FillPatternIcon />}
               label="Overlay"
               enabled={draft.fillEnabled}
-              onChange={setOverlayEnabled}
-            />
-
-            {draft.fillEnabled ? (
+              expanded={expandedSection === "overlay"}
+              onToggleEnabled={setOverlayEnabled}
+              onToggleExpanded={() => toggleSection("overlay")}
+            >
               <View
                 style={[
                   styles.settingBlock,
                   styles.compactSliderBlock,
                   styles.fillOpacityBlock,
+                  !draft.fillEnabled && styles.settingBlockDisabled,
                 ]}
+                pointerEvents={draft.fillEnabled ? "auto" : "none"}
               >
                 <Text style={styles.fieldLabel}>Overlay opacity</Text>
                 <SliderWithValue
@@ -557,7 +594,7 @@ export function MapBoundaryControlsModal({
                   min={BOUNDARY_STEP_MIN}
                   max={BOUNDARY_STEP_MAX}
                   unit="%"
-                  disabled={false}
+                  disabled={!draft.fillEnabled}
                   accessibilityLabel="Overlay opacity"
                   tickCount={0}
                   endLabels={["Subtle", "50%", "Strong"]}
@@ -578,7 +615,129 @@ export function MapBoundaryControlsModal({
                   }
                 />
               </View>
-            ) : null}
+            </CollapsibleStyleSection>
+
+            <View style={styles.sectionGroupDivider} />
+
+            <CollapsibleStyleSection
+              icon={
+                <CountryHighlightIcon
+                  color={
+                    draft.countryFillColorHex ??
+                    hueToHex(draft.countryFillColorHue)
+                  }
+                />
+              }
+              label="Highlight"
+              enabled={countryHighlightEnabled}
+              expanded={expandedSection === "country"}
+              onToggleEnabled={setCountryHighlightEnabled}
+              onToggleExpanded={() => toggleSection("country")}
+            >
+              <ColorField
+                label="Fill color"
+                hue={draft.countryFillColorHue}
+                colorHex={draft.countryFillColorHex}
+                disabled={!countryHighlightEnabled}
+                onHueChange={(countryFillColorHue) =>
+                  setDraft((current) => ({ ...current, countryFillColorHue }))
+                }
+                onHexChange={(countryFillColorHex) =>
+                  setDraft((current) => ({ ...current, countryFillColorHex }))
+                }
+              />
+
+              <View
+                style={[
+                  styles.settingBlock,
+                  styles.compactSliderBlock,
+                  !countryHighlightEnabled && styles.settingBlockDisabled,
+                ]}
+                pointerEvents={countryHighlightEnabled ? "auto" : "none"}
+              >
+                <Text style={styles.fieldLabel}>Fill opacity</Text>
+                <SliderWithValue
+                  value={draft.countryFillOpacityStep}
+                  min={BOUNDARY_STEP_MIN}
+                  max={BOUNDARY_STEP_MAX}
+                  unit="%"
+                  disabled={!countryHighlightEnabled}
+                  accessibilityLabel="Fill opacity"
+                  tickCount={0}
+                  endLabels={["Subtle", "50%", "Strong"]}
+                  showValueInput={false}
+                  formatDisplay={formatCountryFillOpacityStep}
+                  parseDisplay={(text) => {
+                    const parsed = Number.parseInt(text, 10);
+                    if (Number.isNaN(parsed)) {
+                      return null;
+                    }
+                    return displayPercentToFillOpacityStep(parsed);
+                  }}
+                  onValueChange={(countryFillOpacityStep) =>
+                    setDraft((current) => ({
+                      ...current,
+                      countryFillOpacityStep: clampBoundaryStep(
+                        countryFillOpacityStep,
+                      ),
+                    }))
+                  }
+                />
+              </View>
+
+              <ColorField
+                label="Boundary color"
+                hue={draft.countryStrokeColorHue}
+                colorHex={draft.countryStrokeColorHex}
+                disabled={!countryHighlightEnabled}
+                onHueChange={(countryStrokeColorHue) =>
+                  setDraft((current) => ({ ...current, countryStrokeColorHue }))
+                }
+                onHexChange={(countryStrokeColorHex) =>
+                  setDraft((current) => ({ ...current, countryStrokeColorHex }))
+                }
+              />
+
+              <View
+                style={[
+                  styles.settingBlock,
+                  styles.compactSliderBlock,
+                  !countryHighlightEnabled && styles.settingBlockDisabled,
+                ]}
+                pointerEvents={countryHighlightEnabled ? "auto" : "none"}
+              >
+                <Text style={styles.fieldLabel}>
+                  Boundary thickness ({previewCountryStrokeWidth.toFixed(1)}
+                  px)
+                </Text>
+                <SliderWithValue
+                  value={draft.countryStrokeThicknessStep}
+                  min={BOUNDARY_STEP_MIN}
+                  max={BOUNDARY_STEP_MAX}
+                  unit="px"
+                  disabled={!countryHighlightEnabled}
+                  accessibilityLabel="Boundary thickness"
+                  tickCount={5}
+                  showValueInput={false}
+                  formatDisplay={formatThicknessStep}
+                  parseDisplay={(text) => {
+                    const parsed = Number.parseInt(text, 10);
+                    if (Number.isNaN(parsed)) {
+                      return null;
+                    }
+                    return clampBoundaryStep(parsed);
+                  }}
+                  onValueChange={(countryStrokeThicknessStep) =>
+                    setDraft((current) => ({
+                      ...current,
+                      countryStrokeThicknessStep: clampBoundaryStep(
+                        countryStrokeThicknessStep,
+                      ),
+                    }))
+                  }
+                />
+              </View>
+            </CollapsibleStyleSection>
           </ScrollView>
 
           <View style={styles.sectionDivider} />
@@ -683,11 +842,24 @@ const styles = StyleSheet.create({
     paddingTop: 6,
     paddingBottom: 6,
   },
-  featureToggleRow: {
+  collapsibleSection: {
+    gap: 10,
+  },
+  collapsibleHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  collapsibleHeaderMain: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
     minHeight: 40,
+  },
+  collapsibleContent: {
+    gap: 10,
+    paddingBottom: 2,
   },
   featureIconBox: {
     width: 28,
@@ -724,6 +896,13 @@ const styles = StyleSheet.create({
   fillStripeFar: {
     top: 18,
     opacity: 0.5,
+  },
+  countryHighlightSwatch: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
   },
   featureToggleLabel: {
     flex: 1,

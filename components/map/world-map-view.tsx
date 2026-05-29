@@ -13,6 +13,7 @@ import MapView, {
 } from "react-native-maps";
 
 import { MapContinentFocusLayers } from "@/components/map/map-continent-focus-layers";
+import { MapCountryFocusLayers } from "@/components/map/map-country-focus-layers";
 import { MapCountryMarker } from "@/components/map/map-country-marker";
 import {
   boundaryStyleRenderKey,
@@ -20,6 +21,12 @@ import {
   resolveBoundaryStrokeWidth,
 } from "@/constants/map-boundary-style";
 import { MAP_CONTINENT_FOCUS_POLYGON_Z } from "@/constants/map-continent-focus";
+import {
+  countryFocusStyleRenderKey,
+  MAP_COUNTRY_FOCUS_STROKE_Z,
+  resolveCountryFocusBoundaryStrokeColor,
+  resolveCountryFocusBoundaryStrokeWidth,
+} from "@/constants/map-country-focus";
 import { MAP_DARK_STYLE } from "@/constants/map-dark-style";
 import { WORLD_INITIAL_REGION } from "@/constants/map-regions";
 import {
@@ -214,10 +221,16 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
     const showWorldBoundaries =
       showBoundaryLines && !focusedRegion && !selectedName;
 
+    const highlightCountryName = selectedName ?? focusTransitionName ?? null;
+    const showCountryHighlight =
+      !!highlightCountryName && boundaryStyle.countryHighlightEnabled;
+    const showBoundaryStrokes =
+      boundaryStyle.strokeColorEnabled && showBoundaryLines;
+
     const countryBoundaries = useMemo(
       () =>
         filterBoundaryPolygonsByMapContext(allCountryBoundaries, {
-          selectedCountryName: selectedName,
+          selectedCountryName: highlightCountryName,
           focusedRegion,
           countries: boundaryCountries,
           showWorldBoundaries,
@@ -226,26 +239,28 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
         allCountryBoundaries,
         boundaryCountries,
         focusedRegion,
-        selectedName,
+        highlightCountryName,
         showWorldBoundaries,
       ],
     );
 
-    const outlineStrokeWidth = resolveBoundaryStrokeWidth(
-      boundaryStyle,
-      zoomTier,
-    );
-    const outlineStrokeColor = resolveBoundaryStrokeColor(
-      boundaryStyle,
-      zoomTier,
-    );
+    const outlineStrokeWidth = showCountryHighlight
+      ? resolveCountryFocusBoundaryStrokeWidth(boundaryStyle)
+      : resolveBoundaryStrokeWidth(boundaryStyle, zoomTier);
+    const outlineStrokeColor = showCountryHighlight
+      ? resolveCountryFocusBoundaryStrokeColor(boundaryStyle)
+      : resolveBoundaryStrokeColor(boundaryStyle, zoomTier);
     /** Country outlines are stroke-only; continent overlay uses fill settings. */
     const outlineFillColor = "rgba(0,0,0,0)";
-    const boundaryRenderKey = boundaryStyleRenderKey(boundaryStyle, zoomTier);
+    const boundaryRenderKey = showCountryHighlight
+      ? countryFocusStyleRenderKey(boundaryStyle)
+      : boundaryStyleRenderKey(boundaryStyle, zoomTier);
     const boundariesTappable = zoomTier === "country" && !!focusedRegion;
-    const boundaryZIndex = focusedRegion
-      ? MAP_CONTINENT_FOCUS_POLYGON_Z + 2
-      : 1;
+    const boundaryZIndex = showCountryHighlight
+      ? MAP_COUNTRY_FOCUS_STROKE_Z
+      : focusedRegion
+        ? MAP_CONTINENT_FOCUS_POLYGON_Z + 2
+        : 1;
 
     const handleBoundaryPress = useCallback(
       (polygon: CountryBoundaryPolygon) => {
@@ -314,7 +329,12 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
           allPolygons={allCountryBoundaries}
           boundaryCountries={boundaryCountries}
         />
-        {showBoundaryLines
+        <MapCountryFocusLayers
+          selectedCountryName={selectedName}
+          focusTransitionName={focusTransitionName}
+          allPolygons={allCountryBoundaries}
+        />
+        {showBoundaryStrokes
           ? countryBoundaries.map((polygon) => (
               <Polygon
                 key={`${polygon.id}-${boundaryRenderKey}-${boundaryStyleRevision}`}

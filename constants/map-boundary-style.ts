@@ -20,7 +20,20 @@ export type MapBoundaryStyleSettings = {
   fillColorHue: number;
   /** Optional exact hex override (allows grayscale like #000000 / #FFFFFF). */
   fillColorHex: string | null;
+  /** Selected-country fill + stroke when a country is focused. */
+  countryHighlightEnabled: boolean;
+  countryFillColorHue: number;
+  countryFillColorHex: string | null;
+  countryFillOpacityStep: number;
+  countryStrokeColorHue: number;
+  countryStrokeColorHex: string | null;
+  countryStrokeThicknessStep: number;
+  countryStrokeOpacityStep: number;
 };
+
+/** Sky cyan default (#38BDF8) — selected country highlight. */
+export const DEFAULT_COUNTRY_HIGHLIGHT_COLOR_HUE = 199;
+export const DEFAULT_COUNTRY_HIGHLIGHT_COLOR_HEX = "#38BDF8";
 
 /** Amber gold default (#fbbf24 ≈ hue 43) — matches continent focus overlay. */
 export const DEFAULT_STROKE_COLOR_HUE = 43;
@@ -74,6 +87,14 @@ export const DEFAULT_MAP_BOUNDARY_STYLE: MapBoundaryStyleSettings = {
   fillGrayLevel: 50,
   fillColorHue: DEFAULT_FILL_COLOR_HUE,
   fillColorHex: DEFAULT_FILL_COLOR_HEX,
+  countryHighlightEnabled: true,
+  countryFillColorHue: DEFAULT_COUNTRY_HIGHLIGHT_COLOR_HUE,
+  countryFillColorHex: DEFAULT_COUNTRY_HIGHLIGHT_COLOR_HEX,
+  countryFillOpacityStep: 2,
+  countryStrokeColorHue: DEFAULT_COUNTRY_HIGHLIGHT_COLOR_HUE,
+  countryStrokeColorHex: DEFAULT_COUNTRY_HIGHLIGHT_COLOR_HEX,
+  countryStrokeThicknessStep: 4,
+  countryStrokeOpacityStep: 4,
 };
 
 const STROKE_WIDTH_RANGE: Record<MapZoomTier, { min: number; max: number }> = {
@@ -307,6 +328,33 @@ export function normalizeBoundaryStyle(
       candidate.fillColorHue ?? DEFAULT_MAP_BOUNDARY_STYLE.fillColorHue,
     ),
     fillColorHex: normalizedFillHex,
+    countryHighlightEnabled:
+      candidate.countryHighlightEnabled ??
+      DEFAULT_MAP_BOUNDARY_STYLE.countryHighlightEnabled,
+    countryFillColorHue: clampHue(
+      candidate.countryFillColorHue ??
+        DEFAULT_MAP_BOUNDARY_STYLE.countryFillColorHue,
+    ),
+    countryFillColorHex: normalizeHexOverride(candidate.countryFillColorHex),
+    countryFillOpacityStep: clampBoundaryStep(
+      candidate.countryFillOpacityStep ??
+        DEFAULT_MAP_BOUNDARY_STYLE.countryFillOpacityStep,
+    ),
+    countryStrokeColorHue: clampHue(
+      candidate.countryStrokeColorHue ??
+        DEFAULT_MAP_BOUNDARY_STYLE.countryStrokeColorHue,
+    ),
+    countryStrokeColorHex: normalizeHexOverride(
+      candidate.countryStrokeColorHex,
+    ),
+    countryStrokeThicknessStep: clampBoundaryStep(
+      candidate.countryStrokeThicknessStep ??
+        DEFAULT_MAP_BOUNDARY_STYLE.countryStrokeThicknessStep,
+    ),
+    countryStrokeOpacityStep: clampBoundaryStep(
+      candidate.countryStrokeOpacityStep ??
+        DEFAULT_MAP_BOUNDARY_STYLE.countryStrokeOpacityStep,
+    ),
   });
 }
 
@@ -439,6 +487,11 @@ export function applyBoundaryStyleDraft(
     strokeThicknessStep: clampBoundaryStep(draft.strokeThicknessStep),
     strokeOpacityStep: clampBoundaryStep(draft.strokeOpacityStep),
     fillOpacityStep: clampBoundaryStep(draft.fillOpacityStep),
+    countryFillOpacityStep: clampBoundaryStep(draft.countryFillOpacityStep),
+    countryStrokeThicknessStep: clampBoundaryStep(
+      draft.countryStrokeThicknessStep,
+    ),
+    countryStrokeOpacityStep: clampBoundaryStep(draft.countryStrokeOpacityStep),
     fillGrayLevel: grayLevelStepToGrayLevel(
       grayLevelToStep(draft.fillGrayLevel),
     ),
@@ -462,7 +515,15 @@ export function boundaryStyleHasChanges(
     draft.fillColorMode !== current.fillColorMode ||
     draft.fillGrayLevel !== current.fillGrayLevel ||
     draft.fillColorHue !== current.fillColorHue ||
-    draft.fillColorHex !== current.fillColorHex
+    draft.fillColorHex !== current.fillColorHex ||
+    draft.countryHighlightEnabled !== current.countryHighlightEnabled ||
+    draft.countryFillColorHue !== current.countryFillColorHue ||
+    draft.countryFillColorHex !== current.countryFillColorHex ||
+    draft.countryFillOpacityStep !== current.countryFillOpacityStep ||
+    draft.countryStrokeColorHue !== current.countryStrokeColorHue ||
+    draft.countryStrokeColorHex !== current.countryStrokeColorHex ||
+    draft.countryStrokeThicknessStep !== current.countryStrokeThicknessStep ||
+    draft.countryStrokeOpacityStep !== current.countryStrokeOpacityStep
   );
 }
 

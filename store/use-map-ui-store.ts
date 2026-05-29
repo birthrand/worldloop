@@ -135,7 +135,7 @@ export const useMapUiStore = create<MapUiState>()(
     }),
     {
       name: "worldloop-map-ui",
-      version: 3,
+      version: 4,
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         hasSeenMapOnboarding: state.hasSeenMapOnboarding,
@@ -161,6 +161,9 @@ export const useMapUiStore = create<MapUiState>()(
         let boundaryStyle = normalizeBoundaryStyle(persistedBoundaryStyle);
         if (version < 3) {
           boundaryStyle = migrateLegacyFillColorToAmber(boundaryStyle);
+        }
+        if (version < 4) {
+          boundaryStyle = normalizeBoundaryStyle(boundaryStyle);
         }
 
         return { ...settings, boundaryStyle };
