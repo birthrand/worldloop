@@ -9,7 +9,7 @@ import {
 } from "@/constants/map-boundary-style";
 
 export type MapDisplayMode = "globalPulse" | "explore";
-export type FeaturedShortcut = "forYou" | "newActivity";
+export type FeaturedShortcut = "all" | "terrain" | "saved";
 
 /** Country pin display on the 2D map: flag, dot circle, or hidden. */
 export type CountryMarkerDisplayMode = "flag" | "circle" | "hidden";
@@ -88,7 +88,7 @@ type MapUiState = {
 const MAP_EXPLORATION_SESSION_DEFAULTS = {
   displayMode: "globalPulse" as MapDisplayMode,
   focusedRegion: null,
-  featuredShortcut: null,
+  featuredShortcut: "all",
 };
 
 export const useMapUiStore = create<MapUiState>()(
@@ -98,7 +98,7 @@ export const useMapUiStore = create<MapUiState>()(
       hasSeenRandomCountryHint: false,
       displayMode: "globalPulse",
       focusedRegion: null,
-      featuredShortcut: null,
+      featuredShortcut: "all",
       countryMarkerMode: "flag",
       showBoundaryLines: true,
       boundaryStyle: DEFAULT_MAP_BOUNDARY_STYLE,

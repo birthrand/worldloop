@@ -26,7 +26,7 @@ const FOCUS_HALF_MS = MAP_FOCUS_TRANSITION_2D_MS / 2;
 const SNAPSHOT_SETTLE_MS = 500;
 /** Fixed marker anchor box — label is positioned outside this so selection does not shift the pin. */
 const MARKER_ANCHOR_SIZE = 48;
-const PIN_SIZE = 28;
+const PIN_SIZE = 36;
 
 /** Survives marker re-snapshots so flags do not flash on every map action. */
 const loadedFlagUris = new Set<string>();
@@ -261,7 +261,13 @@ export const MapCountryMarker = memo(function MapCountryMarker({
     if (refreshToken === 0) return;
     if (!selected && !focusTransitioning && !keepLive) return;
     nudgeMarkerSnapshot();
-  }, [focusTransitioning, keepLive, nudgeMarkerSnapshot, refreshToken, selected]);
+  }, [
+    focusTransitioning,
+    keepLive,
+    nudgeMarkerSnapshot,
+    refreshToken,
+    selected,
+  ]);
 
   useEffect(() => {
     if (!showFlag) return;
@@ -347,9 +353,11 @@ export const MapCountryMarker = memo(function MapCountryMarker({
         />
         {selected && !isEntering ? (
           <View style={styles.labelRow} pointerEvents="none">
-            <Text style={styles.countryName} numberOfLines={1}>
-              {country.name}
-            </Text>
+            <View style={styles.labelPill}>
+              <Text style={styles.countryName} numberOfLines={2}>
+                {country.name}
+              </Text>
+            </View>
           </View>
         ) : null}
       </Animated.View>
@@ -431,18 +439,28 @@ const styles = StyleSheet.create({
   },
   labelRow: {
     position: "absolute",
+    alignSelf: "stretch",
     top: MARKER_ANCHOR_SIZE + 4,
-    left: -40,
-    right: -40,
+    left: -56,
+    right: -56,
     alignItems: "center",
   },
+  labelPill: {
+    maxWidth: 250,
+    alignSelf: "stretch",
+    paddingHorizontal: 8,
+    // paddingVertical: 3,
+    borderRadius: 12,
+    // backgroundColor: "rgba(11, 19, 43, 0.5)",
+    borderWidth: 0,
+    borderColor: "rgba(251, 191, 36, 0.55)",
+  },
   countryName: {
-    fontSize: 13,
+    fontSize: 14,
+    alignSelf: "stretch",
+    marginVertical: -8,
     fontFamily: "Poppins-SemiBold",
     color: "#ffffff",
     textAlign: "center",
-    textShadowColor: "rgba(0, 0, 0, 0.9)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 5,
   },
 });

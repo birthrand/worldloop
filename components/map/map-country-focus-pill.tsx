@@ -9,8 +9,15 @@ type MapCountryFocusPillProps = {
   country: MapCountry;
   bottom: number;
   onOpenDetails: () => void;
-  onDismiss?: () => void;
+  onDismiss: () => void;
 };
+
+const PILL_HEIGHT = 44;
+
+function shortCountryName(name: string): string {
+  if (name.length <= 2) return name;
+  return `${name.slice(0, 2)}...`;
+}
 
 export function MapCountryFocusPill({
   country,
@@ -25,48 +32,43 @@ export function MapCountryFocusPill({
 
   const handleDismiss = () => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onDismiss?.();
+    onDismiss();
   };
 
   return (
     <View style={[styles.wrap, { bottom }]} pointerEvents="box-none">
-      <View style={styles.stack}>
+      <View style={styles.pill}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`Open details for ${country.name}`}
           onPress={handleOpenDetails}
           style={({ pressed }) => [
-            styles.segment,
             styles.detailsSegment,
             pressed && styles.pressed,
           ]}
         >
           <FlagBadge flag={country.flag} width={22} height={15} />
           <Text style={styles.countryLabel} numberOfLines={1}>
-            {country.name}
+            {shortCountryName(country.name)}
           </Text>
           <Text style={styles.detailsLabel}>Details</Text>
           <Ionicons name="arrow-forward" size={14} color="#fbbf24" />
         </Pressable>
 
-        {onDismiss ? (
-          <>
-            <View style={styles.divider} />
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Clear focus on ${country.name}`}
-              onPress={handleDismiss}
-              hitSlop={6}
-              style={({ pressed }) => [
-                styles.segment,
-                styles.dismissSegment,
-                pressed && styles.pressed,
-              ]}
-            >
-              <Ionicons name="close" size={18} color="#94a3b8" />
-            </Pressable>
-          </>
-        ) : null}
+        <View style={styles.divider} />
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Clear focus on ${country.name}`}
+          onPress={handleDismiss}
+          hitSlop={6}
+          style={({ pressed }) => [
+            styles.dismissSegment,
+            pressed && styles.pressed,
+          ]}
+        >
+          <Ionicons name="close" size={18} color="#94a3b8" />
+        </Pressable>
       </View>
     </View>
   );
@@ -75,50 +77,51 @@ export function MapCountryFocusPill({
 const styles = StyleSheet.create({
   wrap: {
     position: "absolute",
-    alignSelf: "center",
+    left: 0,
+    right: 0,
+    alignItems: "center",
     zIndex: 7,
   },
-  stack: {
+  pill: {
     flexDirection: "row",
-    alignItems: "stretch",
-    maxWidth: "88%",
-    minHeight: 44,
-    borderRadius: 32,
+    alignItems: "center",
+    height: PILL_HEIGHT,
+    borderRadius: PILL_HEIGHT / 2,
     backgroundColor: "#101828",
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.1)",
     overflow: "hidden",
   },
-  segment: {
-    minHeight: 44,
-    justifyContent: "center",
-  },
   detailsSegment: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 14,
-    flexShrink: 1,
-    minWidth: 0,
+    height: PILL_HEIGHT,
+    gap: 6,
+    paddingLeft: 14,
+    paddingRight: 12,
   },
   dismissSegment: {
-    width: 44,
+    width: PILL_HEIGHT,
+    height: PILL_HEIGHT,
     alignItems: "center",
+    justifyContent: "center",
   },
   divider: {
     width: 1,
-    alignSelf: "stretch",
+    height: PILL_HEIGHT,
     backgroundColor: "rgba(255, 255, 255, 0.1)",
   },
   countryLabel: {
-    flexShrink: 1,
+    width: 28,
     fontSize: 13,
+    lineHeight: 18,
     fontFamily: "Poppins-Medium",
     color: "#ffffff",
+    textAlign: "left",
   },
   detailsLabel: {
-    flexShrink: 0,
     fontSize: 13,
+    lineHeight: 18,
     fontFamily: "Poppins-Medium",
     color: "#fbbf24",
   },

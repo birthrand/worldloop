@@ -1,10 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { MapBoundaryControlsModal } from "@/components/map/map-boundary-controls-modal";
+import { MapCircularFab } from "@/components/map/map-circular-fab";
 import { applyBoundaryStyleDraft } from "@/constants/map-boundary-style";
+import { MAP_CONTROL_STACK } from "@/constants/map-chrome-styles";
 import type { MapViewTransition } from "@/lib/map-view-transition";
 import type { MapMode } from "@/store/use-map-store";
 import {
@@ -26,6 +28,12 @@ type MapControlsProps = {
   showBoundaryControls?: boolean;
   /** Distance from the bottom safe edge (tab bar / region chrome clearance). */
   bottom?: number;
+  /** Collapse the tool rail (e.g. while a country is focused). */
+  defaultExpanded?: boolean;
+  /** When true, force the tool rail closed until the user expands it again. */
+  keepCollapsed?: boolean;
+  onRandomCountryPress?: () => void;
+  randomDeemphasized?: boolean;
 };
 
 export function MapControls({
@@ -38,8 +46,19 @@ export function MapControls({
   showFlagToggle = false,
   showBoundaryControls = true,
   bottom = 98,
+  defaultExpanded = false,
+  keepCollapsed = false,
+  onRandomCountryPress,
+  randomDeemphasized = false,
 }: MapControlsProps) {
-  const [isActionRailExpanded, setIsActionRailExpanded] = useState(true);
+  const [isActionRailExpanded, setIsActionRailExpanded] =
+    useState(defaultExpanded);
+
+  useEffect(() => {
+    if (keepCollapsed) {
+      setIsActionRailExpanded(false);
+    }
+  }, [keepCollapsed]);
   const [isBoundaryModalOpen, setIsBoundaryModalOpen] = useState(false);
   const countryMarkerMode = useMapUiStore((s) => s.countryMarkerMode);
   const setCountryMarkerMode = useMapUiStore((s) => s.setCountryMarkerMode);
@@ -103,7 +122,12 @@ export function MapControls({
         strokeWidthEnabled: next,
       }),
     );
-  }, [boundaryStyle, setBoundaryStyle, setShowBoundaryLines, showBoundaryLines]);
+  }, [
+    boundaryStyle,
+    setBoundaryStyle,
+    setShowBoundaryLines,
+    showBoundaryLines,
+  ]);
 
   const handleMapModeToggle = useCallback(() => {
     if (isTransitioning) return;
@@ -119,8 +143,8 @@ export function MapControls({
   }, []);
 
   const legendAccessibilityLabel = isActionRailExpanded
-    ? "Hide map controls"
-    : "Show map controls";
+    ? "Hide map tools"
+    : "Show map tools";
 
   return (
     <>
@@ -308,26 +332,24 @@ export function MapControls({
           </>
         ) : null}
 
-        <View
-          style={[
-            styles.stack,
-            !isActionRailExpanded && styles.legendStackCollapsed,
-          ]}
-        >
-          <Pressable
-            accessibilityRole="button"
-            accessibilityState={{ expanded: isActionRailExpanded }}
-            accessibilityLabel={legendAccessibilityLabel}
-            onPress={toggleActionRail}
-            style={({ pressed }) => [styles.control, pressed && styles.pressed]}
-          >
-            <Ionicons
-              name={isActionRailExpanded ? "layers" : "layers-outline"}
-              size={20}
-              color={isActionRailExpanded ? "#ffffff" : "#ffffff"}
-            />
-          </Pressable>
-        </View>
+        <MapCircularFab
+          variant="control"
+          icon={isActionRailExpanded ? "layers" : "layers-outline"}
+          accessibilityLabel={legendAccessibilityLabel}
+          accessibilityState={{ expanded: isActionRailExpanded }}
+          onPress={toggleActionRail}
+        />
+
+        {onRandomCountryPress ? (
+          <MapCircularFab
+            variant="accent"
+            icon="locate"
+            accessibilityLabel="Pick a random country"
+            accessibilityHint="Focuses a random country on the map without opening details"
+            onPress={onRandomCountryPress}
+            deemphasized={randomDeemphasized}
+          />
+        ) : null}
       </View>
 
       {isBoundaryModalOpen ? (
@@ -343,9 +365,10 @@ export function MapControls({
 const styles = StyleSheet.create({
   column: {
     position: "absolute",
-    left: 16,
-    gap: 4,
-    zIndex: 5,
+    right: 16,
+    gap: 12,
+    zIndex: 6,
+    alignItems: "center",
   },
   /** Match stack pill radius so active fill is not clipped by overflow: hidden. */
   modeControlLoading: {
@@ -353,35 +376,35 @@ const styles = StyleSheet.create({
   },
   modeControlActiveTop: {
     backgroundColor: "#fbbf24",
-    borderTopLeftRadius: 31,
-    borderTopRightRadius: 31,
+    borderTopLeftRadius: 35,
+    borderTopRightRadius: 35,
   },
   modeControlActiveBottom: {
     backgroundColor: "#fbbf24",
-    borderBottomLeftRadius: 31,
-    borderBottomRightRadius: 31,
+    borderBottomLeftRadius: 35,
+    borderBottomRightRadius: 35,
   },
   modeControlPressedTop: {
     opacity: 0.95,
     backgroundColor: "#e5ad1f",
-    borderTopLeftRadius: 31,
-    borderTopRightRadius: 31,
+    borderTopLeftRadius: 35,
+    borderTopRightRadius: 35,
   },
   modeControlPressedBottom: {
     opacity: 0.95,
     backgroundColor: "#e5ad1f",
-    borderBottomLeftRadius: 31,
-    borderBottomRightRadius: 31,
+    borderBottomLeftRadius: 35,
+    borderBottomRightRadius: 35,
   },
   stack: {
-    borderRadius: 32,
-    backgroundColor: "#101828",
+    borderRadius: 36,
+    backgroundColor: MAP_CONTROL_STACK.backgroundColor,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
+    borderColor: MAP_CONTROL_STACK.borderColor,
     overflow: "hidden",
   },
   control: {
-    width: 40,
+    width: 44,
     height: 40,
     alignItems: "center",
     justifyContent: "center",
@@ -390,12 +413,8 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "rgba(255, 255, 255, 0.1)",
   },
-  legendStackCollapsed: {
-    backgroundColor: "#1a2234",
-    borderColor: "rgba(255, 255, 255, 0.1)",
-  },
   pressed: {
     opacity: 0.95,
-    backgroundColor: "#29303C",
+    backgroundColor: MAP_CONTROL_STACK.pressedBackgroundColor,
   },
 });

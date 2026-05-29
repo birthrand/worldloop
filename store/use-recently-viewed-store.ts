@@ -73,7 +73,7 @@ function buildSeedEntries(): RecentlyViewedEntry[] {
         "Peru",
         "PE",
         "Lima",
-        "Americas",
+        "South America",
         33_715_471,
         [-9.19, -75.0152],
         [

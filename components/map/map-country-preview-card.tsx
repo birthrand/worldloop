@@ -82,7 +82,7 @@ export function MapCountryPreviewCard({
         : "Loading…");
 
   return (
-    <View style={[styles.card, { paddingBottom: 12 + bottomInset }]}>
+    <View style={[styles.card, { paddingBottom: bottomInset - 16 }]}>
       <View style={styles.topRow}>
         <View style={styles.titleTextWrap}>
           <Text
@@ -102,13 +102,13 @@ export function MapCountryPreviewCard({
           accessibilityRole="button"
           accessibilityLabel="Close country preview"
           onPress={onDismiss}
-          hitSlop={8}
+          hitSlop={12}
           style={({ pressed }) => [
             styles.closeButton,
             pressed && styles.closeButtonPressed,
           ]}
         >
-          <Ionicons name="close" size={20} color="#94a3b8" />
+          <Ionicons name="close" size={22} color="#cbd5e1" />
         </Pressable>
       </View>
 
@@ -279,6 +279,7 @@ const styles = StyleSheet.create({
   sectionDivider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: "rgba(255, 255, 255, 0.08)",
+    // marginVertical: 4,
   },
   topRow: {
     flexDirection: "row",
@@ -297,11 +298,13 @@ const styles = StyleSheet.create({
     color: "#ffffff",
   },
   closeButton: {
-    width: 32,
-    height: 32,
+    width: 40,
+    height: 40,
     flexShrink: 0,
     alignItems: "center",
     justifyContent: "center",
+    borderRadius: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
   },
   closeButtonPressed: {
     opacity: 0.6,
@@ -309,6 +312,7 @@ const styles = StyleSheet.create({
   metaRow: {
     flexDirection: "row",
     alignItems: "flex-start",
+    // marginVertical: 4,
   },
   flagWrap: {
     flexShrink: 0,
@@ -375,7 +379,8 @@ const styles = StyleSheet.create({
   actionStack: {
     flexDirection: "row",
     alignItems: "stretch",
-    minHeight: 40,
+    marginVertical: 4,
+    minHeight: 48,
     borderRadius: 12,
     backgroundColor: "#101828",
     borderWidth: 1,

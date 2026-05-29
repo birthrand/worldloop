@@ -2,6 +2,7 @@ import { filterMapCountriesByChip, type MapFilterChip } from "@/store/use-map-st
 import { useCountryFeedStore } from "@/store/use-country-feed-store";
 import type { FeaturedShortcut } from "@/store/use-map-ui-store";
 import { useRecentlyViewedStore } from "@/store/use-recently-viewed-store";
+import { useSavedCountriesStore } from "@/store/use-saved-countries-store";
 import { getMapDisplayLatLng, isValidLatLng } from "@/lib/map-country";
 import type { MapCountry } from "@/types/country";
 
@@ -26,19 +27,24 @@ export async function buildMapRandomPool({
   let pool: MapCountry[] = [];
 
   if (useWorldPool) {
-    if (featuredShortcut === "forYou") {
+    if (featuredShortcut === "all") {
       useRecentlyViewedStore.getState().seedIfEmpty();
       const names = useRecentlyViewedStore
         .getState()
         .entries.slice(0, 3)
         .map((e) => e.country.name);
       pool = countries.filter((c) => names.includes(c.name));
-    } else if (featuredShortcut === "newActivity") {
+    } else if (featuredShortcut === "terrain") {
       const feed = useCountryFeedStore.getState();
       if (feed.countries.length === 0 && feed.status === "idle") {
         await feed.loadInitialFeed();
       }
       const names = feed.countries.slice(0, 3).map((c) => c.name);
+      pool = countries.filter((c) => names.includes(c.name));
+    } else if (featuredShortcut === "saved") {
+      const names = useSavedCountriesStore
+        .getState()
+        .savedCountries.map((c) => c.name);
       pool = countries.filter((c) => names.includes(c.name));
     }
 

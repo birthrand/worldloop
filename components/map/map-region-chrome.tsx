@@ -11,6 +11,8 @@ type MapRegionChromeProps = {
   onWorldPress: () => void;
 };
 
+const CHROME_HEIGHT = 44;
+
 export function MapRegionChrome({
   focusedRegion,
   bottom,
@@ -63,7 +65,7 @@ export function MapRegionChrome({
             pressed && styles.pressed,
           ]}
         >
-          <Ionicons name="arrow-undo" size={18} color="#ffffff" />
+          <Ionicons name="arrow-back-outline" size={18} color="#ffffff" />
           <Text style={styles.worldLabel}>World</Text>
         </Pressable>
       </View>
@@ -81,7 +83,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "stretch",
     minWidth: 168,
-    minHeight: 44,
+    height: CHROME_HEIGHT,
     borderRadius: 32,
     backgroundColor: "#101828",
     borderWidth: 1,
@@ -89,7 +91,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   segment: {
-    minHeight: 44,
+    height: CHROME_HEIGHT,
     justifyContent: "center",
   },
   regionSegment: {
@@ -111,8 +113,9 @@ const styles = StyleSheet.create({
   },
   regionLabel: {
     fontSize: 13,
-    fontFamily: "Poppins-Medium",
-    color: "#ffffff",
+    fontFamily: "Poppins-Regular",
+    //accent color
+    color: "#fbbf24",
   },
   worldLabel: {
     fontSize: 13,

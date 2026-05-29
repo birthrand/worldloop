@@ -4,7 +4,8 @@ export const FOR_YOU_TAB = "For You" as const;
 /** REST Countries `region` values (continents) used for browse filters. */
 export const CONTINENTS = [
   "Africa",
-  "Americas",
+  "North America",
+  "South America",
   "Antarctic",
   "Asia",
   "Europe",
@@ -16,7 +17,8 @@ export type Continent = (typeof CONTINENTS)[number];
 /** User-facing labels where REST Countries naming differs (e.g. `Antarctic` → Antarctica). */
 export const CONTINENT_DISPLAY_LABELS: Record<Continent, string> = {
   Africa: "Africa",
-  Americas: "Americas",
+  "North America": "North America",
+  "South America": "South America",
   Antarctic: "Antarctica",
   Asia: "Asia",
   Europe: "Europe",

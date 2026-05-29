@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
 import { CONTINENTS } from "@/constants/regions";
+import { normalizeCountriesRegions } from "@/lib/app-region";
 import { fetchFeedCountries, fetchSearchCountries } from "@/lib/api";
 import { prefetchFeedHeroImages } from "@/lib/prefetch-feed-heroes";
 import type { Country } from "@/types/country";
@@ -124,10 +125,11 @@ async function ensureRegionCountries(region: string): Promise<Country[]> {
 
   const promise = fetchSearchCountries(undefined, region)
     .then(({ data }) => {
+      const normalized = normalizeCountriesRegions(data);
       useCountryFeedStore.setState((state) => ({
-        regionCache: { ...state.regionCache, [region]: data },
+        regionCache: { ...state.regionCache, [region]: normalized },
       }));
-      return data;
+      return normalized;
     })
     .finally(() => {
       regionFetchPromises.delete(region);
@@ -184,9 +186,10 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
     try {
       const prior = get();
       const { data, nextCursor } = await fetchFeedCountries(undefined, limit);
-      await prefetchFeedHeroImages(data);
+      const normalized = normalizeCountriesRegions(data);
+      await prefetchFeedHeroImages(normalized);
       const { sortField, sortOrder } = get();
-      const feedTail = sortCountries(data, sortField, sortOrder);
+      const feedTail = sortCountries(normalized, sortField, sortOrder);
       const { countries, currentIndex } = mergeFetchedWithFocusedCountry(
         feedTail,
         prior.countries,
@@ -338,9 +341,10 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
         nextCursor,
         limit,
       );
+      const normalized = normalizeCountriesRegions(data);
       const { countries } = get();
       const existingNames = new Set(countries.map((c) => c.name));
-      const uniqueNew = data.filter((c) => !existingNames.has(c.name));
+      const uniqueNew = normalized.filter((c) => !existingNames.has(c.name));
       set((state) => {
         const appended = [...state.countries, ...uniqueNew];
         const nextCountries =

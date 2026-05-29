@@ -1,6 +1,10 @@
-import { Entypo, Ionicons } from "@expo/vector-icons";
-import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
+import { Ionicons } from "@expo/vector-icons";
+import {
+  BottomTabBarHeightCallbackContext,
+  type BottomTabBarProps,
+} from "@react-navigation/bottom-tabs";
 import * as Haptics from "expo-haptics";
+import { useContext } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -9,31 +13,15 @@ const TAB_ACTIVE = "#fbbf24";
 const TAB_INACTIVE = "#94a3b8";
 
 type IoniconsName = keyof typeof Ionicons.glyphMap;
-type EntypoName = keyof typeof Entypo.glyphMap;
 
-type RegularTabItem = {
+type TabItem = {
   routeName: string;
   label: string;
   icon: IoniconsName;
   iconFocused: IoniconsName;
 };
 
-type CenterTabItem = {
-  routeName: string;
-  icon: EntypoName;
-  iconFocused: EntypoName;
-  isCenter: true;
-};
-
-type TabItem = RegularTabItem | CenterTabItem;
-
 const TAB_ITEMS: TabItem[] = [
-  {
-    routeName: "index",
-    label: "Home",
-    icon: "home-outline",
-    iconFocused: "home",
-  },
   {
     routeName: "explore",
     label: "Explore",
@@ -42,9 +30,9 @@ const TAB_ITEMS: TabItem[] = [
   },
   {
     routeName: "map",
-    icon: "globe",
+    label: "Map",
+    icon: "globe-outline",
     iconFocused: "globe",
-    isCenter: true,
   },
   {
     routeName: "saved",
@@ -62,6 +50,7 @@ const TAB_ITEMS: TabItem[] = [
 
 export function BottomTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  const onTabBarHeightChange = useContext(BottomTabBarHeightCallbackContext);
 
   const handlePress = (
     route: (typeof state.routes)[number],
@@ -80,7 +69,12 @@ export function BottomTabBar({ state, navigation }: BottomTabBarProps) {
   };
 
   return (
-    <View style={[styles.shell, { paddingBottom: insets.bottom }]}>
+    <View
+      style={[styles.shell, { paddingBottom: insets.bottom }]}
+      onLayout={(event) => {
+        onTabBarHeightChange?.(event.nativeEvent.layout.height);
+      }}
+    >
       <View style={styles.bar}>
         {TAB_ITEMS.map((item) => {
           const route = state.routes.find((r) => r.name === item.routeName);
@@ -90,38 +84,13 @@ export function BottomTabBar({ state, navigation }: BottomTabBarProps) {
           const isFocused = state.index === routeIndex;
           const color = isFocused ? TAB_ACTIVE : TAB_INACTIVE;
 
-          const onPress = () => handlePress(route, isFocused);
-
-          if ("isCenter" in item) {
-            return (
-              <Pressable
-                key={item.routeName}
-                accessibilityRole="button"
-                accessibilityLabel="Map"
-                accessibilityState={{ selected: isFocused }}
-                onPress={onPress}
-                style={styles.centerSlot}
-              >
-                <View
-                  style={[styles.centerButton, isFocused && styles.focusedGlow]}
-                >
-                  <Entypo
-                    name={isFocused ? item.iconFocused : item.icon}
-                    size={36}
-                    color={isFocused ? "#fbbf24" : "rgba(255, 255, 255, 0.9)"}
-                  />
-                </View>
-              </Pressable>
-            );
-          }
-
           return (
             <Pressable
               key={item.routeName}
               accessibilityRole="button"
               accessibilityLabel={item.label}
               accessibilityState={{ selected: isFocused }}
-              onPress={onPress}
+              onPress={() => handlePress(route, isFocused)}
               style={styles.tab}
             >
               <Ionicons
@@ -129,9 +98,7 @@ export function BottomTabBar({ state, navigation }: BottomTabBarProps) {
                 size={24}
                 color={color}
               />
-              {item.label ? (
-                <Text style={[styles.label, { color }]}>{item.label}</Text>
-              ) : null}
+              <Text style={[styles.label, { color }]}>{item.label}</Text>
             </Pressable>
           );
         })}
@@ -143,7 +110,6 @@ export function BottomTabBar({ state, navigation }: BottomTabBarProps) {
 const styles = StyleSheet.create({
   shell: {
     backgroundColor: TAB_BAR_BG,
-    overflow: "visible",
   },
   bar: {
     flexDirection: "row",
@@ -152,8 +118,8 @@ const styles = StyleSheet.create({
     backgroundColor: TAB_BAR_BG,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    paddingTop: 4,
-    // paddingBottom: 6,
+    paddingTop: 6,
+    paddingBottom: 4,
     paddingHorizontal: 8,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -4 },
@@ -166,40 +132,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 2,
-    minHeight: 40,
-    paddingBottom: 0,
+    minHeight: 52,
+    paddingTop: 2,
   },
   label: {
     fontSize: 11,
     fontFamily: "Poppins-Medium",
-  },
-  focusedGlow: {
-    borderWidth: 1,
-    borderColor: "rgba(251, 191, 36, 0.5)",
-    shadowColor: TAB_ACTIVE,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 10,
-  },
-  centerSlot: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  centerButton: {
-    width: 52,
-    height: 52,
-    borderRadius: 32,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#1a2332",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.12)",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 10,
   },
 });

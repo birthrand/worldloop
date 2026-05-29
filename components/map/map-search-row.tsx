@@ -1,26 +1,35 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
+import {
+  MAP_CHROME_BORDER,
+  MAP_CHROME_PLACEHOLDER,
+  MAP_CHROME_SURFACE,
+} from "@/constants/map-chrome-styles";
 import { useSearchUiStore } from "@/store/use-search-ui-store";
 
 export function MapSearchRow() {
   const openSearch = useSearchUiStore((s) => s.openSearch);
 
   return (
-    <View className="px-4">
-      <View className="h-12 flex-row items-center gap-2 rounded-2xl bg-white/15 pl-4 pr-1.5">
+    <View style={styles.wrap}>
+      <View style={styles.bar}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Search countries"
           onPress={() => openSearch("map")}
-          className="min-h-12 min-w-0 flex-1 flex-row items-center gap-3"
+          style={({ pressed }) => [
+            styles.searchPressable,
+            pressed && styles.pressed,
+          ]}
         >
-          <Ionicons name="search" size={20} color="#FFFFFF66" />
+          <Ionicons name="search" size={20} color={MAP_CHROME_PLACEHOLDER} />
           <Text
-            className="min-w-0 flex-1 body-md text-white/40"
+            className="min-w-0 flex-1 body-md"
+            style={styles.placeholder}
             numberOfLines={1}
           >
-            Search countries, regions, cultures…
+            Search places, cities, countries…
           </Text>
         </Pressable>
 
@@ -38,7 +47,11 @@ export function MapSearchRow() {
             pressed && styles.pressed,
           ]}
         >
-          <Ionicons name="options-outline" size={22} color="#FFFFFF66" />
+          <Ionicons
+            name="options-outline"
+            size={20}
+            color={MAP_CHROME_PLACEHOLDER}
+          />
         </Pressable>
       </View>
     </View>
@@ -46,14 +59,40 @@ export function MapSearchRow() {
 }
 
 const styles = StyleSheet.create({
+  wrap: {
+    paddingHorizontal: 16,
+  },
+  bar: {
+    height: 42,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingLeft: 16,
+    paddingRight: 8,
+    borderRadius: 21,
+    backgroundColor: MAP_CHROME_SURFACE,
+    borderWidth: 1,
+    borderColor: MAP_CHROME_BORDER,
+  },
+  searchPressable: {
+    minWidth: 0,
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    minHeight: 42,
+  },
+  placeholder: {
+    fontFamily: "Poppins-Regular",
+    color: MAP_CHROME_PLACEHOLDER,
+  },
   filterButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 32,
+    height: 32,
     alignItems: "center",
     justifyContent: "center",
   },
   pressed: {
-    opacity: 0.85,
+    opacity: 0.88,
   },
 });

@@ -68,7 +68,8 @@ const NATURAL_EARTH_CONTINENTS_BY_APP_REGION: Record<
   readonly string[]
 > = {
   Africa: ["Africa"],
-  Americas: ["North America", "South America"],
+  "North America": ["North America"],
+  "South America": ["South America"],
   Antarctic: ["Antarctica"],
   Asia: ["Asia"],
   Europe: ["Europe"],

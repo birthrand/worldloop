@@ -1,5 +1,6 @@
 import { create } from "zustand";
 
+import { normalizeCountryRegion } from "@/lib/app-region";
 import { fetchMapCountries } from "@/lib/api";
 import { countryToMapCountry, isValidLatLng } from "@/lib/map-country";
 import { selectCountryOnMap } from "@/lib/map-country-selection";
@@ -66,7 +67,9 @@ function resolveMapCountry(
 }
 
 function withValidCoordinates(countries: MapCountry[]): MapCountry[] {
-  return countries.filter((c) => isValidLatLng(c.latlng));
+  return countries
+    .filter((c) => isValidLatLng(c.latlng))
+    .map((c) => normalizeCountryRegion(c));
 }
 
 /** Population chip: top 20% by population. Other chips are visual-only in v1. */

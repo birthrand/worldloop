@@ -31,7 +31,8 @@ export type GlobeLabelScreenPosition = {
  */
 const CONTINENT_LABEL_ANCHORS: Record<Continent, [number, number]> = {
   Africa: [4, 22],
-  Americas: [-12, -62],
+  "North America": [48, -98],
+  "South America": [-14, -58],
   Antarctic: [-78, 25],
   Asia: [34, 95],
   Europe: [54, 15],

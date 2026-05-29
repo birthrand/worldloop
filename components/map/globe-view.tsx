@@ -70,13 +70,15 @@ const GLOBE_RADIUS = 1;
 const PIN_RADIUS = GLOBE_RADIUS * 1.02;
 const MIN_CAMERA_DISTANCE = 1.4;
 const MAX_CAMERA_DISTANCE = 4;
-/** World view starts fully zoomed out (same as reset / zoom-out limit). */
-const DEFAULT_CAMERA_DISTANCE = MAX_CAMERA_DISTANCE;
+/** World view — slightly closer than before so the globe fills more of the stage. */
+const DEFAULT_CAMERA_DISTANCE = 3.88;
+/** Pull target below equator so the sphere sits in the map “stage” between chrome. */
+const GLOBE_VIEW_TARGET_Y = -0.09;
 
-/** Camera sits on the Atlantic side so Americas + Europe/Africa pins are visible first. */
+/** Atlantic-centered view — Americas sit in-frame without left-edge label crop. */
 const INITIAL_CAMERA_POSITION = latLngToVector3(
-  0,
-  -30,
+  4,
+  -36,
   DEFAULT_CAMERA_DISTANCE,
 );
 
@@ -309,7 +311,8 @@ function GlobeScene({
       duration: 0.55,
     };
     cameraDistanceRef.current = DEFAULT_CAMERA_DISTANCE;
-    controls.scope.target.set(0, 0, 0);
+    controls.scope.target.set(0, GLOBE_VIEW_TARGET_Y, 0);
+    camera.lookAt(controls.scope.target);
   }, [camera, controls.scope.target]);
 
   const zoomBy = useCallback(
@@ -338,6 +341,8 @@ function GlobeScene({
 
   useEffect(() => {
     controls.scope.camera = camera as THREE.PerspectiveCamera;
+    controls.scope.target.set(0, GLOBE_VIEW_TARGET_Y, 0);
+    camera.lookAt(controls.scope.target);
     controls.scope.enablePan = false;
     controls.scope.dampingFactor = 0.05;
     controls.scope.rotateSpeed = 0.9;
@@ -658,7 +663,7 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
           style={styles.canvas}
           camera={{
             position: INITIAL_CAMERA_POSITION,
-            fov: 50,
+            fov: 42,
             near: 0.1,
             far: 120,
           }}
@@ -689,6 +694,7 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
         <GlobeLabelOverlay
           labels={visibleLabels}
           positions={labelPositions}
+          layoutSize={layoutSize}
           focusedRegion={focusedRegion}
           continentClustersByRegion={continentClustersByRegion}
           onContinentPress={handleContinentLabelPress}
