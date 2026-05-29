@@ -35,10 +35,10 @@ const TAB_ITEMS: TabItem[] = [
     iconFocused: "globe",
   },
   {
-    routeName: "saved",
-    label: "Saved",
-    icon: "bookmark-outline",
-    iconFocused: "bookmark",
+    routeName: "index",
+    label: "Home",
+    icon: "home-outline",
+    iconFocused: "home",
   },
   {
     routeName: "profile",

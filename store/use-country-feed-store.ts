@@ -1,8 +1,12 @@
 import { create } from "zustand";
 
 import { CONTINENTS } from "@/constants/regions";
-import { normalizeCountriesRegions } from "@/lib/app-region";
-import { fetchFeedCountries, fetchSearchCountries } from "@/lib/api";
+import {
+  filterCountriesForExploreRegion,
+  normalizeCountriesRegions,
+} from "@/lib/app-region";
+import { fetchFeedCountries } from "@/lib/api";
+import { fetchExploreRegionCountries } from "@/lib/explore-region-countries";
 import { prefetchFeedHeroImages } from "@/lib/prefetch-feed-heroes";
 import type { Country } from "@/types/country";
 
@@ -104,10 +108,15 @@ function mergeFetchedWithFocusedCountry(
     return { countries: sortedFetched, currentIndex: 0 };
   }
 
+  const focusedInFetched = sortedFetched.find((c) => c.name === focused.name);
+  if (!focusedInFetched) {
+    return { countries: sortedFetched, currentIndex: 0 };
+  }
+
   const withoutFocused = sortedFetched.filter((c) => c.name !== focused.name);
 
   return {
-    countries: [focused, ...withoutFocused],
+    countries: [focusedInFetched, ...withoutFocused],
     currentIndex: 0,
   };
 }
@@ -118,18 +127,20 @@ function cancelRegionPrefetch(): void {
 
 async function ensureRegionCountries(region: string): Promise<Country[]> {
   const cached = useCountryFeedStore.getState().regionCache[region];
-  if (cached) return cached;
+  if (cached !== undefined) {
+    const filtered = filterCountriesForExploreRegion(cached, region);
+    if (filtered.length > 0) return filtered;
+  }
 
   const inFlight = regionFetchPromises.get(region);
   if (inFlight) return inFlight;
 
-  const promise = fetchSearchCountries(undefined, region)
-    .then(({ data }) => {
-      const normalized = normalizeCountriesRegions(data);
+  const promise = fetchExploreRegionCountries(region)
+    .then((countries) => {
       useCountryFeedStore.setState((state) => ({
-        regionCache: { ...state.regionCache, [region]: normalized },
+        regionCache: { ...state.regionCache, [region]: countries },
       }));
-      return normalized;
+      return countries;
     })
     .finally(() => {
       regionFetchPromises.delete(region);

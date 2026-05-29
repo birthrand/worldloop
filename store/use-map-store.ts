@@ -3,9 +3,12 @@ import { create } from "zustand";
 import { normalizeCountryRegion } from "@/lib/app-region";
 import { fetchMapCountries } from "@/lib/api";
 import { countryToMapCountry, isValidLatLng } from "@/lib/map-country";
-import { selectCountryOnMap } from "@/lib/map-country-selection";
-import { useIdentityStore } from "@/store/use-identity-store";
+import {
+  useIdentityStore,
+  type SelectionSource,
+} from "@/store/use-identity-store";
 import type { Country, MapCountry } from "@/types/country";
+import type { MapPresentationIntent } from "@/types/map-presentation";
 
 export type MapFilterChip =
   | "all"
@@ -34,14 +37,20 @@ type MapState = {
   countries: MapCountry[];
   status: MapStatus;
   error: string | null;
+  /** True after a successful full fetch from GET /map/countries (not a single injected country). */
+  mapCountriesFullyLoaded: boolean;
   /** Set when opening Map from Explore/search; consumed once the map can fly the camera. */
-  pendingExternalFocusName: string | null;
+  pendingMapIntent: MapPresentationIntent | null;
   activeChip: MapFilterChip;
   mapMode: MapMode;
   globeCamera: GlobeCameraHandle | null;
   loadMapCountries: () => Promise<void>;
-  focusCountryFromExternal: (name: string, fallback?: Country) => void;
-  clearPendingExternalFocus: () => void;
+  focusCountryFromExternal: (
+    name: string,
+    fallback?: Country,
+    source?: Exclude<SelectionSource, null>,
+  ) => void;
+  clearPendingMapIntent: () => void;
   selectRandomCountry: () => MapCountry | null;
   setActiveChip: (chip: MapFilterChip) => void;
   setMapMode: (mode: MapMode) => void;
@@ -89,14 +98,14 @@ export const useMapStore = create<MapState>((set, get) => ({
   countries: [],
   status: "idle",
   error: null,
-  pendingExternalFocusName: null,
+  mapCountriesFullyLoaded: false,
+  pendingMapIntent: null,
   activeChip: "all",
   mapMode: "2d",
   globeCamera: null,
 
   loadMapCountries: async () => {
-    const { status, countries } = get();
-    if (countries.length > 0 && status !== "loading") {
+    if (get().mapCountriesFullyLoaded) {
       return;
     }
     if (mapCountriesLoadPromise) {
@@ -113,6 +122,7 @@ export const useMapStore = create<MapState>((set, get) => ({
           countries: nextCountries,
           status: "idle",
           error: null,
+          mapCountriesFullyLoaded: true,
         });
       } catch (err) {
         const message =
@@ -126,7 +136,7 @@ export const useMapStore = create<MapState>((set, get) => ({
     return mapCountriesLoadPromise;
   },
 
-  focusCountryFromExternal: (name, fallback) => {
+  focusCountryFromExternal: (name, fallback, source = "search") => {
     const trimmed = name.trim();
     if (!trimmed) return;
 
@@ -143,15 +153,15 @@ export const useMapStore = create<MapState>((set, get) => ({
 
     set({
       countries,
-      pendingExternalFocusName: trimmed,
+      pendingMapIntent: {
+        countryName: trimmed,
+        mode: "focus",
+        source,
+      },
     });
-
-    if (country) {
-      selectCountryOnMap(country, "search");
-    }
   },
 
-  clearPendingExternalFocus: () => set({ pendingExternalFocusName: null }),
+  clearPendingMapIntent: () => set({ pendingMapIntent: null }),
 
   selectRandomCountry: () => {
     const visible = get().getVisibleCountries();
@@ -159,7 +169,13 @@ export const useMapStore = create<MapState>((set, get) => ({
 
     const pick = visible[Math.floor(Math.random() * visible.length)] ?? null;
     if (pick) {
-      selectCountryOnMap(pick, "shuffle");
+      set({
+        pendingMapIntent: {
+          countryName: pick.name,
+          mode: "focus",
+          source: "shuffle",
+        },
+      });
     }
     return pick;
   },
@@ -175,18 +191,6 @@ export const useMapStore = create<MapState>((set, get) => ({
 
   registerGlobeCamera: (handle) => {
     set({ globeCamera: handle });
-    if (!handle) return;
-
-    const { pendingExternalFocusName, countries, mapMode } = get();
-    if (!pendingExternalFocusName || mapMode !== "3d") return;
-
-    const country =
-      resolveMapCountry(countries, pendingExternalFocusName) ??
-      useIdentityStore.getState().activeCountry;
-    if (!country) return;
-
-    handle.focusCountry(country, 650);
-    get().clearPendingExternalFocus();
   },
 
   focusCountryOnGlobe: (name, duration) => {
@@ -200,6 +204,7 @@ export const useMapStore = create<MapState>((set, get) => ({
   },
 
   focusLatLngOnGlobe: (lat, lng, duration, targetDistance) => {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
     get().globeCamera?.focusLatLng(lat, lng, duration, targetDistance);
   },
 

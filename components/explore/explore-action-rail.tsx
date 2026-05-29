@@ -19,7 +19,6 @@ import {
   useCountryFeedStore,
 } from "@/store/use-country-feed-store";
 import { focusCountryOnMap } from "@/lib/open-country-on-map";
-import { useMapStore } from "@/store/use-map-store";
 import { useSavedCountriesStore } from "@/store/use-saved-countries-store";
 import type { Country } from "@/types/country";
 
@@ -34,27 +33,73 @@ function getOrderLabels(field: FeedSortField): { asc: string; desc: string } {
   return { asc: "A → Z", desc: "Z → A" };
 }
 
-type FeedModalTab = "explore" | "sort";
-
 type SortRadioOptionProps = {
   label: string;
   selected: boolean;
+  disabled?: boolean;
   onPress: () => void;
 };
 
-function SortRadioOption({ label, selected, onPress }: SortRadioOptionProps) {
+function SortRadioOption({
+  label,
+  selected,
+  disabled = false,
+  onPress,
+}: SortRadioOptionProps) {
   return (
     <Pressable
       accessibilityRole="radio"
-      accessibilityState={{ selected }}
+      accessibilityState={{ selected, disabled }}
+      accessibilityLabel={label}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.radioRow,
+        disabled && styles.radioRowDisabled,
+        pressed && !disabled && styles.pressed,
+      ]}
+    >
+      <View
+        style={[
+          styles.radioOuter,
+          selected && !disabled && styles.radioOuterSelected,
+          disabled && styles.radioOuterDisabled,
+        ]}
+      >
+        {selected && !disabled ? <View style={styles.radioInner} /> : null}
+      </View>
+      <Text
+        style={[
+          styles.radioLabel,
+          selected && !disabled && styles.radioLabelSelected,
+          disabled && styles.radioLabelDisabled,
+        ]}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+type SortCheckboxOptionProps = {
+  label: string;
+  checked: boolean;
+  onPress: () => void;
+};
+
+function SortCheckboxOption({ label, checked, onPress }: SortCheckboxOptionProps) {
+  return (
+    <Pressable
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked }}
       accessibilityLabel={label}
       onPress={onPress}
       style={({ pressed }) => [styles.radioRow, pressed && styles.pressed]}
     >
-      <View style={[styles.radioOuter, selected && styles.radioOuterSelected]}>
-        {selected ? <View style={styles.radioInner} /> : null}
+      <View style={[styles.checkboxOuter, checked && styles.checkboxOuterChecked]}>
+        {checked ? <Text style={styles.checkboxMark}>✓</Text> : null}
       </View>
-      <Text style={[styles.radioLabel, selected && styles.radioLabelSelected]}>
+      <Text style={[styles.radioLabel, checked && styles.radioLabelSelected]}>
         {label}
       </Text>
     </Pressable>
@@ -69,7 +114,7 @@ export function ExploreActionRail({ country }: ExploreActionRailProps) {
   const setSort = useCountryFeedStore((s) => s.setSort);
   const saved = isSaved;
   const [isSortModalOpen, setIsSortModalOpen] = useState(false);
-  const [draftTab, setDraftTab] = useState<FeedModalTab>("explore");
+  const [draftRandom, setDraftRandom] = useState(false);
   const [draftField, setDraftField] = useState<FeedSortField>(
     sortField ?? DEFAULT_FEED_SORT_FIELD,
   );
@@ -78,15 +123,11 @@ export function ExploreActionRail({ country }: ExploreActionRailProps) {
   );
   const currentField = sortField ?? DEFAULT_FEED_SORT_FIELD;
   const currentOrder = sortOrder ?? DEFAULT_FEED_SORT_ORDER;
-  const isExploreMode = draftTab === "explore";
-  const effectiveDraftOrder: FeedSortOrder = isExploreMode
-    ? "random"
-    : draftOrder;
-  const hasSortChanges = isExploreMode
-    ? currentOrder !== "random"
-    : currentOrder === "random" ||
-      draftField !== currentField ||
-      draftOrder !== currentOrder;
+  const sortOptionsDisabled = draftRandom;
+  const hasSortChanges =
+    (currentOrder === "random") !== draftRandom ||
+    (!draftRandom &&
+      (draftField !== currentField || draftOrder !== currentOrder));
   const orderLabels = getOrderLabels(draftField);
 
   const handleShare = async () => {
@@ -104,36 +145,21 @@ export function ExploreActionRail({ country }: ExploreActionRailProps) {
   };
 
   const handleOpenSortModal = () => {
+    const random = currentOrder === "random";
     setDraftField(currentField);
-    setDraftOrder(currentOrder === "random" ? "asc" : currentOrder);
-    setDraftTab(currentOrder === "random" ? "explore" : "sort");
+    setDraftRandom(random);
+    setDraftOrder(random ? "asc" : currentOrder);
     setIsSortModalOpen(true);
   };
 
-  const handleSelectExploreTab = () => {
-    setDraftTab("explore");
-  };
-
-  const handleSelectSortTab = () => {
-    if (draftOrder === "random") {
-      setDraftOrder("asc");
-    }
-    setDraftTab("sort");
-  };
-
   const handleApplySort = () => {
-    setSort(draftField, effectiveDraftOrder);
+    setSort(draftField, draftRandom ? "random" : draftOrder);
     setIsSortModalOpen(false);
   };
 
-  const handleJumpToMap = async () => {
-    try {
-      await useMapStore.getState().loadMapCountries();
-      focusCountryOnMap(country);
-      router.push("/(tabs)/map");
-    } catch {
-      Alert.alert("Map", "Unable to open map right now.");
-    }
+  const handleJumpToMap = () => {
+    focusCountryOnMap(country, "explore");
+    router.push("/(tabs)/map");
   };
 
   return (
@@ -195,65 +221,14 @@ export function ExploreActionRail({ country }: ExploreActionRailProps) {
             onPress={() => setIsSortModalOpen(false)}
           />
           <View style={styles.modalCard}>
-            <View style={styles.modeToggleWrap}>
-              {(
-                [
-                  { id: "explore" as const, label: "Explore" },
-                  { id: "sort" as const, label: "Sort" },
-                ] as const
-              ).map((tab) => {
-                const active =
-                  tab.id === "explore" ? isExploreMode : !isExploreMode;
-                return (
-                  <Pressable
-                    key={tab.id}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: active }}
-                    accessibilityLabel={
-                      tab.id === "explore" ? "Explore feed mode" : "Sort feed"
-                    }
-                    onPress={
-                      tab.id === "explore"
-                        ? handleSelectExploreTab
-                        : handleSelectSortTab
-                    }
-                    style={({ pressed }) => [
-                      styles.modeToggleButton,
-                      active && styles.modeToggleButtonActive,
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.modeToggleLabel,
-                        active && styles.modeToggleLabelActive,
-                      ]}
-                    >
-                      {tab.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            {isExploreMode ? (
-              <View
-                accessibilityRole="radiogroup"
-                accessibilityLabel="Explore"
-                style={styles.tabPanel}
-              >
-                <SortRadioOption
+            <View style={styles.tabPanel}>
+              <Text style={styles.sectionLabel}>Sort by</Text>
+              <View style={styles.sortOptionsGroup}>
+                <SortCheckboxOption
                   label="Random"
-                  selected
-                  onPress={handleSelectExploreTab}
+                  checked={draftRandom}
+                  onPress={() => setDraftRandom((prev) => !prev)}
                 />
-                {/* <Text style={styles.tabHint}>
-                  Swipe through countries in a shuffled order.
-                </Text> */}
-              </View>
-            ) : (
-              <View style={styles.tabPanel}>
-                <Text style={styles.sectionLabel}>Sort by</Text>
                 <View
                   accessibilityRole="radiogroup"
                   accessibilityLabel="Sort by"
@@ -262,36 +237,40 @@ export function ExploreActionRail({ country }: ExploreActionRailProps) {
                   <SortRadioOption
                     label="Name"
                     selected={draftField === "name"}
+                    disabled={sortOptionsDisabled}
                     onPress={() => setDraftField("name")}
                   />
                   <SortRadioOption
                     label="Population"
                     selected={draftField === "population"}
+                    disabled={sortOptionsDisabled}
                     onPress={() => setDraftField("population")}
                   />
                 </View>
-
-                <View style={styles.sectionDivider} />
-
-                <Text style={styles.sectionLabel}>Order</Text>
-                <View
-                  accessibilityRole="radiogroup"
-                  accessibilityLabel="Order"
-                  style={styles.radioGroup}
-                >
-                  <SortRadioOption
-                    label={orderLabels.asc}
-                    selected={draftOrder === "asc"}
-                    onPress={() => setDraftOrder("asc")}
-                  />
-                  <SortRadioOption
-                    label={orderLabels.desc}
-                    selected={draftOrder === "desc"}
-                    onPress={() => setDraftOrder("desc")}
-                  />
-                </View>
               </View>
-            )}
+
+              <View style={styles.sectionDivider} />
+
+              <Text style={styles.sectionLabel}>Order</Text>
+              <View
+                accessibilityRole="radiogroup"
+                accessibilityLabel="Order"
+                style={styles.radioGroup}
+              >
+                <SortRadioOption
+                  label={orderLabels.asc}
+                  selected={draftOrder === "asc"}
+                  disabled={sortOptionsDisabled}
+                  onPress={() => setDraftOrder("asc")}
+                />
+                <SortRadioOption
+                  label={orderLabels.desc}
+                  selected={draftOrder === "desc"}
+                  disabled={sortOptionsDisabled}
+                  onPress={() => setDraftOrder("desc")}
+                />
+              </View>
+            </View>
 
             <View style={styles.sectionDivider} />
 
@@ -376,45 +355,11 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.14)",
     gap: 8,
   },
-  modeToggleWrap: {
-    flexDirection: "row",
-    borderRadius: 10,
-    backgroundColor: "rgba(255, 255, 255, 0.07)",
-    padding: 3,
-    gap: 4,
-    marginBottom: 4,
-    overflow: "hidden",
-  },
-  modeToggleButton: {
-    flex: 1,
-    minHeight: 34,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 0,
-  },
-  modeToggleButtonActive: {
-    backgroundColor: "rgba(251, 191, 36, 0.65)",
-    borderWidth: 0,
-    borderTopWidth: 0,
-  },
-  modeToggleLabel: {
-    fontSize: 12,
-    fontFamily: "Poppins-Regular",
-    color: "rgba(255,255,255,0.85)",
-  },
-  modeToggleLabelActive: {
-    color: "#ffffff",
-    fontFamily: "Poppins-SemiBold",
-  },
   tabPanel: {
     gap: 4,
   },
-  tabHint: {
-    marginLeft: 30,
-    fontSize: 12,
-    fontFamily: "Poppins-Regular",
-    color: "rgba(255, 255, 255, 0.45)",
+  sortOptionsGroup: {
+    gap: 2,
   },
   modalTitle: {
     fontSize: 18,
@@ -445,6 +390,9 @@ const styles = StyleSheet.create({
     minHeight: 44,
     paddingVertical: 2,
   },
+  radioRowDisabled: {
+    opacity: 0.4,
+  },
   radioOuter: {
     width: 20,
     height: 20,
@@ -457,11 +405,34 @@ const styles = StyleSheet.create({
   radioOuterSelected: {
     borderColor: "#fbbf24",
   },
+  radioOuterDisabled: {
+    borderColor: "rgba(255,255,255,0.2)",
+  },
   radioInner: {
     width: 10,
     height: 10,
     borderRadius: 5,
     backgroundColor: "#fbbf24",
+  },
+  checkboxOuter: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.45)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkboxOuterChecked: {
+    borderColor: "#fbbf24",
+    backgroundColor: "#fbbf24",
+  },
+  checkboxMark: {
+    fontSize: 12,
+    lineHeight: 14,
+    fontFamily: "Poppins-Bold",
+    color: "#0b132b",
+    marginTop: -1,
   },
   radioLabel: {
     fontSize: 14,
@@ -471,6 +442,9 @@ const styles = StyleSheet.create({
   radioLabelSelected: {
     color: "#ffffff",
     fontFamily: "Poppins-SemiBold",
+  },
+  radioLabelDisabled: {
+    color: "rgba(255,255,255,0.35)",
   },
   modalActions: {
     marginTop: 6,

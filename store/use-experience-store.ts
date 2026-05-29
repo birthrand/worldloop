@@ -10,13 +10,11 @@ type ExperienceState = {
   transitionState: TransitionState;
   pulsing: boolean;
   spotlightActive: boolean;
-  previewOpen: boolean;
   entryMethod: EntryMethod | null;
   cameraTransitioning: boolean;
 
   startTransition: (method: EntryMethod) => void;
   endTransition: () => void;
-  setPreviewOpen: (open: boolean) => void;
   setSpotlight: (active: boolean) => void;
   setPulsing: (active: boolean) => void;
   resetExperience: () => void;
@@ -26,7 +24,6 @@ const EXPERIENCE_IDLE = {
   transitionState: "idle" as const,
   pulsing: false,
   spotlightActive: false,
-  previewOpen: false,
   entryMethod: null,
   cameraTransitioning: false,
 };
@@ -49,8 +46,6 @@ export const useExperienceStore = create<ExperienceState>((set) => ({
       pulsing: false,
       cameraTransitioning: false,
     }),
-
-  setPreviewOpen: (open) => set({ previewOpen: open }),
 
   setSpotlight: (active) => set({ spotlightActive: active }),
 

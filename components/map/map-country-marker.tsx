@@ -12,6 +12,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { resolveFlagCdnUrl } from "@/lib/flag-url";
+import { logMapDebug } from "@/lib/map-debug";
 import { cca2FromFlagUrl, getMapDisplayLatLng } from "@/lib/map-country";
 import {
   type MapMarkerPresentation,
@@ -54,6 +55,12 @@ const FlagImage = memo(function FlagImage({
       style={[style, !loaded && styles.flagHidden]}
       contentFit="cover"
       onLoadEnd={onLoad}
+      onError={(event) => {
+        logMapDebug("marker", "flag image error", {
+          flagUri,
+          error: event?.error,
+        });
+      }}
     />
   );
 });
@@ -186,7 +193,10 @@ export const MapCountryMarker = memo(function MapCountryMarker({
     const didReveal = prevRevealGenerationRef.current !== revealGeneration;
     prevRevealGenerationRef.current = revealGeneration;
 
-    if (didReveal) {
+    // The focal pin must never play the reveal-in animation. A region swap bumps
+    // revealGeneration to re-animate the new region's pins, but the selected /
+    // focusing pin stays mounted — letting it reset to 0 makes its flag blink out.
+    if (didReveal && !selected && !focusTransitioning) {
       fadeOpacity.value = 0;
       fadeScale.value = 0.85;
       fadeOpacity.value = withTiming(targetOpacity, { duration: 350 });

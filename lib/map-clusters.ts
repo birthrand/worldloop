@@ -1,5 +1,6 @@
 import { CONTINENTS } from "@/constants/regions";
 import { getClusterActivity } from "@/constants/map-activity";
+import { isValidLatLng } from "@/lib/map-country";
 import type { MapCountry } from "@/types/country";
 
 export type MapCluster = {
@@ -16,6 +17,7 @@ function weightedCenter(countries: MapCountry[]): [number, number] {
   let sumLng = 0;
 
   for (const c of countries) {
+    if (!isValidLatLng(c.latlng)) continue;
     const [lat, lng] = c.latlng;
     const w = Number.isFinite(c.population) && c.population > 0 ? c.population : 1;
     totalWeight += w;

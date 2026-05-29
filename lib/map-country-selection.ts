@@ -1,3 +1,4 @@
+import { logMapDebug, summarizeCountry } from "@/lib/map-debug";
 import { useExperienceStore } from "@/store/use-experience-store";
 import {
   useIdentityStore,
@@ -10,6 +11,10 @@ export function selectCountryOnMap(
   country: MapCountry,
   source: Exclude<SelectionSource, null>,
 ): void {
+  logMapDebug("selection", "selectCountryOnMap", {
+    source,
+    country: summarizeCountry(country),
+  });
   useIdentityStore.getState().setActiveCountry(country, source);
   useExperienceStore.getState().startTransition(source);
 }

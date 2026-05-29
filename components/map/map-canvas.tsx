@@ -75,6 +75,8 @@ type MapCanvasProps = {
   onCountryPress: (country: MapCountry) => void;
   onClusterPress: (cluster: MapCluster) => void;
   onMapPress: (coordinate?: MapPressCoordinate) => void;
+  onFlatMapReady?: () => void;
+  onFlatRegionChange?: (region: Region) => void;
   onRegionChangeComplete?: (region: Region) => void;
   lockUserGestures?: boolean;
   /** Keeps map markers updating while the camera animates (e.g. Explore → Map). */
@@ -105,6 +107,8 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
       onCountryPress,
       onClusterPress,
       onMapPress,
+      onFlatMapReady,
+      onFlatRegionChange,
       onRegionChangeComplete,
       lockUserGestures = false,
       suspendMarkerSnapshot = false,
@@ -316,6 +320,8 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
       markerRevealGeneration,
       onCountryPress,
       onMapPress,
+      onMapReady: onFlatMapReady,
+      onRegionChange: onFlatRegionChange,
       onRegionChangeComplete,
       lockUserGestures,
       suspendMarkerSnapshot,

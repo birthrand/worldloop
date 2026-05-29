@@ -29,6 +29,7 @@ import {
   parseCountryBoundaryPolygons,
   type CountryBoundaryPolygon,
 } from "@/lib/map-country-boundaries";
+import { logMapDebug, summarizeRegion } from "@/lib/map-debug";
 import type { MapPressCoordinate } from "@/lib/map-map-tap-hit";
 import type { MapMarkerPresentation } from "@/lib/map-region-markers";
 import {
@@ -99,6 +100,9 @@ type WorldMapViewProps = {
   markerRevealGeneration?: number;
   onCountryPress: (country: MapCountry) => void;
   onMapPress: (coordinate?: MapPressCoordinate) => void;
+  onMapReady?: () => void;
+  /** Throttled continuous viewport updates — drives live zoom-tier/marker density. */
+  onRegionChange?: (region: Region) => void;
   onRegionChangeComplete?: (region: Region) => void;
   /** When true, user cannot pan or pinch-zoom (programmatic moves still work). */
   lockUserGestures?: boolean;
@@ -121,6 +125,8 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
       markerRevealGeneration = 0,
       onCountryPress,
       onMapPress,
+      onMapReady,
+      onRegionChange,
       onRegionChangeComplete,
       lockUserGestures = false,
       suspendMarkerSnapshot = false,
@@ -131,11 +137,30 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
     const keepSingleMarkerLive = countries.length === 1;
     const mapRef = useRef<MapView>(null);
     const regionRef = useRef<Region>(WORLD_INITIAL_REGION);
+    const lastRegionChangeEmitRef = useRef(0);
 
     const animateToRegion = useCallback((region: Region, duration = 500) => {
+      const input = summarizeRegion(region);
       const safeRegion = sanitizeRegion(region, regionRef.current);
+      const output = summarizeRegion(safeRegion);
+      if (!input.finite || input.lat !== output.lat || input.latDelta !== output.latDelta) {
+        logMapDebug("camera", "world-map-view region sanitized", {
+          duration,
+          input,
+          output,
+          hasMapRef: !!mapRef.current,
+        });
+      }
       regionRef.current = safeRegion;
-      mapRef.current?.animateToRegion(safeRegion, duration);
+      try {
+        mapRef.current?.animateToRegion(safeRegion, duration);
+      } catch (err) {
+        logMapDebug("camera", "ERROR world-map-view animateToRegion threw", {
+          error: err instanceof Error ? err.message : String(err),
+          output,
+        });
+        throw err;
+      }
     }, []);
 
     useImperativeHandle(
@@ -233,6 +258,17 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
         provider={PROVIDER_DEFAULT}
         initialRegion={WORLD_INITIAL_REGION}
         customMapStyle={MAP_DARK_STYLE}
+        onMapReady={onMapReady}
+        onRegionChange={
+          onRegionChange
+            ? (region) => {
+                const now = Date.now();
+                if (now - lastRegionChangeEmitRef.current < 90) return;
+                lastRegionChangeEmitRef.current = now;
+                onRegionChange(sanitizeRegion(region, regionRef.current));
+              }
+            : undefined
+        }
         onPress={(event) => {
           const coordinate = event.nativeEvent.coordinate;
           if (!coordinate) {
@@ -313,7 +349,7 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
               displayMode={countryMarkerMode}
               presentation={markerPresentation}
               revealGeneration={markerRevealGeneration}
-              keepLive={keepSingleMarkerLive}
+              keepLive={keepSingleMarkerLive || isHighlighted}
               suspendSnapshot={suspendMarkerSnapshot && isHighlighted}
               refreshToken={isHighlighted ? markerRefreshToken : 0}
               onPress={() => onCountryPress(country)}

@@ -2,7 +2,13 @@ import { create } from "zustand";
 
 import type { MapCountry } from "@/types/country";
 
-export type SelectionSource = "fab" | "shuffle" | "search" | "mapTap" | null;
+export type SelectionSource =
+  | "fab"
+  | "shuffle"
+  | "search"
+  | "explore"
+  | "mapTap"
+  | null;
 
 type IdentityState = {
   activeCountry: MapCountry | null;

@@ -272,6 +272,8 @@ function GlobeScene({
 
   const focusLatLng = useCallback(
     (lat: number, lng: number, duration = 650, targetDistance?: number) => {
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
       const toDir = new THREE.Vector3(
         ...latLngToVector3(lat, lng, 1),
       ).normalize();
@@ -293,8 +295,8 @@ function GlobeScene({
 
   const focusCountry = useCallback(
     (country: MapCountry, duration = 650) => {
-      if (!isValidLatLng(country.latlng)) return;
       const [lat, lng] = getMapDisplayLatLng(country);
+      if (!isValidLatLng([lat, lng])) return;
       focusLatLng(lat, lng, duration);
     },
     [focusLatLng],

@@ -62,3 +62,19 @@ export function normalizeCountriesRegions<
 >(countries: T[]): T[] {
   return countries.map((c) => normalizeCountryRegion(c));
 }
+
+/** Whether a country belongs to an Explore continent tab (handles legacy `Americas`). */
+export function countryMatchesExploreRegion(
+  country: { name: string; region: string },
+  targetRegion: string,
+): boolean {
+  return normalizeAppRegion(country.region, undefined, country.name) === targetRegion;
+}
+
+export function filterCountriesForExploreRegion<
+  T extends { name: string; region: string },
+>(countries: T[], region: string): T[] {
+  return normalizeCountriesRegions(
+    countries.filter((c) => countryMatchesExploreRegion(c, region)),
+  );
+}

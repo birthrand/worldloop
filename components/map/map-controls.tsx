@@ -34,6 +34,8 @@ type MapControlsProps = {
   keepCollapsed?: boolean;
   onRandomCountryPress?: () => void;
   randomDeemphasized?: boolean;
+  /** Blocks the random FAB while a camera flight is sequencing (prevents overlapping animateToRegion). */
+  randomDisabled?: boolean;
 };
 
 export function MapControls({
@@ -50,6 +52,7 @@ export function MapControls({
   keepCollapsed = false,
   onRandomCountryPress,
   randomDeemphasized = false,
+  randomDisabled = false,
 }: MapControlsProps) {
   const [isActionRailExpanded, setIsActionRailExpanded] =
     useState(defaultExpanded);
@@ -347,7 +350,8 @@ export function MapControls({
             accessibilityLabel="Pick a random country"
             accessibilityHint="Focuses a random country on the map without opening details"
             onPress={onRandomCountryPress}
-            deemphasized={randomDeemphasized}
+            deemphasized={randomDeemphasized || randomDisabled}
+            disabled={randomDisabled}
           />
         ) : null}
       </View>

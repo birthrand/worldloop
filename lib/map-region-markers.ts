@@ -86,12 +86,28 @@ export function capMapCountriesByPopulation(
     .slice(0, limit);
 }
 
+/** Ensures a focal country stays in the marker list (e.g. random FAB at continent zoom). */
+export function ensureMapCountryInMarkerList(
+  countries: MapCountry[],
+  countryName: string | null | undefined,
+): MapCountry[] {
+  if (!countryName) return countries;
+  if (countries.some((c) => c.name === countryName)) return countries;
+
+  const focal = countries.find((c) => c.name === countryName);
+  return focal ? [...countries, focal] : countries;
+}
+
 /** Full region list at detail zoom; capped major countries at continent zoom. */
 export function resolveRegionMarkerCountries(
   countries: MapCountry[],
   isDetailZoom: boolean,
+  focalCountryName?: string | null,
 ): MapCountry[] {
-  return isDetailZoom ? countries : capMapCountriesByPopulation(countries);
+  const resolved = isDetailZoom
+    ? countries
+    : capMapCountriesByPopulation(countries);
+  return ensureMapCountryInMarkerList(resolved, focalCountryName);
 }
 
 function squaredDistanceToViewport(
@@ -110,10 +126,25 @@ export function sortCountriesByViewportPriority(
   countries: MapCountry[],
   centerLat: number,
   centerLng: number,
+  focalCountryName?: string | null,
 ): MapCountry[] {
-  return [...countries].sort(
+  const sorted = [...countries].sort(
     (a, b) =>
       squaredDistanceToViewport(a, centerLat, centerLng) -
       squaredDistanceToViewport(b, centerLat, centerLng),
   );
+
+  if (!focalCountryName) return sorted;
+
+  const focalIndex = sorted.findIndex((c) => c.name === focalCountryName);
+  if (focalIndex <= 0) return sorted;
+
+  const focal = sorted[focalIndex];
+  if (!focal) return sorted;
+
+  return [
+    focal,
+    ...sorted.slice(0, focalIndex),
+    ...sorted.slice(focalIndex + 1),
+  ];
 }

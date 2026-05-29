@@ -7,6 +7,7 @@ import { useMapStore } from "@/store/use-map-store";
 import { useMapUiStore } from "@/store/use-map-ui-store";
 import { useRecentlyViewedStore } from "@/store/use-recently-viewed-store";
 import { useSearchUiStore } from "@/store/use-search-ui-store";
+import type { SelectionSource } from "@/store/use-identity-store";
 import type { Country } from "@/types/country";
 
 function prefetchCountryFlag(country: Country): void {
@@ -24,7 +25,10 @@ function prefetchCountryFlag(country: Country): void {
   }
 }
 
-function prepareMapForCountry(country: Country): void {
+function prepareMapForCountry(
+  country: Country,
+  source: Exclude<SelectionSource, null> = "search",
+): void {
   const mapUi = useMapUiStore.getState();
   const map = useMapStore.getState();
 
@@ -32,18 +36,25 @@ function prepareMapForCountry(country: Country): void {
 
   map.setMapMode("2d");
   mapUi.setCountryMarkerMode("flag");
-  syncMapRegionFocusForCountry(country);
+  // Explore discovery starts at world zoom — region sync happens during the camera flight.
+  if (source !== "explore") {
+    syncMapRegionFocusForCountry(country);
+  }
   useRecentlyViewedStore.getState().recordView(country);
 }
 
 /**
  * External entry → Map: fly to country and focus only (no preview).
- * Map screen completes the flow via `pendingExternalFocusName`.
+ * Map screen completes the flow via `pendingMapIntent` (mode: focus).
+ * Identity commits after the camera flight acknowledges (Phase 3).
  */
-export function focusCountryOnMap(country: Country): void {
-  prepareMapForCountry(country);
+export function focusCountryOnMap(
+  country: Country,
+  source: Exclude<SelectionSource, null> = "search",
+): void {
+  prepareMapForCountry(country, source);
   const map = useMapStore.getState();
-  map.focusCountryFromExternal(country.name, country);
+  map.focusCountryFromExternal(country.name, country, source);
 }
 
 /** @deprecated Use focusCountryOnMap — spotlight no longer opens preview. */

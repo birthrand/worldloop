@@ -48,7 +48,6 @@ export function MapCountryPreviewCard({
 
   useEffect(() => {
     let cancelled = false;
-    setDetail(null);
     setDetailStatus("loading");
     setDetailError(null);
 
@@ -71,15 +70,21 @@ export function MapCountryPreviewCard({
     };
   }, [country.name]);
 
-  const countryForActions = mapCountryToCountry(country, detail);
+  const detailMatchesCountry = detail?.name === country.name;
+  const countryForActions = mapCountryToCountry(
+    country,
+    detailMatchesCountry ? detail : null,
+  );
 
   const funFact =
-    detail?.ai?.fact?.trim() ||
+    (detailMatchesCountry ? detail?.ai?.fact?.trim() : undefined) ||
     (detailStatus === "loading"
-      ? "Loading…"
+      ? detailMatchesCountry || !detail
+        ? "Loading…"
+        : "Updating…"
       : detailStatus === "error"
         ? (detailError ?? "Unavailable right now")
-        : "Loading…");
+        : "Updating…");
 
   return (
     <View style={[styles.card, { paddingBottom: bottomInset - 16 }]}>
@@ -201,13 +206,12 @@ export function MapCountryPreviewCard({
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Shuffle to another country"
-              accessibilityState={{ disabled: isNextCountryLoading }}
-              disabled={isNextCountryLoading}
+              accessibilityHint="Picks another country in this region and flies the map there"
               onPress={onNextCountry}
               style={({ pressed }) => [
                 styles.actionSegment,
                 isNextCountryLoading && styles.actionLoading,
-                pressed && !isNextCountryLoading && styles.pressed,
+                pressed && styles.pressed,
               ]}
             >
               {isNextCountryLoading ? (
