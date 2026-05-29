@@ -14,6 +14,7 @@ import MapView, {
 
 import { MapContinentFocusLayers } from "@/components/map/map-continent-focus-layers";
 import { MapCountryMarker } from "@/components/map/map-country-marker";
+import { MAP_CONTINENT_FOCUS_POLYGON_Z } from "@/constants/map-continent-focus";
 import {
   boundaryStyleRenderKey,
   resolveBoundaryFillColor,
@@ -42,6 +43,9 @@ export type WorldMapViewHandle = {
   animateToRegion: (region: Region, duration?: number) => void;
   resetWorldView: () => void;
   zoomBy: (direction: "in" | "out") => void;
+  pointForCoordinate: (
+    coordinate: MapPressCoordinate,
+  ) => Promise<{ x: number; y: number } | null>;
 };
 
 export type MapZoomTier = "world" | "region" | "country";
@@ -86,7 +90,9 @@ type WorldMapViewProps = {
   /** Full country list for boundary region matching (markers may be a subset). */
   boundaryCountries: MapCountry[];
   selectedName: string | null;
+  focusTransitionName?: string | null;
   focusedRegion: string | null;
+  previewRegion?: string | null;
   zoomTier: MapZoomTier;
   countryMarkerMode?: CountryMarkerDisplayMode;
   markerPresentation?: MapMarkerPresentation;
@@ -106,7 +112,9 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
       countries,
       boundaryCountries,
       selectedName,
+      focusTransitionName = null,
       focusedRegion,
+      previewRegion = null,
       zoomTier,
       countryMarkerMode = "flag",
       markerPresentation = "full",
@@ -147,6 +155,18 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
             WORLD_INITIAL_REGION,
           );
           animateToRegion(next, 300);
+        },
+        pointForCoordinate: async (coordinate) => {
+          try {
+            const point = await mapRef.current?.pointForCoordinate({
+              latitude: coordinate.latitude,
+              longitude: coordinate.longitude,
+            });
+            if (!point) return null;
+            return { x: point.x, y: point.y };
+          } catch {
+            return null;
+          }
         },
       }),
       [animateToRegion],
@@ -192,6 +212,9 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
     const outlineFillColor = resolveBoundaryFillColor(boundaryStyle);
     const boundaryRenderKey = boundaryStyleRenderKey(boundaryStyle, zoomTier);
     const boundariesTappable = zoomTier === "country" && !!focusedRegion;
+    const boundaryZIndex = focusedRegion
+      ? MAP_CONTINENT_FOCUS_POLYGON_Z + 2
+      : 1;
 
     const handleBoundaryPress = useCallback(
       (polygon: CountryBoundaryPolygon) => {
@@ -245,6 +268,8 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
         {showBoundaryLines ? (
           <MapContinentFocusLayers
             focusedRegion={focusedRegion}
+            selectedCountryName={selectedName}
+            previewRegion={previewRegion}
             allPolygons={allCountryBoundaries}
             boundaryCountries={boundaryCountries}
           />
@@ -264,24 +289,37 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
                 strokeColor={outlineStrokeColor}
                 strokeWidth={outlineStrokeWidth}
                 fillColor={outlineFillColor}
-                zIndex={1}
+                zIndex={boundaryZIndex}
               />
             ))
           : null}
-        {countries.map((country) => (
-          <MapCountryMarker
-            key={country.name}
-            country={country}
-            selected={selectedName === country.name}
-            displayMode={countryMarkerMode}
-            presentation={markerPresentation}
-            revealGeneration={markerRevealGeneration}
-            keepLive={keepSingleMarkerLive}
-            suspendSnapshot={suspendMarkerSnapshot}
-            refreshToken={markerRefreshToken}
-            onPress={() => onCountryPress(country)}
-          />
-        ))}
+        {countries.map((country) => {
+          const isSelected = selectedName === country.name;
+          const isFocusTransitioning = focusTransitionName === country.name;
+          const isHighlighted = isSelected || isFocusTransitioning;
+          const focusedPinName = selectedName ?? focusTransitionName;
+
+          return (
+            <MapCountryMarker
+              key={country.name}
+              country={country}
+              selected={isSelected}
+              focusTransitioning={isFocusTransitioning}
+              deemphasized={
+                !!focusedRegion &&
+                !!focusedPinName &&
+                focusedPinName !== country.name
+              }
+              displayMode={countryMarkerMode}
+              presentation={markerPresentation}
+              revealGeneration={markerRevealGeneration}
+              keepLive={keepSingleMarkerLive}
+              suspendSnapshot={suspendMarkerSnapshot && isHighlighted}
+              refreshToken={isHighlighted ? markerRefreshToken : 0}
+              onPress={() => onCountryPress(country)}
+            />
+          );
+        })}
       </MapView>
     );
   },

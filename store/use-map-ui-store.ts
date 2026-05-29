@@ -59,11 +59,10 @@ function normalizeCountryMarkerMode(
 
 type MapUiState = {
   hasSeenMapOnboarding: boolean;
+  hasSeenRandomCountryHint: boolean;
   displayMode: MapDisplayMode;
   focusedRegion: string | null;
   featuredShortcut: FeaturedShortcut | null;
-  /** Random-country pick: show only this pin until the user opens the preview card. */
-  spotlightCountryName: string | null;
   countryMarkerMode: CountryMarkerDisplayMode;
   /** When false, country/continent boundary polygons are hidden on the 2D map. */
   showBoundaryLines: boolean;
@@ -71,36 +70,45 @@ type MapUiState = {
   /** Bumped on every boundary style write so 2D polygons remount on RN Maps. */
   boundaryStyleRevision: number;
   dismissMapOnboarding: () => void;
+  dismissRandomCountryHint: () => void;
   setDisplayMode: (mode: MapDisplayMode) => void;
   setFocusedRegion: (region: string | null) => void;
   setFeaturedShortcut: (shortcut: FeaturedShortcut | null) => void;
-  setSpotlightCountry: (name: string | null) => void;
   setCountryMarkerMode: (mode: CountryMarkerDisplayMode) => void;
   cycleCountryMarkerMode: () => void;
   setShowBoundaryLines: (show: boolean) => void;
   setBoundaryStyle: (style: MapBoundaryStyleSettings) => void;
   resetBoundaryStyle: () => void;
   resetGlobalPulse: () => void;
+  /** Clears continent/shortcut session state (not persisted across app restarts). */
+  resetMapExplorationSession: () => void;
+};
+
+/** Fields that belong to the current map session only — never written to AsyncStorage. */
+const MAP_EXPLORATION_SESSION_DEFAULTS = {
+  displayMode: "globalPulse" as MapDisplayMode,
+  focusedRegion: null,
+  featuredShortcut: null,
 };
 
 export const useMapUiStore = create<MapUiState>()(
   persist(
     (set) => ({
       hasSeenMapOnboarding: false,
+      hasSeenRandomCountryHint: false,
       displayMode: "globalPulse",
       focusedRegion: null,
       featuredShortcut: null,
-      spotlightCountryName: null,
       countryMarkerMode: "flag",
       showBoundaryLines: true,
       boundaryStyle: DEFAULT_MAP_BOUNDARY_STYLE,
       boundaryStyleRevision: 0,
 
       dismissMapOnboarding: () => set({ hasSeenMapOnboarding: true }),
+      dismissRandomCountryHint: () => set({ hasSeenRandomCountryHint: true }),
       setDisplayMode: (mode) => set({ displayMode: mode }),
       setFocusedRegion: (region) => set({ focusedRegion: region }),
       setFeaturedShortcut: (shortcut) => set({ featuredShortcut: shortcut }),
-      setSpotlightCountry: (name) => set({ spotlightCountryName: name }),
       setCountryMarkerMode: (mode) => set({ countryMarkerMode: mode }),
       cycleCountryMarkerMode: () =>
         set((state) => ({
@@ -118,34 +126,50 @@ export const useMapUiStore = create<MapUiState>()(
           boundaryStyleRevision: state.boundaryStyleRevision + 1,
         })),
 
-      resetGlobalPulse: () =>
-        set({
-          displayMode: "globalPulse",
-          focusedRegion: null,
-          featuredShortcut: null,
-          spotlightCountryName: null,
-        }),
+      resetGlobalPulse: () => set(MAP_EXPLORATION_SESSION_DEFAULTS),
+
+      resetMapExplorationSession: () => set(MAP_EXPLORATION_SESSION_DEFAULTS),
     }),
     {
       name: "worldloop-map-ui",
+      version: 2,
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         hasSeenMapOnboarding: state.hasSeenMapOnboarding,
-        displayMode: state.displayMode,
-        focusedRegion: state.focusedRegion,
-        featuredShortcut: state.featuredShortcut,
-        spotlightCountryName: state.spotlightCountryName,
+        hasSeenRandomCountryHint: state.hasSeenRandomCountryHint,
         countryMarkerMode: state.countryMarkerMode,
         showBoundaryLines: state.showBoundaryLines,
         boundaryStyle: state.boundaryStyle,
       }),
+      migrate: (persistedState) => {
+        const persisted = persistedState as
+          | (Partial<MapUiState> & { showCountryFlags?: boolean })
+          | undefined;
+        if (!persisted) return persistedState;
+        const {
+          displayMode: _displayMode,
+          focusedRegion: _focusedRegion,
+          featuredShortcut: _featuredShortcut,
+          showCountryFlags,
+          ...settings
+        } = persisted;
+        return settings;
+      },
       merge: (persistedState, currentState) => {
         const persisted = persistedState as
           | (Partial<MapUiState> & { showCountryFlags?: boolean })
           | undefined;
         return {
           ...currentState,
-          ...persisted,
+          ...MAP_EXPLORATION_SESSION_DEFAULTS,
+          hasSeenMapOnboarding:
+            persisted?.hasSeenMapOnboarding ??
+            currentState.hasSeenMapOnboarding,
+          hasSeenRandomCountryHint:
+            persisted?.hasSeenRandomCountryHint ??
+            currentState.hasSeenRandomCountryHint,
+          showBoundaryLines:
+            persisted?.showBoundaryLines ?? currentState.showBoundaryLines,
           countryMarkerMode: normalizeCountryMarkerMode(
             persisted?.countryMarkerMode,
             persisted?.showCountryFlags,

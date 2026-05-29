@@ -33,6 +33,10 @@ import {
   globeLabelPositionsChanged,
   type GlobeLabelScreenPosition,
 } from "@/lib/globe-labels";
+import {
+  projectLatLngToScreen,
+  type GlobeScreenPosition,
+} from "@/lib/globe-screen-project";
 import { latLngToVector3, vector3ToLatLng } from "@/lib/latlng-to-sphere";
 import { useGlobeTexture } from "@/lib/load-globe-texture";
 import type { MapCluster } from "@/lib/map-clusters";
@@ -79,7 +83,8 @@ const INITIAL_CAMERA_POSITION = latLngToVector3(
 type CameraFlight = {
   fromDir: THREE.Vector3;
   toDir: THREE.Vector3;
-  distance: number;
+  fromDistance: number;
+  toDistance: number;
   elapsed: number;
   duration: number;
 };
@@ -120,11 +125,33 @@ function GlobePaintNotifier({ onPainted }: { onPainted: () => void }) {
   return null;
 }
 
+type LatLngProjector = (
+  lat: number,
+  lng: number,
+) => Pick<GlobeScreenPosition, "x" | "y" | "visible">;
+
+function GlobeCoordinateProjector({
+  layoutSize,
+  onReady,
+}: {
+  layoutSize: { width: number; height: number };
+  onReady: (project: LatLngProjector) => void;
+}) {
+  const { camera } = useThree();
+
+  useEffect(() => {
+    onReady((lat, lng) => projectLatLngToScreen(lat, lng, camera, layoutSize));
+  }, [camera, layoutSize, onReady]);
+
+  return null;
+}
+
 type GlobeSceneProps = {
   countries: MapCountry[];
   visibleLabels: ReturnType<typeof buildGlobeVisibleLabels>;
   boundaryCountries: MapCountry[];
   selectedName: string | null;
+  focusTransitionName: string | null;
   focusedRegion: string | null;
   showGlobePins: boolean;
   onCountryPress: (country: MapCountry) => void;
@@ -134,6 +161,8 @@ type GlobeSceneProps = {
   onLabelPositions: (positions: GlobeLabelScreenPosition[]) => void;
   onCameraViewChange?: (state: GlobeCameraViewState) => void;
   onGlobeSurfacePress: (coordinate: MapPressCoordinate) => void;
+  layoutSize: { width: number; height: number };
+  onProjectorReady: (project: LatLngProjector) => void;
   lockUserGestures: boolean;
 };
 
@@ -142,6 +171,7 @@ function GlobeScene({
   visibleLabels,
   boundaryCountries,
   selectedName,
+  focusTransitionName,
   focusedRegion,
   showGlobePins,
   onCountryPress,
@@ -151,11 +181,14 @@ function GlobeScene({
   onLabelPositions,
   onCameraViewChange,
   onGlobeSurfacePress,
+  layoutSize,
+  onProjectorReady,
   lockUserGestures,
 }: GlobeSceneProps) {
   const texture = useGlobeTexture();
   const { camera } = useThree();
-  const highlightedName = selectedName;
+  const continentSinglePinActive =
+    !!focusedRegion && (!!selectedName || !!focusTransitionName);
 
   const handlePinPress = useCallback(
     (country: MapCountry) => {
@@ -166,6 +199,9 @@ function GlobeScene({
 
   const handleGlobeSurfacePress = useCallback(
     (event: ThreeEvent<MouseEvent>) => {
+      if (controls.functions.consumeTapThresholdExceeded()) {
+        return;
+      }
       event.stopPropagation();
       const normal = event.point.clone().normalize();
       const latitude = THREE.MathUtils.radToDeg(Math.asin(normal.y));
@@ -176,7 +212,7 @@ function GlobeScene({
       ) - 180;
       onGlobeSurfacePress({ latitude, longitude });
     },
-    [onGlobeSurfacePress],
+    [controls.functions, onGlobeSurfacePress],
   );
 
   const flightRef = useRef<CameraFlight | null>(null);
@@ -233,17 +269,19 @@ function GlobeScene({
   );
 
   const focusLatLng = useCallback(
-    (lat: number, lng: number, duration = 650) => {
+    (lat: number, lng: number, duration = 650, targetDistance?: number) => {
       const toDir = new THREE.Vector3(
         ...latLngToVector3(lat, lng, 1),
       ).normalize();
       const fromDir = camera.position.clone().normalize();
-      const distance = cameraDistanceRef.current;
+      const fromDistance = cameraDistanceRef.current;
+      const toDistance = targetDistance ?? fromDistance;
 
       flightRef.current = {
         fromDir,
         toDir,
-        distance,
+        fromDistance,
+        toDistance,
         elapsed: 0,
         duration: duration / 1000,
       };
@@ -265,7 +303,8 @@ function GlobeScene({
     flightRef.current = {
       fromDir: camera.position.clone().normalize(),
       toDir,
-      distance: DEFAULT_CAMERA_DISTANCE,
+      fromDistance: cameraDistanceRef.current,
+      toDistance: DEFAULT_CAMERA_DISTANCE,
       elapsed: 0,
       duration: 0.55,
     };
@@ -339,13 +378,21 @@ function GlobeScene({
       // Slerp direction at fixed radius — linear lerp dips toward the globe center
       // and reads as zoom-in/out while panning.
       slerpUnitVectors(flight.fromDir, flight.toDir, eased, slerpScratchDir);
-      camera.position.copy(slerpScratchDir.multiplyScalar(flight.distance));
+      const distance = THREE.MathUtils.lerp(
+        flight.fromDistance,
+        flight.toDistance,
+        eased,
+      );
+      cameraDistanceRef.current = distance;
+      camera.position.copy(slerpScratchDir.multiplyScalar(distance));
       camera.lookAt(controls.scope.target);
 
       if (progress >= 1) {
         flightRef.current = null;
+        cameraDistanceRef.current = flight.toDistance;
         controls.scope.enabled = !lockUserGestures;
         controls.functions.update();
+        emitCameraView();
       }
       return;
     }
@@ -400,6 +447,11 @@ function GlobeScene({
         focusedRegion={focusedRegion}
       />
 
+      <GlobeCoordinateProjector
+        layoutSize={layoutSize}
+        onReady={onProjectorReady}
+      />
+
       <GlobeLabelProjector
         labels={visibleLabels}
         onPositions={onLabelPositions}
@@ -415,10 +467,13 @@ function GlobeScene({
       {showGlobePins
         ? countries.map((country) => {
             if (!isValidLatLng(country.latlng)) return null;
-            if (
-              !visibleCirclePinNames.has(country.name) &&
-              highlightedName !== country.name
-            ) {
+            const isSelected = selectedName === country.name;
+            const isFocusTransitioning = focusTransitionName === country.name;
+            const keepVisible =
+              isSelected ||
+              isFocusTransitioning ||
+              visibleCirclePinNames.has(country.name);
+            if (!keepVisible) {
               return null;
             }
             const [lat, lng] = getMapDisplayLatLng(country);
@@ -427,7 +482,13 @@ function GlobeScene({
                 key={country.name}
                 country={country}
                 position={latLngToVector3(lat, lng, PIN_RADIUS)}
-                isSelected={highlightedName === country.name}
+                isSelected={isSelected}
+                isFocusTransitioning={isFocusTransitioning}
+                isDeemphasized={
+                  continentSinglePinActive &&
+                  !isSelected &&
+                  !isFocusTransitioning
+                }
                 onPress={handlePinPress}
               />
             );
@@ -437,7 +498,12 @@ function GlobeScene({
   );
 }
 
-export type GlobeViewHandle = GlobeCameraHandle;
+export type GlobeViewHandle = GlobeCameraHandle & {
+  projectLatLng: (
+    lat: number,
+    lng: number,
+  ) => Pick<GlobeScreenPosition, "x" | "y" | "visible">;
+};
 
 type GlobeViewProps = {
   countries: MapCountry[];
@@ -446,6 +512,7 @@ type GlobeViewProps = {
   labelClusters: MapCluster[];
   boundaryCountries: MapCountry[];
   selectedName: string | null;
+  focusTransitionName?: string | null;
   focusedRegion: string | null;
   countryMarkerMode?: CountryMarkerDisplayMode;
   onClusterPress: (cluster: MapCluster) => void;
@@ -464,6 +531,7 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
       labelClusters,
       boundaryCountries,
       selectedName,
+      focusTransitionName = null,
       focusedRegion,
       countryMarkerMode = "flag",
       onClusterPress,
@@ -476,6 +544,8 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
     ref,
   ) {
     const handleRef = useRef<GlobeCameraHandle | null>(null);
+    const projectLatLngRef = useRef<LatLngProjector | null>(null);
+    const [layoutSize, setLayoutSize] = useState({ width: 0, height: 0 });
     const controls = useMemo(() => createGlobeOrbitControls(), []);
     const [labelPositions, setLabelPositions] = useState<
       GlobeLabelScreenPosition[]
@@ -488,8 +558,7 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
     const selectedCountry = useMemo(
       () =>
         selectedName
-          ? (countries.find((country) => country.name === selectedName) ??
-            null)
+          ? (countries.find((country) => country.name === selectedName) ?? null)
           : null,
       [countries, selectedName],
     );
@@ -525,13 +594,23 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
       () => ({
         focusCountry: (country, duration) =>
           handleRef.current?.focusCountry(country, duration),
-        focusLatLng: (lat, lng, duration) =>
-          handleRef.current?.focusLatLng(lat, lng, duration),
+        focusLatLng: (lat, lng, duration, targetDistance) =>
+          handleRef.current?.focusLatLng(lat, lng, duration, targetDistance),
         resetCamera: () => handleRef.current?.resetCamera(),
         zoomBy: (direction) => handleRef.current?.zoomBy(direction),
+        projectLatLng: (lat, lng) =>
+          projectLatLngRef.current?.(lat, lng) ?? {
+            x: 0,
+            y: 0,
+            visible: false,
+          },
       }),
       [],
     );
+
+    const handleProjectorReady = useCallback((project: LatLngProjector) => {
+      projectLatLngRef.current = project;
+    }, []);
 
     const handleReady = useCallback((handle: GlobeCameraHandle) => {
       handleRef.current = handle;
@@ -547,8 +626,34 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
       [onBackgroundPress],
     );
 
+    const handleContinentLabelPress = useCallback(
+      (cluster: MapCluster) => {
+        if (controls.functions.consumeTapThresholdExceeded()) {
+          return;
+        }
+        onClusterPress(cluster);
+      },
+      [controls.functions, onClusterPress],
+    );
+
     return (
-      <View style={styles.container} {...controls.events}>
+      <View
+        style={styles.container}
+        onLayout={(event) => {
+          const { width, height } = event.nativeEvent.layout;
+          setLayoutSize({ width, height });
+          controls.events.onLayout(event);
+        }}
+        onStartShouldSetResponder={controls.events.onStartShouldSetResponder}
+        onMoveShouldSetResponder={controls.events.onMoveShouldSetResponder}
+        onResponderGrant={controls.events.onResponderGrant}
+        onResponderMove={controls.events.onResponderMove}
+        onResponderRelease={controls.events.onResponderRelease}
+        onResponderTerminate={controls.events.onResponderTerminate}
+        onResponderTerminationRequest={
+          controls.events.onResponderTerminationRequest
+        }
+      >
         <Canvas
           style={styles.canvas}
           camera={{
@@ -565,6 +670,7 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
             visibleLabels={visibleLabels}
             boundaryCountries={boundaryCountries}
             selectedName={selectedName}
+            focusTransitionName={focusTransitionName}
             focusedRegion={focusedRegion}
             showGlobePins={showGlobePins}
             onCountryPress={onCountryPress}
@@ -574,6 +680,8 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
             onLabelPositions={handleLabelPositions}
             onCameraViewChange={onCameraViewChange}
             onGlobeSurfacePress={handleGlobeSurfacePress}
+            layoutSize={layoutSize}
+            onProjectorReady={handleProjectorReady}
             lockUserGestures={lockUserGestures}
           />
         </Canvas>
@@ -583,7 +691,7 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
           positions={labelPositions}
           focusedRegion={focusedRegion}
           continentClustersByRegion={continentClustersByRegion}
-          onContinentPress={onClusterPress}
+          onContinentPress={handleContinentLabelPress}
         />
       </View>
     );

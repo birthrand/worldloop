@@ -7,13 +7,16 @@ import {
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
-
 import {
   MAP_CONTINENT_FOCUS_FADE_MS,
   MAP_CONTINENT_FOCUS_FILL_OPACITY,
+  MAP_CONTINENT_FOCUS_FILL_OPACITY_WITH_COUNTRY,
   MAP_CONTINENT_FOCUS_POLYGON_Z,
   MAP_CONTINENT_FOCUS_SCRIM_Z,
+  MAP_CONTINENT_PREVIEW_FILL_OPACITY,
+  MAP_CONTINENT_PREVIEW_SCRIM_OPACITY,
   MAP_SCRIM_MAX_OPACITY,
+  MAP_SCRIM_MAX_OPACITY_WITH_COUNTRY,
   MAP_WORLD_SCRIM_RING,
   mapFocusAccentRgba,
   mapFocusScrimRgba,
@@ -24,20 +27,47 @@ import {
 } from "@/lib/map-country-boundaries";
 import type { MapCountry } from "@/types/country";
 
+/** Limit polygon color updates during fades — per-frame setState can crash MapView. */
+const BLEND_REACTION_STEPS = 8;
+
+function isRenderablePolygon(polygon: CountryBoundaryPolygon): boolean {
+  if (polygon.coordinates.length < 3) return false;
+
+  return polygon.coordinates.every(
+    (point) =>
+      Number.isFinite(point.latitude) &&
+      Number.isFinite(point.longitude) &&
+      Math.abs(point.latitude) <= 90,
+  );
+}
+
 type MapContinentFocusLayersProps = {
   focusedRegion: string | null;
+  /** Active country pin — softens overlay so it complements selection. */
+  selectedCountryName?: string | null;
+  /** Pending continent before intent delay commits. */
+  previewRegion?: string | null;
   allPolygons: CountryBoundaryPolygon[];
   boundaryCountries: MapCountry[];
 };
 
 export function MapContinentFocusLayers({
   focusedRegion,
+  selectedCountryName = null,
+  previewRegion = null,
   allPolygons,
   boundaryCountries,
 }: MapContinentFocusLayersProps) {
   const blend = useSharedValue(0);
+  const previewBlend = useSharedValue(0);
+  const lastBlendStep = useSharedValue(-1);
+  const lastPreviewBlendStep = useSharedValue(-1);
   const [displayRegion, setDisplayRegion] = useState<string | null>(null);
+  const [displayPreviewRegion, setDisplayPreviewRegion] = useState<
+    string | null
+  >(null);
   const [renderBlend, setRenderBlend] = useState(0);
+  const [renderPreviewBlend, setRenderPreviewBlend] = useState(0);
 
   useEffect(() => {
     if (focusedRegion) {
@@ -63,12 +93,57 @@ export function MapContinentFocusLayers({
     );
   }, [blend, focusedRegion]);
 
+  useEffect(() => {
+    if (previewRegion && !focusedRegion) {
+      setDisplayPreviewRegion(previewRegion);
+      previewBlend.value = withTiming(1, {
+        duration: MAP_CONTINENT_FOCUS_FADE_MS * 0.6,
+        easing: Easing.out(Easing.ease),
+      });
+      return;
+    }
+
+    if (previewRegion && focusedRegion) {
+      setDisplayPreviewRegion(null);
+      previewBlend.value = 0;
+      return;
+    }
+
+    previewBlend.value = withTiming(
+      0,
+      {
+        duration: MAP_CONTINENT_FOCUS_FADE_MS * 0.5,
+        easing: Easing.inOut(Easing.ease),
+      },
+      (finished) => {
+        if (finished) {
+          runOnJS(setDisplayPreviewRegion)(null);
+        }
+      },
+    );
+  }, [focusedRegion, previewBlend, previewRegion]);
+
   useAnimatedReaction(
     () => blend.value,
     (value) => {
-      runOnJS(setRenderBlend)(value);
+      const step = Math.round(value * BLEND_REACTION_STEPS) / BLEND_REACTION_STEPS;
+      if (step === lastBlendStep.value) return;
+      lastBlendStep.value = step;
+      runOnJS(setRenderBlend)(step);
     },
-    [blend],
+    [blend, lastBlendStep],
+  );
+
+  useAnimatedReaction(
+    () => previewBlend.value,
+    (value) => {
+      const step =
+        Math.round(value * BLEND_REACTION_STEPS) / BLEND_REACTION_STEPS;
+      if (step === lastPreviewBlendStep.value) return;
+      lastPreviewBlendStep.value = step;
+      runOnJS(setRenderPreviewBlend)(step);
+    },
+    [lastPreviewBlendStep, previewBlend],
   );
 
   const continentPolygons = useMemo(() => {
@@ -77,38 +152,91 @@ export function MapContinentFocusLayers({
       selectedCountryName: null,
       focusedRegion: displayRegion,
       countries: boundaryCountries,
-    });
+    }).filter(isRenderablePolygon);
   }, [allPolygons, boundaryCountries, displayRegion]);
 
-  const scrimFill = mapFocusScrimRgba(renderBlend * MAP_SCRIM_MAX_OPACITY);
+  const previewPolygons = useMemo(() => {
+    if (!displayPreviewRegion) return [];
+    return filterBoundaryPolygonsByMapContext(allPolygons, {
+      selectedCountryName: null,
+      focusedRegion: displayPreviewRegion,
+      countries: boundaryCountries,
+    }).filter(isRenderablePolygon);
+  }, [allPolygons, boundaryCountries, displayPreviewRegion]);
+
+  const scrimFill = mapFocusScrimRgba(
+    renderBlend *
+      (selectedCountryName
+        ? MAP_SCRIM_MAX_OPACITY_WITH_COUNTRY
+        : MAP_SCRIM_MAX_OPACITY),
+  );
   const fillColor = mapFocusAccentRgba(
-    renderBlend * MAP_CONTINENT_FOCUS_FILL_OPACITY,
+    renderBlend *
+      (selectedCountryName
+        ? MAP_CONTINENT_FOCUS_FILL_OPACITY_WITH_COUNTRY
+        : MAP_CONTINENT_FOCUS_FILL_OPACITY),
+  );
+  const previewScrimFill = mapFocusScrimRgba(
+    renderPreviewBlend * MAP_CONTINENT_PREVIEW_SCRIM_OPACITY,
+  );
+  const previewFillColor = mapFocusAccentRgba(
+    renderPreviewBlend * MAP_CONTINENT_PREVIEW_FILL_OPACITY,
   );
 
-  if (!displayRegion && renderBlend <= 0.001) {
+  const showCommitted = displayRegion && renderBlend > 0.001;
+  const showPreview =
+    displayPreviewRegion && renderPreviewBlend > 0.001 && !focusedRegion;
+
+  if (!showCommitted && !showPreview) {
     return null;
   }
 
   return (
     <>
-      <Polygon
-        coordinates={MAP_WORLD_SCRIM_RING}
-        fillColor={scrimFill}
-        strokeColor="rgba(0,0,0,0)"
-        strokeWidth={0}
-        zIndex={MAP_CONTINENT_FOCUS_SCRIM_Z}
-      />
-      {continentPolygons.map((polygon) => (
+      {showPreview ? (
         <Polygon
-          key={`continent-focus-${polygon.id}`}
-          coordinates={polygon.coordinates}
-          holes={polygon.holes}
-          fillColor={fillColor}
+          coordinates={MAP_WORLD_SCRIM_RING}
+          fillColor={previewScrimFill}
           strokeColor="rgba(0,0,0,0)"
           strokeWidth={0}
-          zIndex={MAP_CONTINENT_FOCUS_POLYGON_Z}
+          zIndex={MAP_CONTINENT_FOCUS_SCRIM_Z}
         />
-      ))}
+      ) : null}
+      {showCommitted ? (
+        <Polygon
+          coordinates={MAP_WORLD_SCRIM_RING}
+          fillColor={scrimFill}
+          strokeColor="rgba(0,0,0,0)"
+          strokeWidth={0}
+          zIndex={MAP_CONTINENT_FOCUS_SCRIM_Z}
+        />
+      ) : null}
+      {showPreview
+        ? previewPolygons.map((polygon) => (
+            <Polygon
+              key={`continent-preview-${polygon.id}`}
+              coordinates={polygon.coordinates}
+              holes={polygon.holes}
+              fillColor={previewFillColor}
+              strokeColor="rgba(0,0,0,0)"
+              strokeWidth={0}
+              zIndex={MAP_CONTINENT_FOCUS_POLYGON_Z}
+            />
+          ))
+        : null}
+      {showCommitted
+        ? continentPolygons.map((polygon) => (
+            <Polygon
+              key={`continent-focus-${polygon.id}`}
+              coordinates={polygon.coordinates}
+              holes={polygon.holes}
+              fillColor={fillColor}
+              strokeColor="rgba(0,0,0,0)"
+              strokeWidth={0}
+              zIndex={MAP_CONTINENT_FOCUS_POLYGON_Z + 1}
+            />
+          ))
+        : null}
     </>
   );
 }

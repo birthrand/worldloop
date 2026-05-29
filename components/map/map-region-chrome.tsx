@@ -8,8 +8,6 @@ type MapRegionChromeProps = {
   focusedRegion: string;
   bottom: number;
   onContinentPress: () => void;
-  onPreviousContinent: () => void;
-  onNextContinent: () => void;
   onWorldPress: () => void;
 };
 
@@ -17,82 +15,56 @@ export function MapRegionChrome({
   focusedRegion,
   bottom,
   onContinentPress,
-  onPreviousContinent,
-  onNextContinent,
   onWorldPress,
 }: MapRegionChromeProps) {
   const label = continentDisplayLabel(focusedRegion);
 
-  const handlePrevious = () => {
+  const handleContinentPress = () => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onPreviousContinent();
+    onContinentPress();
   };
 
-  const handleNext = () => {
+  const handleWorldPress = () => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onNextContinent();
+    onWorldPress();
   };
 
   return (
     <View style={[styles.wrap, { bottom }]} pointerEvents="box-none">
-      <View style={styles.stack}>
-        <View style={styles.row}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Previous continent"
-            onPress={handlePrevious}
-            style={({ pressed }) => [
-              styles.navButton,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Text style={styles.navChevron}>&lt;</Text>
-          </Pressable>
-
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Back to ${label} view`}
-            onPress={() => {
-              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              onContinentPress();
-            }}
-            style={({ pressed }) => [
-              styles.centerButton,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Ionicons name="globe-outline" size={18} color="#fbbf24" />
-            <Text style={styles.regionLabel} numberOfLines={1}>
-              {label}
-            </Text>
-          </Pressable>
-
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Next continent"
-            onPress={handleNext}
-            style={({ pressed }) => [
-              styles.navButton,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Text style={styles.navChevron}>&gt;</Text>
-          </Pressable>
-        </View>
+      <View
+        style={styles.stack}
+        accessibilityRole="toolbar"
+        accessibilityLabel="Region navigation"
+      >
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Recenter on ${label}`}
+          onPress={handleContinentPress}
+          style={({ pressed }) => [
+            styles.segment,
+            styles.regionSegment,
+            pressed && styles.pressed,
+          ]}
+        >
+          <Text style={styles.regionLabel} numberOfLines={1}>
+            {label}
+          </Text>
+        </Pressable>
 
         <View style={styles.divider} />
 
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Back to world map"
-          onPress={() => {
-            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            onWorldPress();
-          }}
-          style={({ pressed }) => [styles.worldRow, pressed && styles.pressed]}
+          onPress={handleWorldPress}
+          style={({ pressed }) => [
+            styles.segment,
+            styles.worldSegment,
+            pressed && styles.pressed,
+          ]}
         >
-          <Ionicons name="arrow-undo-outline" size={18} color="#ffffff" />
-          <Text style={styles.worldLabel}>Back to World</Text>
+          <Ionicons name="arrow-undo" size={18} color="#ffffff" />
+          <Text style={styles.worldLabel}>World</Text>
         </Pressable>
       </View>
     </View>
@@ -106,65 +78,49 @@ const styles = StyleSheet.create({
     zIndex: 7,
   },
   stack: {
-    minWidth: 200,
-    borderRadius: 20,
+    flexDirection: "row",
+    alignItems: "stretch",
+    minWidth: 168,
+    minHeight: 44,
+    borderRadius: 32,
     backgroundColor: "#101828",
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.1)",
     overflow: "hidden",
   },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
+  segment: {
     minHeight: 44,
-  },
-  navButton: {
-    width: 44,
-    height: 44,
-    alignItems: "center",
     justifyContent: "center",
   },
-  navChevron: {
-    fontSize: 20,
-    fontFamily: "Poppins-SemiBold",
-    color: "#94a3b8",
-    lineHeight: 22,
+  regionSegment: {
+    flexGrow: 1,
+    flexShrink: 1,
+    paddingHorizontal: 16,
+    alignItems: "center",
   },
-  centerButton: {
-    flex: 1,
+  worldSegment: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingHorizontal: 4,
-    minHeight: 44,
+    gap: 6,
+    paddingHorizontal: 14,
   },
   divider: {
-    height: 1,
+    width: 1,
+    alignSelf: "stretch",
     backgroundColor: "rgba(255, 255, 255, 0.1)",
   },
-  worldRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-    minHeight: 44,
-  },
   regionLabel: {
-    flexShrink: 1,
     fontSize: 13,
-    fontFamily: "Poppins-SemiBold",
-    color: "#fbbf24",
+    fontFamily: "Poppins-Medium",
+    color: "#ffffff",
   },
   worldLabel: {
     fontSize: 13,
     fontFamily: "Poppins-Medium",
     color: "#ffffff",
-    textAlign: "center",
   },
   pressed: {
+    opacity: 0.95,
     backgroundColor: "#29303C",
   },
 });

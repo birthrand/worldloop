@@ -2,6 +2,7 @@ import { filterMapCountriesByChip, type MapFilterChip } from "@/store/use-map-st
 import { useCountryFeedStore } from "@/store/use-country-feed-store";
 import type { FeaturedShortcut } from "@/store/use-map-ui-store";
 import { useRecentlyViewedStore } from "@/store/use-recently-viewed-store";
+import { getMapDisplayLatLng, isValidLatLng } from "@/lib/map-country";
 import type { MapCountry } from "@/types/country";
 
 type BuildMapRandomPoolOptions = {
@@ -51,7 +52,11 @@ export async function buildMapRandomPool({
     pool = base;
   }
 
-  return filterMapCountriesByChip(pool, activeChip);
+  // Only keep countries we can actually frame on the map. Picking one with an
+  // invalid coordinate would feed NaN to the native MapView and crash the app.
+  return filterMapCountriesByChip(pool, activeChip).filter((country) =>
+    isValidLatLng(getMapDisplayLatLng(country)),
+  );
 }
 
 /** Picks a random country, optionally avoiding `excludeName` when the pool allows. */

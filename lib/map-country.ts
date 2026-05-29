@@ -68,7 +68,9 @@ export function getMapDisplayLatLng(
   const override = DISPLAY_LATLNG_BY_NAME[country.name];
   if (override) return override;
 
-  if (!isValidLatLng(country.latlng)) return country.latlng;
+  // Never hand back an invalid coordinate: passing NaN/undefined to the native
+  // MapView's animateToRegion crashes the app. Fall back to [0, 0] instead.
+  if (!isValidLatLng(country.latlng)) return [0, 0];
 
   const [lat, lng] = country.latlng;
   if (lat < -MAP_MARKER_MAX_LATITUDE) return [-MAP_MARKER_MAX_LATITUDE, lng];

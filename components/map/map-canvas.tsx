@@ -4,6 +4,7 @@ import {
   useEffect,
   useImperativeHandle,
   useRef,
+  useState,
 } from "react";
 import { StyleSheet, View } from "react-native";
 import Animated, {
@@ -22,6 +23,7 @@ import {
   type GlobeCameraViewState,
   type GlobeViewHandle,
 } from "@/components/map/globe-view";
+import { MapTapRipple } from "@/components/map/map-tap-ripple";
 import {
   WorldMapView,
   type MapZoomTier,
@@ -57,7 +59,11 @@ type MapCanvasProps = {
   boundaryCountries: MapCountry[];
   clusters: MapCluster[];
   selectedName: string | null;
+  focusTransitionName?: string | null;
   focusedRegion: string | null;
+  previewRegion?: string | null;
+  tapRippleAt?: MapPressCoordinate | null;
+  tapRippleToken?: number;
   zoomTier: MapZoomTier;
   countryMarkerMode?: CountryMarkerDisplayMode;
   markerPresentation?: MapMarkerPresentation;
@@ -83,7 +89,11 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
       boundaryCountries,
       clusters,
       selectedName,
+      focusTransitionName = null,
       focusedRegion,
+      previewRegion = null,
+      tapRippleAt = null,
+      tapRippleToken = 0,
       zoomTier,
       countryMarkerMode = "flag",
       markerPresentation = "full",
@@ -105,6 +115,10 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
     const mapMode = useMapStore((s) => s.mapMode);
     const mapRef = useRef<WorldMapViewHandle>(null);
     const globeRef = useRef<GlobeViewHandle>(null);
+    const [rippleScreen, setRippleScreen] = useState<{
+      x: number;
+      y: number;
+    } | null>(null);
 
     const globeOpacity = useSharedValue(shouldShowGlobeLayer(mapMode, mapViewTransition) ? 1 : 0);
     const flatDimOpacity = useSharedValue(0);
@@ -254,11 +268,48 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
       opacity: continentFocusBlend.value * MAP_SCRIM_MAX_OPACITY,
     }));
 
+    useEffect(() => {
+      if (!tapRippleAt) {
+        setRippleScreen(null);
+        return;
+      }
+
+      let cancelled = false;
+
+      const resolveRipple = async () => {
+        if (mapMode === "3d" && mapViewTransition === "ready") {
+          const projected = globeRef.current?.projectLatLng(
+            tapRippleAt.latitude,
+            tapRippleAt.longitude,
+          );
+          if (!cancelled && projected?.visible) {
+            setRippleScreen({ x: projected.x, y: projected.y });
+          }
+          return;
+        }
+
+        if (mapMode === "2d") {
+          const point = await mapRef.current?.pointForCoordinate(tapRippleAt);
+          if (!cancelled && point) {
+            setRippleScreen(point);
+          }
+        }
+      };
+
+      void resolveRipple();
+
+      return () => {
+        cancelled = true;
+      };
+    }, [mapMode, mapViewTransition, tapRippleAt, tapRippleToken]);
+
     const mapProps = {
       countries,
       boundaryCountries,
       selectedName,
+      focusTransitionName,
       focusedRegion,
+      previewRegion,
       zoomTier,
       countryMarkerMode: showFlatMarkers ? countryMarkerMode : "hidden",
       markerPresentation,
@@ -300,6 +351,7 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
               labelClusters={clusters}
               boundaryCountries={boundaryCountries}
               selectedName={selectedName}
+              focusTransitionName={focusTransitionName}
               focusedRegion={focusedRegion}
               countryMarkerMode={countryMarkerMode}
               onClusterPress={onClusterPress}
@@ -314,6 +366,14 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
               style={[styles.continentFocusScrim, continentFocusScrimStyle]}
             />
           </Animated.View>
+        ) : null}
+
+        {rippleScreen ? (
+          <MapTapRipple
+            x={rippleScreen.x}
+            y={rippleScreen.y}
+            triggerKey={tapRippleToken}
+          />
         ) : null}
       </View>
     );

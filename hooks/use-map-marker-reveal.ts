@@ -56,13 +56,14 @@ export function useMapMarkerReveal({
     viewportCenter.longitude,
   ]);
 
-  const sortedCandidateNamesKey = useMemo(
+  /** Stable across viewport sort order — avoids reveal restarts when the globe spins. */
+  const candidateSetKey = useMemo(
     () =>
-      sortedCandidates
+      candidateCountries
         .map((country) => country.name)
         .sort()
         .join("\0"),
-    [sortedCandidates],
+    [candidateCountries],
   );
 
   const clearRevealInterval = () => {
@@ -118,7 +119,7 @@ export function useMapMarkerReveal({
     enabled,
     focusedRegion,
     isDetailZoom,
-    sortedCandidateNamesKey,
+    candidateSetKey,
     sortedCandidates.length,
     suspendReveal,
   ]);

@@ -2,6 +2,7 @@ import { Image } from "expo-image";
 
 import { buildFlagCdnUrl, resolveFlagCdnUrl } from "@/lib/flag-url";
 import { cca2FromFlagUrl } from "@/lib/map-country";
+import { syncMapRegionFocusForCountry } from "@/lib/map-region-focus";
 import { useMapStore } from "@/store/use-map-store";
 import { useMapUiStore } from "@/store/use-map-ui-store";
 import { useRecentlyViewedStore } from "@/store/use-recently-viewed-store";
@@ -23,42 +24,34 @@ function prefetchCountryFlag(country: Country): void {
   }
 }
 
-/**
- * Explore action rail → Map: single spotlight pin, preview opens on pin tap only.
- */
-export function spotlightCountryOnMap(country: Country): void {
+function prepareMapForCountry(country: Country): void {
   const mapUi = useMapUiStore.getState();
   const map = useMapStore.getState();
 
   prefetchCountryFlag(country);
 
-  // Normalize map presentation for cross-screen deep links:
-  // 2D view + flag pins guarantees the selected country marker is visible.
   map.setMapMode("2d");
   mapUi.setCountryMarkerMode("flag");
-  mapUi.setSpotlightCountry(country.name);
-  map.focusCountryFromExternal(country.name, country, "spotlight");
+  syncMapRegionFocusForCountry(country);
   useRecentlyViewedStore.getState().recordView(country);
 }
 
 /**
- * Search → Map: zoom to region and show all regional pins (preview may open).
+ * External entry → Map: fly to country and focus only (no preview).
+ * Map screen completes the flow via `pendingExternalFocusName`.
  */
 export function focusCountryOnMap(country: Country): void {
-  const mapUi = useMapUiStore.getState();
+  prepareMapForCountry(country);
   const map = useMapStore.getState();
-
-  prefetchCountryFlag(country);
-
-  // Keep behavior consistent regardless of source screen.
-  map.setMapMode("2d");
-  mapUi.setCountryMarkerMode("flag");
-  mapUi.setSpotlightCountry(null);
-  map.focusCountryFromExternal(country.name, country, "region");
-  useRecentlyViewedStore.getState().recordView(country);
+  map.focusCountryFromExternal(country.name, country);
 }
 
-/** Close search and focus the country on the map (stays on Map tab). */
+/** @deprecated Use focusCountryOnMap — spotlight no longer opens preview. */
+export function spotlightCountryOnMap(country: Country): void {
+  focusCountryOnMap(country);
+}
+
+/** Close search and focus the country on the map (no forced preview). */
 export function openCountryOnMap(country: Country): void {
   useSearchUiStore.getState().closeSearch();
   focusCountryOnMap(country);

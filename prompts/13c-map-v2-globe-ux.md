@@ -131,6 +131,8 @@ npx expo start
 
 ## Next steps (post v2)
 
+**Step 4 (recommended):** [`13d-map-v3-ui-ux-upgrade.md`](./13d-map-v3-ui-ux-upgrade.md) — one-tap preview, unified dismiss, remove stacked bottom chrome.
+
 See parent [`13-map-v2-3d-globe.md`](./13-map-v2-3d-globe.md):
 
 - Persist `mapMode` + camera pose

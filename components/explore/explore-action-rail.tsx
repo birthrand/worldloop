@@ -18,7 +18,7 @@ import {
   type FeedSortOrder,
   useCountryFeedStore,
 } from "@/store/use-country-feed-store";
-import { spotlightCountryOnMap } from "@/lib/open-country-on-map";
+import { focusCountryOnMap } from "@/lib/open-country-on-map";
 import { useMapStore } from "@/store/use-map-store";
 import { useSavedCountriesStore } from "@/store/use-saved-countries-store";
 import type { Country } from "@/types/country";
@@ -129,7 +129,7 @@ export function ExploreActionRail({ country }: ExploreActionRailProps) {
   const handleJumpToMap = async () => {
     try {
       await useMapStore.getState().loadMapCountries();
-      spotlightCountryOnMap(country);
+      focusCountryOnMap(country);
       router.push("/(tabs)/map");
     } catch {
       Alert.alert("Map", "Unable to open map right now.");

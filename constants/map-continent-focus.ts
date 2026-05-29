@@ -16,7 +16,21 @@ export const MAP_FOCUS_SCRIM = {
 
 /** Target fill opacity at full blend (0–1). */
 export const MAP_CONTINENT_FOCUS_FILL_OPACITY = 0.18;
-export const MAP_SCRIM_MAX_OPACITY = 0.09;
+export const MAP_SCRIM_MAX_OPACITY = 0.12;
+
+/** Softer continent wash when a country pin is already selected. */
+export const MAP_CONTINENT_FOCUS_FILL_OPACITY_WITH_COUNTRY = 0.11;
+export const MAP_SCRIM_MAX_OPACITY_WITH_COUNTRY = 0.08;
+
+/** Softer highlight while continent intent is pending (before commit). */
+export const MAP_CONTINENT_PREVIEW_FILL_OPACITY = 0.12;
+export const MAP_CONTINENT_PREVIEW_SCRIM_OPACITY = 0.05;
+
+/** Pause before committing continent focus (ms). */
+export const MAP_CONTINENT_INTENT_DELAY_MS = 200;
+
+/** Ignore taps when orbit/pan finger movement exceeds this (px). */
+export const MAP_TAP_DRAG_THRESHOLD_PX = 10;
 
 export const MAP_CONTINENT_FOCUS_FADE_MS = 250;
 

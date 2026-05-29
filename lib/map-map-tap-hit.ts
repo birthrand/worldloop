@@ -56,12 +56,36 @@ function pointInRing(point: MapPressCoordinate, ring: LatLng[]): boolean {
     const yi = ring[i].latitude;
     const xj = ring[j].longitude;
     const yj = ring[j].latitude;
-    const intersect =
-      yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
+    const spansLatitude = yi > y !== yj > y;
+    if (!spansLatitude) continue;
+
+    const dy = yj - yi;
+    if (Math.abs(dy) < 1e-12) continue;
+
+    const intersect = x < ((xj - xi) * (y - yi)) / dy + xi;
     if (intersect) inside = !inside;
   }
 
   return inside;
+}
+
+/** Prefer nearest land when tap is just outside a country bbox (coasts). */
+const COAST_BIAS_DEGREES = 1;
+
+function distanceToBBox(point: MapPressCoordinate, bbox: RingBBox): number {
+  const latDist =
+    point.latitude < bbox.minLat
+      ? bbox.minLat - point.latitude
+      : point.latitude > bbox.maxLat
+        ? point.latitude - bbox.maxLat
+        : 0;
+  const lngDist =
+    point.longitude < bbox.minLng
+      ? bbox.minLng - point.longitude
+      : point.longitude > bbox.maxLng
+        ? point.longitude - bbox.maxLng
+        : 0;
+  return Math.hypot(latDist, lngDist);
 }
 
 function approximateRingArea(ring: LatLng[]): number {
@@ -140,6 +164,34 @@ export function findMapCountryAtCoordinate(
   return best?.country ?? null;
 }
 
+function findCountryNearCoast(
+  polygons: CountryBoundaryPolygon[],
+  countries: MapCountry[],
+  coordinate: MapPressCoordinate,
+): MapCountry | null {
+  let best: { country: MapCountry; distance: number } | null = null;
+
+  for (const polygon of polygons) {
+    if (!polygon.countryName) continue;
+
+    const bbox = ringBBox(polygon.coordinates);
+    const distance = distanceToBBox(coordinate, bbox);
+    if (distance > COAST_BIAS_DEGREES) continue;
+
+    const country = findMapCountryByBoundaryName(
+      countries,
+      polygon.countryName,
+    );
+    if (!country) continue;
+
+    if (!best || distance < best.distance) {
+      best = { country, distance };
+    }
+  }
+
+  return best?.country ?? null;
+}
+
 /** World-view tap: land hit → app's continent cluster for that country's region. */
 export function findClusterAtWorldCoordinate(
   polygons: CountryBoundaryPolygon[],
@@ -147,7 +199,9 @@ export function findClusterAtWorldCoordinate(
   clusters: MapCluster[],
   coordinate: MapPressCoordinate,
 ): MapCluster | null {
-  const country = findMapCountryAtCoordinate(polygons, countries, coordinate);
+  const country =
+    findMapCountryAtCoordinate(polygons, countries, coordinate) ??
+    findCountryNearCoast(polygons, countries, coordinate);
   if (!country) return null;
   return clusters.find((cluster) => cluster.region === country.region) ?? null;
 }

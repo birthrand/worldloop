@@ -83,13 +83,14 @@ export function MapOnboardingSheet({ onDismiss }: MapOnboardingSheetProps) {
         Explore the World
       </Text>
       <Text style={styles.subtitle}>
-        Tap a country to see content from that region.
+        Tap a country to focus · Tap again for details
       </Text>
 
       <View style={styles.hintsRow}>
         <Hint icon="resize-outline" label="Pinch to zoom" />
         <Hint icon="hand-left-outline" label="Drag to explore" />
         <Hint icon="layers-outline" label="Tap clusters" />
+        <Hint icon="dice-outline" label="Random country" />
       </View>
     </Animated.View>
   );
@@ -149,10 +150,10 @@ const styles = StyleSheet.create({
   },
   hintsRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
   },
   hint: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
@@ -160,6 +161,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 16,
     backgroundColor: "rgba(255,255,255,0.05)",
+    flexGrow: 1,
+    flexBasis: "45%",
   },
   hintLabel: {
     fontFamily: "Poppins-Medium",

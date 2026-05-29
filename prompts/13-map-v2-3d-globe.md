@@ -15,6 +15,7 @@ Do **not** jump to the full globe system in one pass. Implement in order — eac
 | **1** | [`13a-map-v2-globe-debug.md`](./13a-map-v2-globe-debug.md) | Debug globe: sphere, lights, orbit controls, 3–5 fake pins |
 | **2** | [`13b-map-v2-globe-data-pins.md`](./13b-map-v2-globe-data-pins.md) | Real data: `latlng` → sphere, backend countries, all pins |
 | **3** | [`13c-map-v2-globe-ux.md`](./13c-map-v2-globe-ux.md) | UX: preview card, selection highlight, random country, camera animation |
+| **4** | [`13d-map-v3-ui-ux-upgrade.md`](./13d-map-v3-ui-ux-upgrade.md) | UX fix: one-tap preview, unified dismiss, simplify bottom chrome |
 
 If Step 1 does not spin and zoom smoothly on device, fix that before wiring API data or UX.
 

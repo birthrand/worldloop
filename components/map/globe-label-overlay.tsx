@@ -139,11 +139,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   continentHitArea: {
-    minWidth: 96,
-    maxWidth: 120,
+    minWidth: 112,
+    maxWidth: 132,
     alignItems: "center",
-    paddingVertical: 6,
-    paddingHorizontal: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
   },
   continentWrap: {
     alignItems: "center",

@@ -15,6 +15,8 @@ import {
 } from "three";
 import type { GestureResponderEvent, LayoutChangeEvent } from "react-native";
 
+import { MAP_TAP_DRAG_THRESHOLD_PX } from "@/constants/map-continent-focus";
+
 const EPSILON = 0.000001;
 
 const STATE = {
@@ -89,9 +91,32 @@ export function createGlobeOrbitControls() {
     state: STATE.NONE as OrbitState,
   };
 
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let interactionExceededTapThreshold = false;
+  let suppressNextTap = false;
+
   const resetTouchState = () => {
     internals.state = STATE.NONE;
     internals.moveStart.set(0, 0, 0);
+  };
+
+  const recordTouchStart = (event: GestureResponderEvent) => {
+    const touch = event.nativeEvent.touches[0] ?? event.nativeEvent;
+    touchStartX = touch.pageX;
+    touchStartY = touch.pageY;
+    interactionExceededTapThreshold = false;
+    suppressNextTap = false;
+  };
+
+  const trackTouchMove = (event: GestureResponderEvent) => {
+    const touch = event.nativeEvent.touches[0];
+    if (!touch) return;
+    const dx = touch.pageX - touchStartX;
+    const dy = touch.pageY - touchStartY;
+    if (Math.hypot(dx, dy) > MAP_TAP_DRAG_THRESHOLD_PX) {
+      interactionExceededTapThreshold = true;
+    }
   };
 
   const functions = {
@@ -431,8 +456,15 @@ export function createGlobeOrbitControls() {
   };
 
   const endInteraction = () => {
+    suppressNextTap = interactionExceededTapThreshold;
     resetTouchState();
     scope.onEnd();
+  };
+
+  const consumeTapThresholdExceeded = () => {
+    const exceeded = suppressNextTap;
+    suppressNextTap = false;
+    return exceeded;
   };
 
   return {
@@ -441,6 +473,7 @@ export function createGlobeOrbitControls() {
       ...functions,
       update,
       resetTouchState,
+      consumeTapThresholdExceeded,
     },
     events: {
       onLayout(event: LayoutChangeEvent) {
@@ -449,19 +482,23 @@ export function createGlobeOrbitControls() {
       onStartShouldSetResponder(event: GestureResponderEvent) {
         if (!scope.enabled) return false;
         beginInteraction();
+        recordTouchStart(event);
         functions.onTouchStart(event);
         return true;
       },
       onMoveShouldSetResponder(event: GestureResponderEvent) {
         if (!scope.enabled) return false;
         beginInteraction();
+        recordTouchStart(event);
         functions.onTouchStart(event);
         return true;
       },
       onResponderGrant(event: GestureResponderEvent) {
+        recordTouchStart(event);
         functions.onTouchStart(event);
       },
       onResponderMove(event: GestureResponderEvent) {
+        trackTouchMove(event);
         const touchCount = event.nativeEvent.touches.length;
         if (
           internals.state === STATE.ROTATE &&

@@ -12,8 +12,37 @@ export const REGION_FOCUS_INITIAL_DELTA = 45;
 /** Globe camera distance at or below this shows every country in the focused region. */
 export const GLOBE_DETAIL_CAMERA_DISTANCE = 2;
 
+/** Globe distance for continent framing after zooming out from country detail. */
+export const GLOBE_REGION_CAMERA_DISTANCE = 2.75;
+
 /** Above this distance the globe is in world view (no continent selected). */
 export const GLOBE_WORLD_ZOOM_DISTANCE = 3.45;
+
+/** Opacity for sibling flags when one country stays softly highlighted at continent zoom. */
+export const MARKER_DEEMPHASIZED_OPACITY = 0.34;
+
+/** One-shot pin scale peak while the camera flies to a country (2D + 3D). */
+export const MAP_FOCUS_TRANSITION_SCALE_PEAK = 1.12;
+/** Matches default 2D `animateToRegion` flight duration in map screen. */
+export const MAP_FOCUS_TRANSITION_2D_MS = 650;
+/** Matches default 3D globe focus flight duration in map screen. */
+export const MAP_FOCUS_TRANSITION_3D_MS = 1100;
+
+/** 0–1 flight progress → scale multiplier (1 → peak → 1). */
+export function resolveFocusTransitionScale(progress: number): number {
+  const t = Math.min(1, Math.max(0, progress));
+  const peakDelta = MAP_FOCUS_TRANSITION_SCALE_PEAK - 1;
+
+  if (t <= 0.5) {
+    const p = t / 0.5;
+    const eased = 1 - (1 - p) * (1 - p);
+    return 1 + peakDelta * eased;
+  }
+
+  const p = (t - 0.5) / 0.5;
+  const eased = p * p;
+  return MAP_FOCUS_TRANSITION_SCALE_PEAK - peakDelta * eased;
+}
 
 export type GlobeZoomTier = "world" | "region" | "country";
 

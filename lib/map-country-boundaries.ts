@@ -229,8 +229,8 @@ function naturalEarthContinentMatchesRegion(
 
 /**
  * Scope boundaries to map context (option 1 — implicit, no extra UI):
- * - Selected country → that country only
- * - Focused continent → countries in that region
+ * - Selected country (no continent focus) → that country only
+ * - Focused continent → countries in that region (even when a country is selected)
  * - No focus → hidden unless `showWorldBoundaries` (grid toggle on world view)
  */
 export function filterBoundaryPolygonsByMapContext(
@@ -242,12 +242,6 @@ export function filterBoundaryPolygonsByMapContext(
 
   if (!selectedCountryName && !focusedRegion) {
     return showWorldBoundaries ? polygons : [];
-  }
-
-  if (selectedCountryName) {
-    return polygons.filter((polygon) =>
-      countryNamesMatch(selectedCountryName, polygon.countryName),
-    );
   }
 
   if (focusedRegion) {
@@ -270,6 +264,12 @@ export function filterBoundaryPolygonsByMapContext(
         focusedRegion,
       );
     });
+  }
+
+  if (selectedCountryName) {
+    return polygons.filter((polygon) =>
+      countryNamesMatch(selectedCountryName, polygon.countryName),
+    );
   }
 
   return [];

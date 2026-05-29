@@ -52,6 +52,7 @@ export function GlobePinProjector({
   countriesRef.current = countries;
 
   const frameRef = useRef(0);
+  const lastPositionsRef = useRef<GlobePinScreenPosition[]>([]);
 
   useFrame((state) => {
     frameRef.current += 1;
@@ -79,7 +80,10 @@ export function GlobePinProjector({
       });
     }
 
-    onPositionsRef.current(next);
+    if (globePinPositionsChanged(lastPositionsRef.current, next)) {
+      lastPositionsRef.current = next;
+      onPositionsRef.current(next);
+    }
   });
 
   return null;

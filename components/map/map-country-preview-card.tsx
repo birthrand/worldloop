@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -8,10 +8,10 @@ import {
   View,
 } from "react-native";
 
-import { prefetchCountryImage } from "@/components/explore/country-image";
 import { FlagBadge } from "@/components/explore/flag-badge";
+import { continentDisplayLabel } from "@/constants/regions";
 import { fetchCountryByName } from "@/lib/api";
-import { formatPopulation, getCountryImages } from "@/lib/format-country";
+import { formatPopulation } from "@/lib/format-country";
 import { mapCountryToCountry } from "@/lib/map-country";
 import { openCountryInExplore } from "@/lib/open-country-in-explore";
 import type { Country, MapCountry } from "@/types/country";
@@ -20,24 +20,25 @@ type MapCountryPreviewCardProps = {
   country: MapCountry;
   onNextCountry?: () => void;
   isNextCountryLoading?: boolean;
-  onDismiss?: () => void;
+  onDismiss: () => void;
+  onBackToContinent?: () => void;
+  backToRegionLabel?: string;
+  bottomInset?: number;
 };
 
-const TITLE_FONT_SIZE = 16;
-const TITLE_MIN_FONT_SIZE = 12;
-const TITLE_CLOSE_SIZE = 32;
-/** Compact inline flag — matches explore feed badge scale, leaves room for stats. */
 const FLAG_WIDTH = 56;
 const FLAG_HEIGHT = 38;
-/** Capital at or above this length gets extra column width; others stay equal thirds. */
-const CAPITAL_EXPAND_CHAR_THRESHOLD = 11;
-const STAT_COLUMN_GAP = 12;
+const COUNTRY_NAME_FONT_SIZE = 17;
+const COUNTRY_NAME_MIN_FONT_SIZE = 14;
 
 export function MapCountryPreviewCard({
   country,
   onNextCountry,
   isNextCountryLoading = false,
   onDismiss,
+  onBackToContinent,
+  backToRegionLabel,
+  bottomInset = 0,
 }: MapCountryPreviewCardProps) {
   const [detail, setDetail] = useState<Country | null>(null);
   const [detailStatus, setDetailStatus] = useState<
@@ -72,174 +73,193 @@ export function MapCountryPreviewCard({
 
   const countryForActions = mapCountryToCountry(country, detail);
 
-  const previewImages = useMemo(() => {
-    if (!detail) return [];
-    return getCountryImages(detail).slice(0, 3);
-  }, [detail]);
-
-  useEffect(() => {
-    if (previewImages.length === 0) return;
-    for (const uri of previewImages) {
-      void prefetchCountryImage(uri);
-    }
-  }, [previewImages]);
-
-  const aiFact =
+  const funFact =
     detail?.ai?.fact?.trim() ||
     (detailStatus === "loading"
-      ? "Fun fact loading…"
+      ? "Loading…"
       : detailStatus === "error"
-        ? (detailError ?? "Fun fact unavailable")
-        : "Fun fact loading…");
+        ? (detailError ?? "Unavailable right now")
+        : "Loading…");
 
   return (
-    <View style={styles.card}>
-      <View style={styles.headerBlock}>
-        <View style={styles.titleRow}>
-          {onDismiss ? <View style={styles.titleRowSide} /> : null}
-
+    <View style={[styles.card, { paddingBottom: 12 + bottomInset }]}>
+      <View style={styles.topRow}>
+        <View style={styles.titleTextWrap}>
           <Text
             style={styles.countryName}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={TITLE_MIN_FONT_SIZE / TITLE_FONT_SIZE}
+            numberOfLines={2}
             ellipsizeMode="tail"
+            adjustsFontSizeToFit
+            minimumFontScale={
+              COUNTRY_NAME_MIN_FONT_SIZE / COUNTRY_NAME_FONT_SIZE
+            }
           >
             {country.name}
           </Text>
+        </View>
 
-          {onDismiss ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Close country preview"
+          onPress={onDismiss}
+          hitSlop={8}
+          style={({ pressed }) => [
+            styles.closeButton,
+            pressed && styles.closeButtonPressed,
+          ]}
+        >
+          <Ionicons name="close" size={20} color="#94a3b8" />
+        </Pressable>
+      </View>
+
+      <View style={styles.sectionDivider} />
+
+      <View style={styles.metaRow}>
+        <View style={styles.flagWrap}>
+          <FlagBadge
+            flag={country.flag}
+            width={FLAG_WIDTH}
+            height={FLAG_HEIGHT}
+          />
+        </View>
+
+        <View style={styles.statDivider} />
+
+        <View style={styles.statsRow}>
+          <Stat
+            caption="Population"
+            value={formatPopulation(country.population)}
+            valueLines={1}
+          />
+          <View style={styles.statDivider} />
+          <Stat
+            caption="Capital"
+            value={country.capital || "—"}
+            flex={1.4}
+            valueLines={3}
+          />
+          <View style={styles.statDivider} />
+          <Stat
+            caption="Continent"
+            value={continentDisplayLabel(country.region)}
+            valueLines={2}
+          />
+        </View>
+      </View>
+
+      <View style={styles.sectionDivider} />
+
+      <View style={styles.factBlock}>
+        <View style={styles.factLabelRow}>
+          <Text style={styles.factLabel}>Fun fact</Text>
+          {detailStatus === "loading" ? (
+            <ActivityIndicator size="small" color="#94a3b8" />
+          ) : null}
+        </View>
+        <Text
+          style={[
+            styles.factText,
+            detailStatus === "error" && styles.factTextMuted,
+          ]}
+        >
+          {funFact}
+        </Text>
+      </View>
+
+      <View style={styles.sectionDivider} />
+
+      <View style={styles.actionStack}>
+        {onBackToContinent ? (
+          <>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Close country preview"
-              onPress={onDismiss}
-              hitSlop={8}
+              accessibilityLabel={
+                backToRegionLabel
+                  ? `Back to ${backToRegionLabel}`
+                  : "Back to continent"
+              }
+              onPress={onBackToContinent}
               style={({ pressed }) => [
-                styles.closeButton,
+                styles.actionSegment,
+                styles.backSegment,
                 pressed && styles.pressed,
               ]}
             >
-              <Ionicons name="close" size={18} color="#ffffff" />
+              <Ionicons name="arrow-back" size={16} color="#ffffff" />
+              {backToRegionLabel ? (
+                <Text style={styles.actionLabel} numberOfLines={1}>
+                  {backToRegionLabel}
+                </Text>
+              ) : null}
             </Pressable>
-          ) : null}
-        </View>
-
-        <View style={styles.metaRow}>
-          <View style={styles.flagWrap}>
-            <FlagBadge
-              flag={country.flag}
-              width={FLAG_WIDTH}
-              height={FLAG_HEIGHT}
-            />
-          </View>
-
-          <View style={styles.statsColumn}>
-            <View style={styles.statsRow}>
-              <StatItem
-                label={formatPopulation(country.population)}
-                caption="Population"
-              />
-              <StatItem
-                label={country.capital}
-                caption="Capital"
-                expandLabel={
-                  country.capital.length >= CAPITAL_EXPAND_CHAR_THRESHOLD
-                }
-              />
-              <StatItem label={country.region} caption="Region" />
-            </View>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.aiBlock}>
-        <View className="flex-row items-center gap-1">
-          <Ionicons name="bulb" size={16} color="#fbbf24" />
-          <Text className="font-semibold text-sm text-tab-active">
-            AI Fun Fact
-          </Text>
-          {detailStatus === "loading" ? (
-            <ActivityIndicator size="small" color="#fbbf24" />
-          ) : null}
-        </View>
-        <Text className="body-md text-white/85">{aiFact}</Text>
-      </View>
-
-      {/* <View style={styles.previewBlock}>
-        <Text style={styles.previewTitle}>Top 3 posts</Text>
-        {detailStatus === "loading" && previewImages.length === 0 ? (
-          <View style={styles.previewSkeletonRow}>
-            {[0, 1, 2].map((i) => (
-              <View key={i} style={styles.previewSkeleton} />
-            ))}
-          </View>
+            <View style={styles.actionDivider} />
+          </>
         ) : null}
-        {previewImages.length > 0 ? (
-          <ScrollRowPreview
-            images={previewImages}
-            onPress={() => openCountryInExplore(countryForActions)}
-          />
-        ) : null}
-      </View> */}
 
-      {onNextCountry ? (
+        {onNextCountry ? (
+          <>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Shuffle to another country"
+              accessibilityState={{ disabled: isNextCountryLoading }}
+              disabled={isNextCountryLoading}
+              onPress={onNextCountry}
+              style={({ pressed }) => [
+                styles.actionSegment,
+                isNextCountryLoading && styles.actionLoading,
+                pressed && !isNextCountryLoading && styles.pressed,
+              ]}
+            >
+              {isNextCountryLoading ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <Ionicons name="shuffle" size={18} color="#ffffff" />
+              )}
+              <Text style={styles.actionLabel}>Shuffle</Text>
+            </Pressable>
+            <View style={styles.actionDivider} />
+          </>
+        ) : null}
+
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Next country"
-          accessibilityState={{ disabled: isNextCountryLoading }}
-          disabled={isNextCountryLoading}
-          onPress={onNextCountry}
+          accessibilityLabel={`Open ${country.name} in Explore`}
+          onPress={() => openCountryInExplore(countryForActions)}
           style={({ pressed }) => [
-            styles.nextCountryButton,
-            (pressed || isNextCountryLoading) && styles.pressed,
+            styles.actionSegment,
+            pressed && styles.pressed,
           ]}
         >
-          {isNextCountryLoading ? (
-            <ActivityIndicator size="small" color="#fbbf24" />
-          ) : (
-            <Ionicons name="shuffle" size={18} color="#fbbf24" />
-          )}
-          <Text style={styles.nextCountryLabel}>Next country</Text>
+          <Text style={styles.actionLabel}>Explore</Text>
+          <Ionicons name="arrow-forward" size={16} color="#ffffff" />
         </Pressable>
-      ) : null}
-
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`View full feed for ${country.name}`}
-        onPress={() => openCountryInExplore(countryForActions)}
-        style={({ pressed }) => [
-          styles.exploreButton,
-          pressed && styles.pressed,
-        ]}
-      >
-        <Text style={styles.exploreLabel}>View full feed</Text>
-        {/* <Ionicons name="arrow-forward" size={20} color="#0b132b" /> */}
-      </Pressable>
+      </View>
     </View>
   );
 }
 
-function StatItem({
-  label,
+function Stat({
   caption,
-  expandLabel = false,
+  value,
+  flex = 1,
+  valueLines = 1,
 }: {
-  label: string;
   caption: string;
-  /** Long capital: slightly wider column + 2 lines; others stay equal width. */
-  expandLabel?: boolean;
+  value: string;
+  flex?: number;
+  valueLines?: number;
 }) {
   return (
-    <View style={[styles.statItem, expandLabel && styles.statItemWide]}>
+    <View style={[styles.stat, { flex }]}>
+      <Text style={styles.statCaption} numberOfLines={1} ellipsizeMode="tail">
+        {caption}
+      </Text>
       <Text
-        style={styles.statLabel}
-        numberOfLines={expandLabel ? 2 : 1}
+        style={styles.statValue}
+        numberOfLines={valueLines}
         ellipsizeMode="tail"
       >
-        {label}
-      </Text>
-      <Text style={styles.statCaption} numberOfLines={1}>
-        {caption}
+        {value}
       </Text>
     </View>
   );
@@ -247,129 +267,149 @@ function StatItem({
 
 const styles = StyleSheet.create({
   card: {
-    marginHorizontal: 32,
-    marginBottom: 8,
-    padding: 16,
-    gap: 16,
-    borderRadius: 24,
-    backgroundColor: "rgba(18, 24, 38, 0.8)",
-    borderWidth: 1,
+    paddingTop: 14,
+    paddingHorizontal: 16,
+    gap: 10,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    backgroundColor: "#121826",
+    borderTopWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.08)",
   },
-  headerBlock: {
-    gap: 12,
+  sectionDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
   },
-  titleRow: {
+  topRow: {
     flexDirection: "row",
+    // justifyContent: "center",
     alignItems: "center",
     gap: 6,
-    minHeight: TITLE_CLOSE_SIZE,
   },
-  titleRowSide: {
-    width: TITLE_CLOSE_SIZE,
-    flexShrink: 0,
-  },
-  countryName: {
+  titleTextWrap: {
     flex: 1,
     minWidth: 0,
-    fontSize: TITLE_FONT_SIZE,
-    lineHeight: TITLE_CLOSE_SIZE,
+  },
+  countryName: {
+    fontSize: COUNTRY_NAME_FONT_SIZE,
+    lineHeight: 21,
     fontFamily: "Poppins-SemiBold",
     color: "#ffffff",
-    textAlign: "center",
   },
   closeButton: {
-    width: TITLE_CLOSE_SIZE,
-    height: TITLE_CLOSE_SIZE,
+    width: 32,
+    height: 32,
     flexShrink: 0,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: TITLE_CLOSE_SIZE / 2,
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
+  },
+  closeButtonPressed: {
+    opacity: 0.6,
   },
   metaRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 12,
   },
   flagWrap: {
-    width: FLAG_WIDTH,
-    height: FLAG_HEIGHT,
-    borderRadius: 10,
-    overflow: "hidden",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.06)",
-  },
-  statsColumn: {
-    flex: 1,
-    minWidth: 0,
-    justifyContent: "center",
-    minHeight: FLAG_HEIGHT,
+    flexShrink: 0,
+    marginTop: 1,
   },
   statsRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: STAT_COLUMN_GAP,
-  },
-  statItem: {
     flex: 1,
+    flexShrink: 1,
+    flexDirection: "row",
+    alignItems: "stretch",
+    minWidth: 0,
+  },
+  statDivider: {
+    width: 1,
+    flexShrink: 0,
+    alignSelf: "stretch",
+    marginHorizontal: 8,
+    backgroundColor: "rgba(255, 255, 255, 0.12)",
+  },
+  stat: {
     flexBasis: 0,
+    flexShrink: 1,
     minWidth: 0,
     gap: 2,
+    overflow: "hidden",
   },
-  statItemWide: {
-    flex: 1.85,
-    flexBasis: 0,
-    minWidth: 0,
+  statCaption: {
+    fontSize: 11,
+    lineHeight: 13,
+    fontFamily: "Poppins-Regular",
+    color: "#94a3b8",
   },
-  statLabel: {
+  statValue: {
+    fontSize: 14,
+    lineHeight: 17,
+    fontFamily: "Poppins-SemiBold",
+    color: "#ffffff",
+    flexShrink: 1,
+  },
+  factBlock: {
+    gap: 4,
+  },
+  factLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  factLabel: {
+    fontSize: 12,
+    fontFamily: "Poppins-Medium",
+    color: "#94a3b8",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  factText: {
+    fontSize: 14,
+    lineHeight: 19,
+    fontFamily: "Poppins-Regular",
+    color: "rgba(255, 255, 255, 0.9)",
+  },
+  factTextMuted: {
+    color: "#94a3b8",
+  },
+  actionStack: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    minHeight: 40,
+    borderRadius: 12,
+    backgroundColor: "#101828",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+    overflow: "hidden",
+  },
+  actionSegment: {
+    flex: 1,
+    minHeight: 40,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+  },
+  backSegment: {
+    flex: 0.85,
+    minWidth: 44,
+  },
+  actionDivider: {
+    width: 1,
+    alignSelf: "stretch",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+  },
+  actionLabel: {
     fontSize: 13,
     fontFamily: "Poppins-Medium",
     color: "#ffffff",
   },
-  statCaption: {
-    fontSize: 11,
-    fontFamily: "Poppins-Regular",
-    color: "#94a3b8",
-  },
-  aiBlock: {
-    gap: 8,
-    padding: 12,
-    borderRadius: 16,
-    backgroundColor: "rgba(255, 255, 255, 0.04)",
-  },
-  nextCountryButton: {
-    height: 48,
-    borderRadius: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.2)",
-    backgroundColor: "rgba(255, 255, 255, 0.04)",
-  },
-  nextCountryLabel: {
-    fontSize: 15,
-    fontFamily: "Poppins-SemiBold",
-    color: "#fbbf24",
-  },
-  exploreButton: {
-    height: 52,
-    borderRadius: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: "#fbbf24",
-  },
-  exploreLabel: {
-    fontSize: 16,
-    fontFamily: "Poppins-SemiBold",
-    color: "#0b132b",
+  actionLoading: {
+    opacity: 0.45,
   },
   pressed: {
-    opacity: 0.88,
+    opacity: 0.95,
+    backgroundColor: "#29303C",
   },
 });
