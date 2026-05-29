@@ -277,7 +277,10 @@ npx expo start
 
 After this prompt:
 
-1. `prompts/13-map-v2-3d-globe.md` — upgrade map canvas to interactive 3D globe
+1. Map v2 3D globe — implement in order (see `prompts/13-map-v2-3d-globe.md`):
+   - `prompts/13a-map-v2-globe-debug.md` — sphere, lights, orbit controls, fake pins
+   - `prompts/13b-map-v2-globe-data-pins.md` — `latlng` conversion + backend countries
+   - `prompts/13c-map-v2-globe-ux.md` — preview card, selection, random country, camera animation
 2. Saved countries screen (`prompt_material/saved-screen-ui.png`)
 3. Country detail route (if separate from Explore)
 4. Map chip filters backed by search/stats APIs (optional)

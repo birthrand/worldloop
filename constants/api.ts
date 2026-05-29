@@ -1,7 +1,9 @@
+import { resolveApiBaseUrl } from "@/lib/resolve-api-base-url";
+
 /**
  * Public backend base URL for the Expo app.
- * Set EXPO_PUBLIC_API_URL in `.env` (see `.env.example`).
- * On a physical device, use your machine's LAN IP instead of localhost.
+ *
+ * In dev, this follows Metro's host (see `lib/resolve-api-base-url.ts`).
+ * Override with `EXPO_PUBLIC_API_URL` for tunnels or production builds.
  */
-export const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001";
+export const API_BASE_URL = resolveApiBaseUrl();

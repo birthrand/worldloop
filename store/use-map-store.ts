@@ -1,8 +1,14 @@
 import { create } from "zustand";
 
+import { normalizeCountryRegion } from "@/lib/app-region";
 import { fetchMapCountries } from "@/lib/api";
-import { isValidLatLng } from "@/lib/map-country";
-import type { MapCountry } from "@/types/country";
+import { countryToMapCountry, isValidLatLng } from "@/lib/map-country";
+import {
+  useIdentityStore,
+  type SelectionSource,
+} from "@/store/use-identity-store";
+import type { Country, MapCountry } from "@/types/country";
+import type { MapPresentationIntent } from "@/types/map-presentation";
 
 export type MapFilterChip =
   | "all"
@@ -11,23 +17,68 @@ export type MapFilterChip =
   | "nature"
   | "history";
 
+export type MapMode = "2d" | "3d";
+
 type MapStatus = "idle" | "loading" | "error";
+
+export type GlobeCameraHandle = {
+  focusCountry: (country: MapCountry, duration?: number) => void;
+  focusLatLng: (
+    lat: number,
+    lng: number,
+    duration?: number,
+    targetDistance?: number,
+  ) => void;
+  resetCamera: () => void;
+  zoomBy: (direction: "in" | "out") => void;
+};
 
 type MapState = {
   countries: MapCountry[];
   status: MapStatus;
   error: string | null;
-  selectedCountry: MapCountry | null;
+  /** True after a successful full fetch from GET /map/countries (not a single injected country). */
+  mapCountriesFullyLoaded: boolean;
+  /** Set when opening Map from Explore/search; consumed once the map can fly the camera. */
+  pendingMapIntent: MapPresentationIntent | null;
   activeChip: MapFilterChip;
+  mapMode: MapMode;
+  globeCamera: GlobeCameraHandle | null;
   loadMapCountries: () => Promise<void>;
-  selectCountry: (name: string | null) => void;
+  focusCountryFromExternal: (
+    name: string,
+    fallback?: Country,
+    source?: Exclude<SelectionSource, null>,
+  ) => void;
+  clearPendingMapIntent: () => void;
   selectRandomCountry: () => MapCountry | null;
   setActiveChip: (chip: MapFilterChip) => void;
+  setMapMode: (mode: MapMode) => void;
+  toggleMapMode: () => void;
+  registerGlobeCamera: (handle: GlobeCameraHandle | null) => void;
+  focusCountryOnGlobe: (name: string, duration?: number) => void;
+  focusLatLngOnGlobe: (
+    lat: number,
+    lng: number,
+    duration?: number,
+    targetDistance?: number,
+  ) => void;
   getVisibleCountries: () => MapCountry[];
 };
 
+let mapCountriesLoadPromise: Promise<void> | null = null;
+
+function resolveMapCountry(
+  countries: MapCountry[],
+  name: string,
+): MapCountry | null {
+  return countries.find((c) => c.name === name) ?? null;
+}
+
 function withValidCoordinates(countries: MapCountry[]): MapCountry[] {
-  return countries.filter((c) => isValidLatLng(c.latlng));
+  return countries
+    .filter((c) => isValidLatLng(c.latlng))
+    .map((c) => normalizeCountryRegion(c));
 }
 
 /** Population chip: top 20% by population. Other chips are visual-only in v1. */
@@ -47,38 +98,70 @@ export const useMapStore = create<MapState>((set, get) => ({
   countries: [],
   status: "idle",
   error: null,
-  selectedCountry: null,
+  mapCountriesFullyLoaded: false,
+  pendingMapIntent: null,
   activeChip: "all",
+  mapMode: "2d",
+  globeCamera: null,
 
   loadMapCountries: async () => {
-    const { status } = get();
-    if (status === "loading") return;
-
-    set({ status: "loading", error: null });
-
-    try {
-      const { data } = await fetchMapCountries();
-      set({
-        countries: withValidCoordinates(data),
-        status: "idle",
-        error: null,
-      });
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to load map countries";
-      set({ status: "error", error: message });
-    }
-  },
-
-  selectCountry: (name) => {
-    if (!name) {
-      set({ selectedCountry: null });
+    if (get().mapCountriesFullyLoaded) {
       return;
     }
+    if (mapCountriesLoadPromise) {
+      return mapCountriesLoadPromise;
+    }
 
-    const country = get().countries.find((c) => c.name === name) ?? null;
-    set({ selectedCountry: country });
+    mapCountriesLoadPromise = (async () => {
+      set({ status: "loading", error: null });
+
+      try {
+        const { data } = await fetchMapCountries();
+        const nextCountries = withValidCoordinates(data);
+        set({
+          countries: nextCountries,
+          status: "idle",
+          error: null,
+          mapCountriesFullyLoaded: true,
+        });
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Failed to load map countries";
+        set({ status: "error", error: message });
+      } finally {
+        mapCountriesLoadPromise = null;
+      }
+    })();
+
+    return mapCountriesLoadPromise;
   },
+
+  focusCountryFromExternal: (name, fallback, source = "search") => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+
+    let country = resolveMapCountry(get().countries, trimmed);
+    let countries = get().countries;
+
+    if (!country && fallback) {
+      const injected = countryToMapCountry(fallback);
+      country = injected;
+      if (!countries.some((c) => c.name === injected.name)) {
+        countries = [...countries, injected];
+      }
+    }
+
+    set({
+      countries,
+      pendingMapIntent: {
+        countryName: trimmed,
+        mode: "focus",
+        source,
+      },
+    });
+  },
+
+  clearPendingMapIntent: () => set({ pendingMapIntent: null }),
 
   selectRandomCountry: () => {
     const visible = get().getVisibleCountries();
@@ -86,12 +169,44 @@ export const useMapStore = create<MapState>((set, get) => ({
 
     const pick = visible[Math.floor(Math.random() * visible.length)] ?? null;
     if (pick) {
-      set({ selectedCountry: pick });
+      set({
+        pendingMapIntent: {
+          countryName: pick.name,
+          mode: "focus",
+          source: "shuffle",
+        },
+      });
     }
     return pick;
   },
 
   setActiveChip: (chip) => set({ activeChip: chip }),
+
+  setMapMode: (mode) => set({ mapMode: mode }),
+
+  toggleMapMode: () =>
+    set((state) => ({
+      mapMode: state.mapMode === "3d" ? "2d" : "3d",
+    })),
+
+  registerGlobeCamera: (handle) => {
+    set({ globeCamera: handle });
+  },
+
+  focusCountryOnGlobe: (name, duration) => {
+    const country =
+      resolveMapCountry(get().countries, name) ??
+      (useIdentityStore.getState().activeCountry?.name === name
+        ? useIdentityStore.getState().activeCountry
+        : null);
+    if (!country) return;
+    get().globeCamera?.focusCountry(country, duration);
+  },
+
+  focusLatLngOnGlobe: (lat, lng, duration, targetDistance) => {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    get().globeCamera?.focusLatLng(lat, lng, duration, targetDistance);
+  },
 
   getVisibleCountries: () => {
     const { countries, activeChip } = get();

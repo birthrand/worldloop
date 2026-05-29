@@ -1,4 +1,5 @@
 import { env } from "../config/env.js";
+import { normalizeAppRegion } from "../lib/app-region.js";
 import { flagCdnUrlFromIso2 } from "../lib/flag-url.js";
 import { fetchJson, HttpError } from "../lib/http.js";
 import type { CountryBasic } from "../types/country.js";
@@ -12,6 +13,7 @@ type RestCountry = {
   name?: { common?: string };
   capital?: string[];
   region?: string;
+  subregion?: string;
   population?: number;
   cca2?: string;
   latlng?: number[];
@@ -28,10 +30,12 @@ function normalizeCountry(raw: RestCountry): CountryBasic | null {
   const cca2 = raw.cca2?.trim().toUpperCase();
   if (!cca2 || cca2.length !== 2) return null;
 
+  const apiRegion = raw.region ?? "Unknown";
+
   return {
     name,
     capital: raw.capital?.[0] ?? "N/A",
-    region: raw.region ?? "Unknown",
+    region: normalizeAppRegion(apiRegion, raw.subregion, name),
     population: raw.population ?? 0,
     cca2,
     flag: flagCdnUrlFromIso2(cca2),
@@ -72,7 +76,7 @@ async function fetchCountryFromApi(name: string): Promise<CountryBasic> {
 }
 
 async function fetchAllCountriesFromApi(): Promise<CountryBasic[]> {
-  const url = `${env.restCountriesBaseUrl}/all?fields=name,capital,region,population,cca2,latlng`;
+  const url = `${env.restCountriesBaseUrl}/all?fields=name,capital,region,subregion,population,cca2,latlng`;
   const data = await fetchJson<RestCountry[]>(url);
   return normalizeMany(data);
 }

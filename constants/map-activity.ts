@@ -1,14 +1,7 @@
 import type { MapCountry } from "@/types/country";
-
-import { TRENDING_COUNTRY_NAMES } from "@/constants/trending-countries";
-
-export type MapClusterActivity = "trending" | "rising" | "quiet";
+export type MapClusterActivity = "rising" | "quiet";
 
 export function getClusterActivity(countries: MapCountry[]): MapClusterActivity {
-  if (countries.some((c) => TRENDING_COUNTRY_NAMES.has(c.name))) {
-    return "trending";
-  }
-
   // Rising: cluster contains any country in the top 20% by population (within cluster).
   const sorted = [...countries].sort((a, b) => b.population - a.population);
   const topCount = Math.max(1, Math.ceil(sorted.length * 0.2));
@@ -23,14 +16,6 @@ export function getClusterActivity(countries: MapCountry[]): MapClusterActivity 
 
 export function getActivityVisual(activity: MapClusterActivity) {
   switch (activity) {
-    case "trending":
-      return {
-        borderColor: "rgba(239,68,68,0.75)",
-        bgColor: "rgba(239,68,68,0.16)",
-        textColor: "#fb7185",
-        ringColor: "rgba(239,68,68,0.9)",
-        icon: "flame" as const,
-      };
     case "rising":
       return {
         borderColor: "rgba(251,191,36,0.8)",
