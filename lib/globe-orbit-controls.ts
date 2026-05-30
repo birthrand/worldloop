@@ -4,6 +4,7 @@
  * pointer events on the GL canvas and breaks RN touch tracking.
  */
 import { invalidate } from "@react-three/fiber/native";
+import type { GestureResponderEvent, LayoutChangeEvent } from "react-native";
 import {
   Matrix4,
   OrthographicCamera,
@@ -13,7 +14,6 @@ import {
   Vector2,
   Vector3,
 } from "three";
-import type { GestureResponderEvent, LayoutChangeEvent } from "react-native";
 
 import { MAP_TAP_DRAG_THRESHOLD_PX } from "@/constants/map-continent-focus";
 
@@ -505,15 +505,9 @@ export function createGlobeOrbitControls() {
       onResponderMove(event: GestureResponderEvent) {
         trackTouchMove(event);
         const touchCount = event.nativeEvent.touches.length;
-        if (
-          internals.state === STATE.ROTATE &&
-          touchCount >= 2
-        ) {
+        if (internals.state === STATE.ROTATE && touchCount >= 2) {
           functions.onTouchStart(event);
-        } else if (
-          internals.state === STATE.DOLLY &&
-          touchCount === 1
-        ) {
+        } else if (internals.state === STATE.DOLLY && touchCount === 1) {
           functions.onTouchStart(event);
         }
 

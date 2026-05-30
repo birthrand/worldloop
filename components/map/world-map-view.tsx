@@ -115,6 +115,8 @@ type WorldMapViewProps = {
   lockUserGestures?: boolean;
   suspendMarkerSnapshot?: boolean;
   markerRefreshToken?: number;
+  /** When false (3D mode), skip flat highlight layers — globe renders them. */
+  showFocusLayers?: boolean;
 };
 
 export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
@@ -139,6 +141,7 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
       lockUserGestures = false,
       suspendMarkerSnapshot = false,
       markerRefreshToken = 0,
+      showFocusLayers = true,
     },
     ref,
   ) {
@@ -218,7 +221,7 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
     const showWorldBoundaries =
       showBoundaryLines && !focusedRegion && !selectedName;
 
-    const highlightCountryName = selectedName ?? focusTransitionName ?? null;
+    const highlightCountryName = selectedName;
     const showCountryHighlight =
       !!highlightCountryName && boundaryStyle.countryHighlightEnabled;
     const showBoundaryStrokes =
@@ -319,22 +322,24 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
         showsMyLocationButton={false}
         mapType={Platform.OS === "android" ? "standard" : "hybridFlyover"}
       >
-        <MapContinentFocusLayers
-          focusedRegion={continentOverlayRegion}
-          selectedCountryName={selectedName}
-          previewRegion={previewRegion}
-          allPolygons={allCountryBoundaries}
-          boundaryCountries={boundaryCountries}
-        />
+        {showFocusLayers ? (
+          <MapContinentFocusLayers
+            focusedRegion={continentOverlayRegion}
+            selectedCountryName={selectedName}
+            previewRegion={previewRegion}
+            allPolygons={allCountryBoundaries}
+            boundaryCountries={boundaryCountries}
+          />
+        ) : null}
         <MapCountryFocusLayers
-          selectedCountryName={selectedName}
+          selectedCountryName={showFocusLayers ? selectedName : null}
           focusTransitionName={focusTransitionName}
           allPolygons={allCountryBoundaries}
         />
-        {showBoundaryStrokes
+        {showFocusLayers && showBoundaryStrokes && !showCountryHighlight
           ? countryBoundaries.map((polygon) => (
               <Polygon
-                key={`${polygon.id}-${boundaryRenderKey}-${boundaryStyleRevision}`}
+                key={`country-boundary-${polygon.id}-${boundaryRenderKey}-${boundaryStyleRevision}`}
                 coordinates={polygon.coordinates}
                 holes={polygon.holes}
                 tappable={boundariesTappable}
@@ -351,10 +356,13 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
             ))
           : null}
         {countries.map((country) => {
-          const isSelected = selectedName === country.name;
-          const isFocusTransitioning = focusTransitionName === country.name;
+          const focusCountryName = selectedName ?? focusTransitionName ?? null;
+          const isSelected = focusCountryName === country.name;
+          const isFocusTransitioning =
+            !!focusTransitionName &&
+            focusTransitionName === country.name &&
+            selectedName !== country.name;
           const isHighlighted = isSelected || isFocusTransitioning;
-          const focusedPinName = selectedName ?? focusTransitionName;
 
           return (
             <MapCountryMarker
@@ -364,8 +372,8 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
               focusTransitioning={isFocusTransitioning}
               deemphasized={
                 !!focusedRegion &&
-                !!focusedPinName &&
-                focusedPinName !== country.name
+                !!focusCountryName &&
+                focusCountryName !== country.name
               }
               displayMode={countryMarkerMode}
               presentation={markerPresentation}

@@ -71,7 +71,7 @@ export function GlobeBoundaryLines({
   const showBoundaryLines = useMapUiStore((s) => s.showBoundaryLines);
   const boundaryStyle = useMapUiStore((s) => s.boundaryStyle);
 
-  const highlightCountryName = selectedName ?? focusTransitionName ?? null;
+  const highlightCountryName = selectedName;
   const showCountryHighlight =
     !!highlightCountryName && boundaryStyle.countryHighlightEnabled;
   const showBoundaryStrokes =

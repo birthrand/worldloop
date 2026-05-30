@@ -7,6 +7,8 @@ export const CLIENT_CACHE_KEYS = {
   feedFirstPage: "cache:feed:countries:cursor=all",
   feedRegion: (region: string) =>
     `cache:feed:region:${region.trim().toLowerCase()}`,
+  search: (query: string, region: string) =>
+    `cache:search:${query.trim().toLowerCase()}:${region.trim().toLowerCase()}`,
 } as const;
 
 /** Align with prompts-worldloop TTLs where it matters. */
@@ -15,4 +17,5 @@ export const CLIENT_CACHE_TTL = {
   countryDetail: 7 * 24 * 60 * 60, // 7d — AI + images can change
   feedFirstPage: 24 * 60 * 60, // 1d — feed order is shuffled server-side
   feedRegion: 7 * 24 * 60 * 60,
+  search: 7 * 24 * 60 * 60, // 7d — match backend search TTL
 } as const;

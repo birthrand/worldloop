@@ -1,17 +1,12 @@
 import { fetchFeedCountries, fetchSearchCountries } from "@/lib/api";
 import {
   filterCountriesForExploreRegion,
-  NORTH_AMERICA,
-  SOUTH_AMERICA,
+  isSplitAmericasRegion,
 } from "@/lib/app-region";
 import type { Country } from "@/types/country";
 
 const FEED_PAGE_LIMIT = 30;
 const MAX_FEED_PAGES = 15;
-
-function isSplitAmericasRegion(region: string): boolean {
-  return region === NORTH_AMERICA || region === SOUTH_AMERICA;
-}
 
 async function fetchAllFeedCountries(): Promise<Country[]> {
   const all: Country[] = [];

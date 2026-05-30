@@ -40,6 +40,7 @@ import {
   GLOBE_CROSSFADE_MS,
   MAP_DIM_HOLD_MS,
   shouldShowFlatMapMarkers,
+  shouldShowFlatMapOverlays,
   shouldShowGlobeLayer,
   type MapViewTransition,
 } from "@/lib/map-view-transition";
@@ -141,6 +142,7 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
     const isGlobeInteractive =
       mapMode === "3d" && mapViewTransition === "ready";
     const showFlatMarkers = shouldShowFlatMapMarkers(mapMode);
+    const showFlatOverlays = shouldShowFlatMapOverlays(mapMode);
 
     useImperativeHandle(
       ref,
@@ -344,6 +346,7 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
             ref={mapRef}
             {...mapProps}
             countries={showFlatMarkers ? countries : []}
+            showFocusLayers={showFlatOverlays}
           />
           <Animated.View
             pointerEvents="none"

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Easing,
+  cancelAnimation,
   runOnJS,
   useAnimatedReaction,
   useSharedValue,
@@ -26,6 +27,8 @@ const countriesGeoJson = require("@/assets/geo/ne_50m_admin_0_countries/ne_50m_a
 /** Limit opacity updates during fades — per-frame setState can overload the GL thread. */
 const BLEND_REACTION_STEPS = 8;
 
+const COUNTRY_FOCUS_SLOT_COUNT = 24;
+
 function isRenderablePolygon(polygon: CountryBoundaryPolygon): boolean {
   if (polygon.coordinates.length < 3) return false;
 
@@ -37,20 +40,22 @@ function isRenderablePolygon(polygon: CountryBoundaryPolygon): boolean {
   );
 }
 
-function GlobeCountryFocusFillMesh({
+function GlobeCountryFocusSlotMesh({
   geometry,
   color,
   opacity,
 }: {
-  geometry: THREE.BufferGeometry;
+  geometry: THREE.BufferGeometry | null;
   color: THREE.Color;
   opacity: number;
 }) {
   useEffect(() => {
-    return () => geometry.dispose();
+    return () => {
+      geometry?.dispose();
+    };
   }, [geometry]);
 
-  if (opacity <= 0.001) return null;
+  if (!geometry || opacity <= 0.001) return null;
 
   return (
     <mesh geometry={geometry}>
@@ -72,20 +77,20 @@ type GlobeCountryFocusLayersProps = {
 
 export function GlobeCountryFocusLayers({
   selectedCountryName,
-  focusTransitionName = null,
+  focusTransitionName: _focusTransitionName = null,
 }: GlobeCountryFocusLayersProps) {
   const boundaryStyle = useMapUiStore((s) => s.boundaryStyle);
-  const activeName = selectedCountryName ?? focusTransitionName;
-  const blend = useSharedValue(0);
+  const highlightName = selectedCountryName;
+  const blend = useSharedValue(highlightName ? 1 : 0);
   const lastBlendStep = useSharedValue(-1);
-  const [displayName, setDisplayName] = useState<string | null>(null);
-  const [renderBlend, setRenderBlend] = useState(0);
+  const [renderBlend, setRenderBlend] = useState(highlightName ? 1 : 0);
 
   const allCountryBoundaries = getCountryBoundaryPolygons(countriesGeoJson);
 
   useEffect(() => {
-    if (activeName) {
-      setDisplayName(activeName);
+    cancelAnimation(blend);
+
+    if (highlightName) {
       blend.value = withTiming(1, {
         duration: MAP_COUNTRY_FOCUS_FADE_MS,
         easing: Easing.inOut(Easing.ease),
@@ -93,19 +98,11 @@ export function GlobeCountryFocusLayers({
       return;
     }
 
-    blend.value = withTiming(
-      0,
-      {
-        duration: MAP_COUNTRY_FOCUS_FADE_MS,
-        easing: Easing.inOut(Easing.ease),
-      },
-      (finished) => {
-        if (finished) {
-          runOnJS(setDisplayName)(null);
-        }
-      },
-    );
-  }, [activeName, blend]);
+    blend.value = withTiming(0, {
+      duration: MAP_COUNTRY_FOCUS_FADE_MS,
+      easing: Easing.inOut(Easing.ease),
+    });
+  }, [blend, highlightName]);
 
   useAnimatedReaction(
     () => blend.value,
@@ -120,13 +117,15 @@ export function GlobeCountryFocusLayers({
   );
 
   const countryPolygons = useMemo(() => {
-    if (!displayName) return [];
+    if (!highlightName || renderBlend <= 0.001) return [];
     return filterBoundaryPolygonsByMapContext(allCountryBoundaries, {
-      selectedCountryName: displayName,
+      selectedCountryName: highlightName,
       focusedRegion: null,
       countries: [],
-    }).filter(isRenderablePolygon);
-  }, [allCountryBoundaries, displayName]);
+    })
+      .filter(isRenderablePolygon)
+      .slice(0, COUNTRY_FOCUS_SLOT_COUNT);
+  }, [allCountryBoundaries, highlightName, renderBlend]);
 
   const fill = useMemo(
     () =>
@@ -141,21 +140,16 @@ export function GlobeCountryFocusLayers({
     [countryPolygons],
   );
 
-  if (
-    !boundaryStyle.countryHighlightEnabled ||
-    !displayName ||
-    renderBlend <= 0.001 ||
-    fillMeshes.length === 0
-  ) {
+  if (!boundaryStyle.countryHighlightEnabled) {
     return null;
   }
 
   return (
     <group>
-      {fillMeshes.map((mesh) => (
-        <GlobeCountryFocusFillMesh
-          key={`globe-country-focus-${mesh.id}`}
-          geometry={mesh.geometry}
+      {Array.from({ length: COUNTRY_FOCUS_SLOT_COUNT }, (_, slotIndex) => (
+        <GlobeCountryFocusSlotMesh
+          key={`globe-country-focus-slot-${slotIndex}`}
+          geometry={fillMeshes[slotIndex]?.geometry ?? null}
           color={fill.threeColor}
           opacity={fill.opacity}
         />

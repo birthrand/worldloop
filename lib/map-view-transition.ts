@@ -50,3 +50,8 @@ export function isFlatMapUi(
 export function shouldShowFlatMapMarkers(mapMode: "2d" | "3d"): boolean {
   return mapMode === "2d";
 }
+
+/** Continent/country highlight fills — flat map only; globe renders its own GL layers. */
+export function shouldShowFlatMapOverlays(mapMode: "2d" | "3d"): boolean {
+  return mapMode === "2d";
+}

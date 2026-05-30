@@ -3,6 +3,7 @@ import type { Region } from "react-native-maps";
 import {
   regionForClusterFocus,
   regionForMapCountry,
+  regionForWorldViewCountry,
   WORLD_INITIAL_REGION,
 } from "@/constants/map-regions";
 import type { FlightPhase } from "@/hooks/use-map-flight";
@@ -14,6 +15,8 @@ import type { MapCountry } from "@/types/country";
 const WORLD_PHASE_MS = 700;
 const CONTINENT_PHASE_MS = 600;
 const COUNTRY_PHASE_MS = 750;
+/** Explore → Map: one pan at world zoom to the country's coordinates. */
+const EXPLORE_WORLD_PAN_MS = 900;
 /** Direct map taps are already near the target — snap in faster. */
 const COUNTRY_TAP_MS = 520;
 /** Preview shuffle — one continuous retarget from the current camera. */
@@ -34,6 +37,8 @@ export type DiscoveryFlightParams = {
   source: Exclude<SelectionSource, null>;
   /** Opening world pan — included for cinematic programmatic discovery only. */
   includeWorld: boolean;
+  /** Focus keeps continent framing; preview zooms to country detail. */
+  mode?: "focus" | "preview";
 };
 
 /**
@@ -43,15 +48,29 @@ export type DiscoveryFlightParams = {
  * Map tap and preview shuffle retarget in one continuous country-zoom flight from
  * the current viewport. Random FAB uses the same pattern at continent zoom.
  *
- * Explore runs continent → country; search may prepend a world pan when `includeWorld`.
+ * Explore → Map pans at world zoom only; search may prepend a world pan then continent → country.
  */
 export function buildDiscoveryPhases({
   pick,
   cluster,
   source,
   includeWorld,
+  mode = "focus",
 }: DiscoveryFlightParams): FlightPhase[] {
   const countryRegion = regionForMapCountry(pick);
+  const continentOnCountry = regionForMapCountry(
+    pick,
+    REGION_FOCUS_INITIAL_DELTA,
+  );
+
+  if (source === "explore") {
+    return [
+      {
+        region: regionForWorldViewCountry(pick),
+        duration: EXPLORE_WORLD_PAN_MS,
+      },
+    ];
+  }
 
   if (source === "fab") {
     // Continent zoom, centered on the picked country (not the cluster centroid).
@@ -64,9 +83,9 @@ export function buildDiscoveryPhases({
   }
 
   if (COUNTRY_RETARGET_SOURCES.has(source)) {
-    const duration =
-      source === "mapTap" ? COUNTRY_TAP_MS : COUNTRY_RETARGET_MS;
-    return [{ region: countryRegion, duration }];
+    const duration = source === "mapTap" ? COUNTRY_TAP_MS : COUNTRY_RETARGET_MS;
+    const region = mode === "preview" ? countryRegion : continentOnCountry;
+    return [{ region, duration }];
   }
 
   const continentRegion: Region = cluster
@@ -78,6 +97,8 @@ export function buildDiscoveryPhases({
     phases.push({ region: WORLD_INITIAL_REGION, duration: WORLD_PHASE_MS });
   }
   phases.push({ region: continentRegion, duration: CONTINENT_PHASE_MS });
-  phases.push({ region: countryRegion, duration: COUNTRY_PHASE_MS });
+  if (mode === "preview") {
+    phases.push({ region: countryRegion, duration: COUNTRY_PHASE_MS });
+  }
   return phases;
 }

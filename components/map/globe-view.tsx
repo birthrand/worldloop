@@ -12,6 +12,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type RefObject,
 } from "react";
 import { StyleSheet, View } from "react-native";
 import * as THREE from "three";
@@ -36,10 +37,17 @@ import {
   type GlobeOrbitControls,
 } from "@/lib/globe-orbit-controls";
 import {
+  GLOBE_CAMERA_VIEW_DIRECTION,
+  globeQuaternionDeltaForCameraOrbit,
+  latLngFromWorldNormal,
+  quaternionForLatLngFacingCamera,
+  viewCenterLatLngFromGlobeQuaternion,
+} from "@/lib/globe-rotation";
+import {
   projectLatLngToScreen,
   type GlobeScreenPosition,
 } from "@/lib/globe-screen-project";
-import { latLngToVector3, vector3ToLatLng } from "@/lib/latlng-to-sphere";
+import { latLngToVector3 } from "@/lib/latlng-to-sphere";
 import { useGlobeTexture } from "@/lib/load-globe-texture";
 import type { MapCluster } from "@/lib/map-clusters";
 import { getMapDisplayLatLng, isValidLatLng } from "@/lib/map-country";
@@ -84,9 +92,9 @@ const INITIAL_CAMERA_POSITION = latLngToVector3(
   DEFAULT_CAMERA_DISTANCE,
 );
 
-type CameraFlight = {
-  fromDir: THREE.Vector3;
-  toDir: THREE.Vector3;
+type GlobeRotationFlight = {
+  fromQuat: THREE.Quaternion;
+  toQuat: THREE.Quaternion;
   fromDistance: number;
   toDistance: number;
   elapsed: number;
@@ -98,27 +106,10 @@ function easeInOutCubic(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
-const SLERP_REFERENCE = new THREE.Vector3(0, 0, 1);
-const slerpScratchDir = new THREE.Vector3();
-const slerpScratchQuatA = new THREE.Quaternion();
-const slerpScratchQuatB = new THREE.Quaternion();
-const slerpScratchQuat = new THREE.Quaternion();
-
-function slerpUnitVectors(
-  from: THREE.Vector3,
-  to: THREE.Vector3,
-  alpha: number,
-  target: THREE.Vector3,
-): THREE.Vector3 {
-  slerpScratchQuatA.setFromUnitVectors(SLERP_REFERENCE, from);
-  slerpScratchQuatB.setFromUnitVectors(SLERP_REFERENCE, to);
-  slerpScratchQuat.slerpQuaternions(
-    slerpScratchQuatA,
-    slerpScratchQuatB,
-    alpha,
-  );
-  return target.copy(SLERP_REFERENCE).applyQuaternion(slerpScratchQuat);
-}
+const flightScratchQuat = new THREE.Quaternion();
+const orbitPrevDir = new THREE.Vector3();
+const orbitNextDir = new THREE.Vector3();
+const orbitDeltaQuat = new THREE.Quaternion();
 
 /** Fires once after the GL canvas renders its first frame. */
 function GlobePaintNotifier({ onPainted }: { onPainted: () => void }) {
@@ -141,15 +132,26 @@ type LatLngProjector = (
 function GlobeCoordinateProjector({
   layoutSize,
   onReady,
+  globeQuaternionRef,
 }: {
   layoutSize: { width: number; height: number };
   onReady: (project: LatLngProjector) => void;
+  globeQuaternionRef: RefObject<THREE.Quaternion>;
 }) {
   const { camera } = useThree();
 
   useEffect(() => {
-    onReady((lat, lng) => projectLatLngToScreen(lat, lng, camera, layoutSize));
-  }, [camera, layoutSize, onReady]);
+    onReady((lat, lng) =>
+      projectLatLngToScreen(
+        lat,
+        lng,
+        camera,
+        layoutSize,
+        undefined,
+        globeQuaternionRef.current ?? undefined,
+      ),
+    );
+  }, [camera, globeQuaternionRef, layoutSize, onReady]);
 
   return null;
 }
@@ -197,6 +199,8 @@ function GlobeScene({
 }: GlobeSceneProps) {
   const texture = useGlobeTexture();
   const { camera } = useThree();
+  const globeGroupRef = useRef<THREE.Group>(null);
+  const globeQuaternionRef = useRef(new THREE.Quaternion());
   const continentSinglePinActive =
     !!focusedRegion && (!!selectedName || !!focusTransitionName);
 
@@ -213,30 +217,42 @@ function GlobeScene({
         return;
       }
       event.stopPropagation();
-      const normal = event.point.clone().normalize();
-      const latitude = THREE.MathUtils.radToDeg(Math.asin(normal.y));
-      const thetaDeg = THREE.MathUtils.radToDeg(
-        Math.atan2(normal.z, -normal.x),
+      const globe = globeGroupRef.current;
+      if (!globe) return;
+      const [latitude, longitude] = latLngFromWorldNormal(
+        event.point,
+        globe.quaternion,
       );
-      const longitude = THREE.MathUtils.euclideanModulo(thetaDeg, 360) - 180;
       onGlobeSurfacePress({ latitude, longitude });
     },
     [controls.functions, onGlobeSurfacePress],
   );
 
-  const flightRef = useRef<CameraFlight | null>(null);
+  const flightRef = useRef<GlobeRotationFlight | null>(null);
   const cameraDistanceRef = useRef(DEFAULT_CAMERA_DISTANCE);
   const onCameraViewChangeRef = useRef(onCameraViewChange);
   onCameraViewChangeRef.current = onCameraViewChange;
   const lastCameraViewKeyRef = useRef("");
 
+  const syncFixedCamera = useCallback(() => {
+    const distance = cameraDistanceRef.current;
+    camera.position.copy(GLOBE_CAMERA_VIEW_DIRECTION).multiplyScalar(distance);
+    camera.lookAt(controls.scope.target);
+  }, [camera, controls.scope.target]);
+
+  const syncGlobeQuaternionRef = useCallback(() => {
+    const globe = globeGroupRef.current;
+    if (globe) {
+      globeQuaternionRef.current.copy(globe.quaternion);
+    }
+  }, []);
+
   const emitCameraView = useCallback(() => {
-    const distance = camera.position.length();
-    const [centerLat, centerLng] = vector3ToLatLng(
-      camera.position.x,
-      camera.position.y,
-      camera.position.z,
-    );
+    const distance = cameraDistanceRef.current;
+    const globe = globeGroupRef.current;
+    const [centerLat, centerLng] = globe
+      ? viewCenterLatLngFromGlobeQuaternion(globe.quaternion)
+      : ([0, 0] as [number, number]);
     const zoomTier = resolveGlobeZoomTier(distance);
     const key = `${zoomTier}:${distance.toFixed(2)}:${centerLat.toFixed(1)}:${centerLng.toFixed(1)}`;
     if (key === lastCameraViewKeyRef.current) return;
@@ -247,7 +263,7 @@ function GlobeScene({
       centerLng,
       zoomTier,
     });
-  }, [camera]);
+  }, []);
 
   const [visibleCirclePinNames, setVisibleCirclePinNames] = useState<
     Set<string>
@@ -280,24 +296,22 @@ function GlobeScene({
   const focusLatLng = useCallback(
     (lat: number, lng: number, duration = 650, targetDistance?: number) => {
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+      const globe = globeGroupRef.current;
+      if (!globe) return;
 
-      const toDir = new THREE.Vector3(
-        ...latLngToVector3(lat, lng, 1),
-      ).normalize();
-      const fromDir = camera.position.clone().normalize();
       const fromDistance = cameraDistanceRef.current;
       const toDistance = targetDistance ?? fromDistance;
 
       flightRef.current = {
-        fromDir,
-        toDir,
+        fromQuat: globe.quaternion.clone(),
+        toQuat: quaternionForLatLngFacingCamera(lat, lng),
         fromDistance,
         toDistance,
         elapsed: 0,
         duration: duration / 1000,
       };
     },
-    [camera],
+    [],
   );
 
   const focusCountry = useCallback(
@@ -310,10 +324,12 @@ function GlobeScene({
   );
 
   const resetCamera = useCallback(() => {
-    const toDir = new THREE.Vector3(...INITIAL_CAMERA_POSITION).normalize();
+    const globe = globeGroupRef.current;
+    if (!globe) return;
+
     flightRef.current = {
-      fromDir: camera.position.clone().normalize(),
-      toDir,
+      fromQuat: globe.quaternion.clone(),
+      toQuat: new THREE.Quaternion(),
       fromDistance: cameraDistanceRef.current,
       toDistance: DEFAULT_CAMERA_DISTANCE,
       elapsed: 0,
@@ -321,8 +337,8 @@ function GlobeScene({
     };
     cameraDistanceRef.current = DEFAULT_CAMERA_DISTANCE;
     controls.scope.target.set(0, GLOBE_VIEW_TARGET_Y, 0);
-    camera.lookAt(controls.scope.target);
-  }, [camera, controls.scope.target]);
+    syncFixedCamera();
+  }, [controls.scope.target, syncFixedCamera]);
 
   const zoomBy = useCallback(
     (direction: "in" | "out") => {
@@ -335,11 +351,11 @@ function GlobeScene({
         MAX_CAMERA_DISTANCE,
       );
       cameraDistanceRef.current = nextDistance;
-
-      const directionVector = camera.position.clone().normalize();
-      camera.position.copy(directionVector.multiplyScalar(nextDistance));
+      syncFixedCamera();
+      syncGlobeQuaternionRef();
+      emitCameraView();
     },
-    [camera],
+    [emitCameraView, syncFixedCamera, syncGlobeQuaternionRef],
   );
 
   useEffect(() => {
@@ -351,7 +367,7 @@ function GlobeScene({
   useEffect(() => {
     controls.scope.camera = camera as THREE.PerspectiveCamera;
     controls.scope.target.set(0, GLOBE_VIEW_TARGET_Y, 0);
-    camera.lookAt(controls.scope.target);
+    syncFixedCamera();
     controls.scope.enablePan = false;
     controls.scope.dampingFactor = 0.05;
     controls.scope.rotateSpeed = 0.9;
@@ -359,14 +375,15 @@ function GlobeScene({
     controls.scope.minZoom = MIN_CAMERA_DISTANCE;
     controls.scope.maxZoom = MAX_CAMERA_DISTANCE;
     controls.scope.onChange = () => {
-      const distance = camera.position.length();
-      cameraDistanceRef.current = distance;
+      cameraDistanceRef.current = camera.position.distanceTo(
+        controls.scope.target,
+      );
       emitCameraView();
     };
     controls.scope.onStart = () => {
       flightRef.current = null;
     };
-  }, [camera, controls.scope, emitCameraView]);
+  }, [camera, controls.scope, emitCameraView, syncFixedCamera]);
 
   useEffect(() => {
     const handle: GlobeCameraHandle = {
@@ -381,43 +398,57 @@ function GlobeScene({
   }, [focusCountry, focusLatLng, onReady, resetCamera, zoomBy]);
 
   useFrame((_, delta) => {
+    const globe = globeGroupRef.current;
     const flight = flightRef.current;
 
-    if (flight) {
+    if (flight && globe) {
       controls.scope.enabled = false;
       flight.elapsed += delta;
       const progress = Math.min(flight.elapsed / flight.duration, 1);
       const eased = easeInOutCubic(progress);
 
-      // Slerp direction at fixed radius — linear lerp dips toward the globe center
-      // and reads as zoom-in/out while panning.
-      slerpUnitVectors(flight.fromDir, flight.toDir, eased, slerpScratchDir);
-      const distance = THREE.MathUtils.lerp(
+      flightScratchQuat.slerpQuaternions(flight.fromQuat, flight.toQuat, eased);
+      globe.quaternion.copy(flightScratchQuat);
+
+      cameraDistanceRef.current = THREE.MathUtils.lerp(
         flight.fromDistance,
         flight.toDistance,
         eased,
       );
-      cameraDistanceRef.current = distance;
-      camera.position.copy(slerpScratchDir.multiplyScalar(distance));
-      camera.lookAt(controls.scope.target);
+      syncFixedCamera();
+      syncGlobeQuaternionRef();
 
       if (progress >= 1) {
         flightRef.current = null;
         cameraDistanceRef.current = flight.toDistance;
         controls.scope.enabled = !lockUserGestures;
-        controls.functions.update();
         emitCameraView();
       }
       return;
     }
 
     controls.scope.enabled = !lockUserGestures;
-    controls.functions.update();
 
-    const distance = camera.position.length();
-    if (Math.abs(distance - cameraDistanceRef.current) > 0.01) {
-      cameraDistanceRef.current = distance;
-      emitCameraView();
+    if (globe) {
+      orbitPrevDir.copy(camera.position).sub(controls.scope.target).normalize();
+      controls.functions.update();
+      orbitNextDir.copy(camera.position).sub(controls.scope.target).normalize();
+
+      if (orbitPrevDir.angleTo(orbitNextDir) > 0.0001) {
+        globe.quaternion.premultiply(
+          globeQuaternionDeltaForCameraOrbit(orbitPrevDir, orbitNextDir),
+        );
+      }
+
+      const distance = camera.position.distanceTo(controls.scope.target);
+      if (Math.abs(distance - cameraDistanceRef.current) > 0.01) {
+        cameraDistanceRef.current = distance;
+        emitCameraView();
+      }
+      syncFixedCamera();
+      syncGlobeQuaternionRef();
+    } else {
+      controls.functions.update();
     }
   });
 
@@ -431,96 +462,104 @@ function GlobeScene({
       <ambientLight intensity={3} />
       <directionalLight position={[5, 3, 5]} intensity={2} />
 
-      <mesh>
-        <sphereGeometry args={[GLOBE_RADIUS, 64, 64]} />
-        <meshStandardMaterial
-          map={texture ?? undefined}
-          color={texture ? "#ffffff" : "#1a1a2e"}
-          emissive={texture ? "#000000" : "#3d3520"}
-          emissiveIntensity={texture ? 0 : 0.12}
-          roughness={0.85}
-          metalness={0.05}
+      <group ref={globeGroupRef}>
+        <mesh>
+          <sphereGeometry args={[GLOBE_RADIUS, 64, 64]} />
+          <meshStandardMaterial
+            map={texture ?? undefined}
+            color={texture ? "#ffffff" : "#1a1a2e"}
+            emissive={texture ? "#000000" : "#3d3520"}
+            emissiveIntensity={texture ? 0 : 0.12}
+            roughness={0.85}
+            metalness={0.05}
+          />
+        </mesh>
+        <mesh onPointerDown={handleGlobeSurfacePress}>
+          <sphereGeometry args={[GLOBE_RADIUS * 1.01, 64, 64]} />
+          <meshBasicMaterial
+            transparent
+            opacity={0}
+            depthWrite={false}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+
+        <GlobeContinentFocusLayers
+          focusedRegion={focusedRegion}
+          previewRegion={previewRegion}
+          selectedCountryName={selectedName}
+          boundaryCountries={boundaryCountries}
         />
-      </mesh>
-      <mesh
-        // onClick={handleGlobeSurfacePress}
-        onPointerDown={handleGlobeSurfacePress}
-      >
-        <sphereGeometry args={[GLOBE_RADIUS * 1.01, 64, 64]} />
-        <meshBasicMaterial
-          transparent
-          opacity={0}
-          depthWrite={false}
-          side={THREE.DoubleSide}
+
+        <GlobeCountryFocusLayers
+          selectedCountryName={selectedName}
+          focusTransitionName={focusTransitionName}
         />
-      </mesh>
 
-      <GlobeContinentFocusLayers
-        focusedRegion={focusedRegion}
-        previewRegion={previewRegion}
-        selectedCountryName={selectedName}
-        boundaryCountries={boundaryCountries}
-      />
+        <GlobeBoundaryLines
+          boundaryCountries={boundaryCountries}
+          selectedName={selectedName}
+          focusTransitionName={focusTransitionName}
+          focusedRegion={focusedRegion}
+        />
 
-      <GlobeCountryFocusLayers
-        selectedCountryName={selectedName}
-        focusTransitionName={focusTransitionName}
-      />
-
-      <GlobeBoundaryLines
-        boundaryCountries={boundaryCountries}
-        selectedName={selectedName}
-        focusTransitionName={focusTransitionName}
-        focusedRegion={focusedRegion}
-      />
+        {showGlobePins
+          ? countries.map((country) => {
+              if (!isValidLatLng(country.latlng)) return null;
+              const focusCountryName =
+                selectedName ?? focusTransitionName ?? null;
+              const isSelected = focusCountryName === country.name;
+              const isFocusTransitioning =
+                !!focusTransitionName &&
+                focusTransitionName === country.name &&
+                selectedName !== country.name;
+              const keepVisible = continentSinglePinActive
+                ? isSelected || isFocusTransitioning
+                : isSelected ||
+                  isFocusTransitioning ||
+                  visibleCirclePinNames.has(country.name);
+              if (!keepVisible) {
+                return null;
+              }
+              const [lat, lng] = getMapDisplayLatLng(country);
+              return (
+                <GlobeCountryPin
+                  key={country.name}
+                  country={country}
+                  position={latLngToVector3(lat, lng, PIN_RADIUS)}
+                  isSelected={isSelected}
+                  isFocusTransitioning={isFocusTransitioning}
+                  isDeemphasized={
+                    continentSinglePinActive &&
+                    !isSelected &&
+                    !isFocusTransitioning
+                  }
+                  onPress={handlePinPress}
+                />
+              );
+            })
+          : null}
+      </group>
 
       <GlobeCoordinateProjector
         layoutSize={layoutSize}
         onReady={onProjectorReady}
+        globeQuaternionRef={globeQuaternionRef}
       />
 
       <GlobeLabelProjector
         labels={visibleLabels}
         onPositions={onLabelPositions}
+        globeQuaternionRef={globeQuaternionRef}
       />
 
       {showGlobePins ? (
         <GlobePinProjector
           countries={countries}
           onPositions={handlePinPositions}
+          globeQuaternionRef={globeQuaternionRef}
         />
       ) : null}
-
-      {showGlobePins
-        ? countries.map((country) => {
-            if (!isValidLatLng(country.latlng)) return null;
-            const isSelected = selectedName === country.name;
-            const isFocusTransitioning = focusTransitionName === country.name;
-            const keepVisible =
-              isSelected ||
-              isFocusTransitioning ||
-              visibleCirclePinNames.has(country.name);
-            if (!keepVisible) {
-              return null;
-            }
-            const [lat, lng] = getMapDisplayLatLng(country);
-            return (
-              <GlobeCountryPin
-                key={country.name}
-                country={country}
-                position={latLngToVector3(lat, lng, PIN_RADIUS)}
-                isSelected={isSelected}
-                isFocusTransitioning={isFocusTransitioning}
-                isDeemphasized={
-                  continentSinglePinActive &&
-                  !isSelected &&
-                  !isFocusTransitioning
-                }
-                onPress={handlePinPress}
-              />
-            );
-          })
-        : null}
     </>
   );
 }

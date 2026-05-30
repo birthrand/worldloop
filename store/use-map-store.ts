@@ -5,6 +5,7 @@ import { fetchMapCountries } from "@/lib/api";
 import { normalizeCountryRegion } from "@/lib/app-region";
 import { getClientCache, staleWhileRevalidate } from "@/lib/client-cache";
 import { countryToMapCountry, isValidLatLng } from "@/lib/map-country";
+import { prefetchMapCountryDetails } from "@/lib/prefetch-country-details";
 import {
   useIdentityStore,
   type SelectionSource,
@@ -162,10 +163,15 @@ export const useMapStore = create<MapState>((set, get) => ({
             err instanceof Error ? err.message : "Failed to load map countries";
           set({ status: "error", error: message });
         }
-      } finally {
-        mapCountriesLoadPromise = null;
       }
-    })();
+
+      const countries = get().countries;
+      if (countries.length > 0) {
+        void prefetchMapCountryDetails(countries);
+      }
+    })().finally(() => {
+      mapCountriesLoadPromise = null;
+    });
 
     return mapCountriesLoadPromise;
   },

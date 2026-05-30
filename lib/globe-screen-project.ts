@@ -33,12 +33,14 @@ export function projectLatLngToScreen(
   camera: Camera,
   size: { width: number; height: number },
   radius = GLOBE_SURFACE_RADIUS,
+  globeQuaternion?: THREE.Quaternion,
 ): { x: number; y: number; visible: boolean } {
   const surface = new THREE.Vector3(...latLngToVector3(lat, lng, radius));
+  if (globeQuaternion) {
+    surface.applyQuaternion(globeQuaternion);
+  }
   const normal = surface.clone().normalize();
-  const cameraDirection = new THREE.Vector3()
-    .copy(camera.position)
-    .normalize();
+  const cameraDirection = new THREE.Vector3().copy(camera.position).normalize();
 
   const onVisibleHemisphere =
     normal.dot(cameraDirection) > HEMISPHERE_DOT_THRESHOLD;

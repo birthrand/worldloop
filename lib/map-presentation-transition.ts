@@ -1,11 +1,14 @@
-import { syncMapRegionFocusForCountry } from "@/lib/map-region-focus";
 import { selectCountryOnMap } from "@/lib/map-country-selection";
-import { useMapPresentationStore } from "@/store/use-map-presentation-store";
+import { syncMapRegionFocusForCountry } from "@/lib/map-region-focus";
 import type { SelectionSource } from "@/store/use-identity-store";
+import { useMapPresentationStore } from "@/store/use-map-presentation-store";
 import type { MapCountry } from "@/types/country";
 import type { MapPresentationMode } from "@/types/map-presentation";
 
-type CountryPresentationMode = Extract<MapPresentationMode, "focus" | "preview">;
+type CountryPresentationMode = Extract<
+  MapPresentationMode,
+  "focus" | "preview"
+>;
 
 /** Region + UI prep before camera flight — identity commits later via `commitMapPresentation`. */
 export function stageMapPresentationForFlight(country: MapCountry): void {
@@ -24,7 +27,10 @@ export function commitMapPresentation({
 }): void {
   useMapPresentationStore.getState().setMode(mode);
   selectCountryOnMap(country, source);
-  syncMapRegionFocusForCountry(country);
+  // Explore handoff stays at world zoom until the camera flight settles.
+  if (source !== "explore") {
+    syncMapRegionFocusForCountry(country);
+  }
 }
 
 /** Immediate transition (no camera deferral) — e.g. preview on already-focused country. */

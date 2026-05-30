@@ -102,7 +102,7 @@ export default function MapScreen() {
         countries={map.mapMarkersForCanvas}
         boundaryCountries={map.countries}
         clusters={map.clusters}
-        selectedName={map.selectedMapName}
+        selectedName={map.activeCountry?.name ?? null}
         focusTransitionName={map.focusTransitionCountryName}
         focusedRegion={map.focusedRegion}
         continentOverlayRegion={map.continentOverlayRegion}

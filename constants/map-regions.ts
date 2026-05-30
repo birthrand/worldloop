@@ -11,10 +11,7 @@ export const WORLD_INITIAL_REGION: Region = {
   longitudeDelta: 120,
 };
 
-export function regionForCountry(
-  latlng: [number, number],
-  delta = 18,
-): Region {
+export function regionForCountry(latlng: [number, number], delta = 18): Region {
   return {
     latitude: latlng[0],
     longitude: latlng[1],
@@ -29,6 +26,19 @@ export function regionForMapCountry(
   delta = 18,
 ): Region {
   return regionForCountry(getMapDisplayLatLng(country), delta);
+}
+
+/** World-scale viewport centered on a country (Explore → Map handoff). */
+export function regionForWorldViewCountry(
+  country: Pick<MapCountry, "name" | "latlng" | "region">,
+): Region {
+  const [lat, lng] = getMapDisplayLatLng(country);
+  return {
+    latitude: lat,
+    longitude: lng,
+    latitudeDelta: WORLD_INITIAL_REGION.latitudeDelta,
+    longitudeDelta: WORLD_INITIAL_REGION.longitudeDelta,
+  };
 }
 
 /** Framed for the Antarctic continent + nearby island territories. */

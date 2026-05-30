@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
+import type { LatLng } from "react-native-maps";
 import { Polygon } from "react-native-maps";
 import {
   Easing,
+  cancelAnimation,
   runOnJS,
   useAnimatedReaction,
   useSharedValue,
@@ -24,6 +26,18 @@ import { useMapUiStore } from "@/store/use-map-ui-store";
 /** Limit polygon color updates during fades — per-frame setState can crash MapView. */
 const BLEND_REACTION_STEPS = 8;
 
+/** Stable slot count — reuse native Polygon views instead of unmounting (prevents ghost overlays). */
+const COUNTRY_FOCUS_SLOT_COUNT = 24;
+
+const TRANSPARENT = "rgba(0, 0, 0, 0)";
+
+/** Degenerate ring — keeps the slot mounted while clearing the native overlay. */
+const CLEARED_COORDS: LatLng[] = [
+  { latitude: 0, longitude: 0 },
+  { latitude: 0, longitude: 0.0001 },
+  { latitude: 0.0001, longitude: 0 },
+];
+
 function isRenderablePolygon(polygon: CountryBoundaryPolygon): boolean {
   if (polygon.coordinates.length < 3) return false;
 
@@ -44,20 +58,20 @@ type MapCountryFocusLayersProps = {
 
 export function MapCountryFocusLayers({
   selectedCountryName,
-  focusTransitionName = null,
+  focusTransitionName: _focusTransitionName = null,
   allPolygons,
 }: MapCountryFocusLayersProps) {
   const boundaryStyle = useMapUiStore((s) => s.boundaryStyle);
   const boundaryStyleRevision = useMapUiStore((s) => s.boundaryStyleRevision);
-  const activeName = selectedCountryName ?? focusTransitionName;
-  const blend = useSharedValue(0);
+  const highlightName = selectedCountryName;
+  const blend = useSharedValue(highlightName ? 1 : 0);
   const lastBlendStep = useSharedValue(-1);
-  const [displayName, setDisplayName] = useState<string | null>(null);
-  const [renderBlend, setRenderBlend] = useState(0);
+  const [renderBlend, setRenderBlend] = useState(highlightName ? 1 : 0);
 
   useEffect(() => {
-    if (activeName) {
-      setDisplayName(activeName);
+    cancelAnimation(blend);
+
+    if (highlightName) {
       blend.value = withTiming(1, {
         duration: MAP_COUNTRY_FOCUS_FADE_MS,
         easing: Easing.inOut(Easing.ease),
@@ -65,19 +79,11 @@ export function MapCountryFocusLayers({
       return;
     }
 
-    blend.value = withTiming(
-      0,
-      {
-        duration: MAP_COUNTRY_FOCUS_FADE_MS,
-        easing: Easing.inOut(Easing.ease),
-      },
-      (finished) => {
-        if (finished) {
-          runOnJS(setDisplayName)(null);
-        }
-      },
-    );
-  }, [activeName, blend]);
+    blend.value = withTiming(0, {
+      duration: MAP_COUNTRY_FOCUS_FADE_MS,
+      easing: Easing.inOut(Easing.ease),
+    });
+  }, [blend, highlightName]);
 
   useAnimatedReaction(
     () => blend.value,
@@ -92,40 +98,46 @@ export function MapCountryFocusLayers({
   );
 
   const countryPolygons = useMemo(() => {
-    if (!displayName) return [];
+    if (!highlightName || renderBlend <= 0.001) return [];
     return filterBoundaryPolygonsByMapContext(allPolygons, {
-      selectedCountryName: displayName,
+      selectedCountryName: highlightName,
       focusedRegion: null,
       countries: [],
-    }).filter(isRenderablePolygon);
-  }, [allPolygons, displayName]);
+    })
+      .filter(isRenderablePolygon)
+      .slice(0, COUNTRY_FOCUS_SLOT_COUNT);
+  }, [allPolygons, highlightName, renderBlend]);
 
   const fillColor = resolveCountryFocusFillRgba(boundaryStyle, renderBlend);
   const strokeColor = resolveCountryFocusStrokeRgba(boundaryStyle, renderBlend);
   const strokeWidth = resolveCountryFocusFillStrokeWidth(boundaryStyle);
+  const isVisible =
+    boundaryStyle.countryHighlightEnabled &&
+    !!highlightName &&
+    renderBlend > 0.001 &&
+    countryPolygons.length > 0;
 
-  if (
-    !boundaryStyle.countryHighlightEnabled ||
-    !displayName ||
-    renderBlend <= 0.001 ||
-    countryPolygons.length === 0
-  ) {
+  if (!boundaryStyle.countryHighlightEnabled) {
     return null;
   }
 
   return (
     <>
-      {countryPolygons.map((polygon) => (
-        <Polygon
-          key={`country-focus-${polygon.id}-${boundaryStyleRevision}`}
-          coordinates={polygon.coordinates}
-          holes={polygon.holes}
-          fillColor={fillColor}
-          strokeColor={strokeColor}
-          strokeWidth={strokeWidth}
-          zIndex={MAP_COUNTRY_FOCUS_POLYGON_Z}
-        />
-      ))}
+      {Array.from({ length: COUNTRY_FOCUS_SLOT_COUNT }, (_, slotIndex) => {
+        const polygon = isVisible ? countryPolygons[slotIndex] : undefined;
+
+        return (
+          <Polygon
+            key={`country-focus-slot-${slotIndex}-${boundaryStyleRevision}`}
+            coordinates={polygon?.coordinates ?? CLEARED_COORDS}
+            holes={polygon?.holes}
+            fillColor={polygon ? fillColor : TRANSPARENT}
+            strokeColor={polygon ? strokeColor : TRANSPARENT}
+            strokeWidth={polygon ? strokeWidth : 0}
+            zIndex={MAP_COUNTRY_FOCUS_POLYGON_Z}
+          />
+        );
+      })}
     </>
   );
 }
