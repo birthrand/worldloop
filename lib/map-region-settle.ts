@@ -1,4 +1,5 @@
 import { resolveFlatZoomTier } from "@/lib/map-camera-zoom";
+import { resolveGlobeZoomTier } from "@/lib/map-region-markers";
 
 export const REGION_SWITCH_HYSTERESIS_MS = 200;
 export const EXPLICIT_REGION_RELEASE_DISTANCE_DEGREES = 22;
@@ -9,7 +10,7 @@ export type ExplicitRegionLock = {
 };
 
 export type RegionSettleDecision =
-  | { kind: "skip"; reason: "3d" | "animating" }
+  | { kind: "skip"; reason: "disabled" | "animating" }
   | {
       kind: "world_tier";
       clearPending: true;
@@ -39,11 +40,15 @@ export type RegionSettleDecision =
       keepPendingCandidate: false;
     };
 
-/** Pure decision for flat-map region settle after the camera stops moving. */
+/** Pure decision for map region settle after the camera stops moving. */
 export function resolveRegionSettleDecision(input: {
   latitudeDelta: number;
+  globeDistance?: number;
+  /** When true, tier comes from globe distance instead of flat latitudeDelta. */
+  useGlobeDistance?: boolean;
   mapCenter: { latitude: number; longitude: number };
-  is3d: boolean;
+  /** False when this viewport is not driving region settle (e.g. flat map under 3D). */
+  settleEnabled?: boolean;
   isMapAnimating: boolean;
   suppressWorldReset: boolean;
   explicitLock: ExplicitRegionLock | null;
@@ -51,14 +56,16 @@ export function resolveRegionSettleDecision(input: {
   nearestRegion: string | null;
   pendingCandidate: string | null;
 }): RegionSettleDecision {
-  if (input.is3d) {
-    return { kind: "skip", reason: "3d" };
+  if (input.settleEnabled === false) {
+    return { kind: "skip", reason: "disabled" };
   }
   if (input.isMapAnimating) {
     return { kind: "skip", reason: "animating" };
   }
 
-  const nextTier = resolveFlatZoomTier(input.latitudeDelta);
+  const nextTier = input.useGlobeDistance
+    ? resolveGlobeZoomTier(input.globeDistance ?? Number.POSITIVE_INFINITY)
+    : resolveFlatZoomTier(input.latitudeDelta);
   let suppressWorldReset = input.suppressWorldReset;
 
   if (suppressWorldReset && nextTier !== "world") {
@@ -155,11 +162,16 @@ export function resolveRegionSettleDecision(input: {
 
 /** Whether a hysteresis timer should commit the pending region switch. */
 export function shouldCommitScheduledRegionSwitch(input: {
-  latitudeDelta: number;
+  latitudeDelta?: number;
+  globeDistance?: number;
+  useGlobeDistance?: boolean;
   pendingCandidate: string | null;
   expectedRegion: string;
 }): boolean {
-  if (resolveFlatZoomTier(input.latitudeDelta) === "world") {
+  const tier = input.useGlobeDistance
+    ? resolveGlobeZoomTier(input.globeDistance ?? Number.POSITIVE_INFINITY)
+    : resolveFlatZoomTier(input.latitudeDelta ?? Number.POSITIVE_INFINITY);
+  if (tier === "world") {
     return false;
   }
   return input.pendingCandidate === input.expectedRegion;

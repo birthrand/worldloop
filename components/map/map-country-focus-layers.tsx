@@ -21,6 +21,7 @@ import {
   filterBoundaryPolygonsByMapContext,
   type CountryBoundaryPolygon,
 } from "@/lib/map-country-boundaries";
+import { resolveCountryFocusRenderPolygons } from "@/lib/map-country-focus-polygons";
 import { useMapUiStore } from "@/store/use-map-ui-store";
 
 /** Limit polygon color updates during fades — per-frame setState can crash MapView. */
@@ -54,12 +55,15 @@ type MapCountryFocusLayersProps = {
   /** In-flight focus animation — keeps fill visible while camera moves. */
   focusTransitionName?: string | null;
   allPolygons: CountryBoundaryPolygon[];
+  /** Solid fill when continent overlay sits below (no lake/bay holes). */
+  fillGapsWhenContinentOverlay?: boolean;
 };
 
 export function MapCountryFocusLayers({
   selectedCountryName,
   focusTransitionName: _focusTransitionName = null,
   allPolygons,
+  fillGapsWhenContinentOverlay = false,
 }: MapCountryFocusLayersProps) {
   const boundaryStyle = useMapUiStore((s) => s.boundaryStyle);
   const boundaryStyleRevision = useMapUiStore((s) => s.boundaryStyleRevision);
@@ -99,14 +103,19 @@ export function MapCountryFocusLayers({
 
   const countryPolygons = useMemo(() => {
     if (!highlightName || renderBlend <= 0.001) return [];
-    return filterBoundaryPolygonsByMapContext(allPolygons, {
+    const filtered = filterBoundaryPolygonsByMapContext(allPolygons, {
       selectedCountryName: highlightName,
       focusedRegion: null,
       countries: [],
     })
       .filter(isRenderablePolygon)
       .slice(0, COUNTRY_FOCUS_SLOT_COUNT);
-  }, [allPolygons, highlightName, renderBlend]);
+
+    return resolveCountryFocusRenderPolygons(
+      filtered,
+      fillGapsWhenContinentOverlay,
+    );
+  }, [allPolygons, fillGapsWhenContinentOverlay, highlightName, renderBlend]);
 
   const fillColor = resolveCountryFocusFillRgba(boundaryStyle, renderBlend);
   const strokeColor = resolveCountryFocusStrokeRgba(boundaryStyle, renderBlend);

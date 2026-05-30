@@ -31,14 +31,18 @@ export type MapBoundaryStyleSettings = {
   countryStrokeOpacityStep: number;
 };
 
-/** Sky cyan default (#38BDF8) — selected country highlight. */
-export const DEFAULT_COUNTRY_HIGHLIGHT_COLOR_HUE = 199;
-export const DEFAULT_COUNTRY_HIGHLIGHT_COLOR_HEX = "#38BDF8";
-
 /** Amber gold default (#fbbf24 ≈ hue 43) — matches continent focus overlay. */
 export const DEFAULT_STROKE_COLOR_HUE = 43;
 export const DEFAULT_FILL_COLOR_HUE = DEFAULT_STROKE_COLOR_HUE;
 export const DEFAULT_FILL_COLOR_HEX = "#FBBF24";
+
+/** Amber gold default (#fbbf24) — matches map pins and continent overlay. */
+export const DEFAULT_COUNTRY_HIGHLIGHT_COLOR_HUE = DEFAULT_STROKE_COLOR_HUE;
+export const DEFAULT_COUNTRY_HIGHLIGHT_COLOR_HEX = DEFAULT_FILL_COLOR_HEX;
+
+/** Legacy sky-cyan country highlight — migrated to pin amber on load. */
+const LEGACY_COUNTRY_HIGHLIGHT_COLOR_HUE = 199;
+const LEGACY_COUNTRY_HIGHLIGHT_COLOR_HEX = "#38BDF8";
 
 /** Pre-amber default fill hue (blue) — migrated on load. */
 const LEGACY_DEFAULT_FILL_COLOR_HUE = 210;
@@ -252,6 +256,28 @@ function migrateLegacyThickness(
   return DEFAULT_MAP_BOUNDARY_STYLE.strokeThicknessStep;
 }
 
+/** Upgrade persisted cyan country highlight to pin-matched amber. */
+export function migrateLegacyCountryHighlightColorToAmber(
+  settings: MapBoundaryStyleSettings,
+): MapBoundaryStyleSettings {
+  const isLegacyCyan =
+    settings.countryFillColorHue === LEGACY_COUNTRY_HIGHLIGHT_COLOR_HUE &&
+    (settings.countryFillColorHex === LEGACY_COUNTRY_HIGHLIGHT_COLOR_HEX ||
+      settings.countryFillColorHex === null) &&
+    settings.countryStrokeColorHue === LEGACY_COUNTRY_HIGHLIGHT_COLOR_HUE &&
+    (settings.countryStrokeColorHex === LEGACY_COUNTRY_HIGHLIGHT_COLOR_HEX ||
+      settings.countryStrokeColorHex === null);
+  if (!isLegacyCyan) return settings;
+
+  return {
+    ...settings,
+    countryFillColorHue: DEFAULT_COUNTRY_HIGHLIGHT_COLOR_HUE,
+    countryFillColorHex: DEFAULT_COUNTRY_HIGHLIGHT_COLOR_HEX,
+    countryStrokeColorHue: DEFAULT_COUNTRY_HIGHLIGHT_COLOR_HUE,
+    countryStrokeColorHex: DEFAULT_COUNTRY_HIGHLIGHT_COLOR_HEX,
+  };
+}
+
 /** Upgrade persisted blue fill defaults to amber continent-overlay color. */
 export function migrateLegacyFillColorToAmber(
   settings: MapBoundaryStyleSettings,
@@ -302,60 +328,62 @@ export function normalizeBoundaryStyle(
         ? "grayscale"
         : "hue";
 
-  return migrateLegacyFillColorToAmber({
-    strokeColorEnabled,
-    strokeColorHue: clampHue(
-      candidate.strokeColorHue ?? DEFAULT_MAP_BOUNDARY_STYLE.strokeColorHue,
-    ),
-    strokeColorHex: normalizeHexOverride(candidate.strokeColorHex),
-    strokeWidthEnabled: strokeColorEnabled
-      ? (candidate.strokeWidthEnabled ??
-        DEFAULT_MAP_BOUNDARY_STYLE.strokeWidthEnabled)
-      : false,
-    strokeThicknessStep: migrateLegacyThickness(candidate),
-    strokeOpacityStep: clampBoundaryStep(
-      candidate.strokeOpacityStep ??
-        DEFAULT_MAP_BOUNDARY_STYLE.strokeOpacityStep,
-    ),
-    fillEnabled: fill.fillEnabled,
-    fillOpacityStep: fill.fillOpacityStep,
-    fillColorMode,
-    fillGrayLevel:
-      fillColorMode === "grayscale"
-        ? (grayscaleFromHex ?? clampGrayLevel(candidate.fillGrayLevel))
-        : clampGrayLevel(candidate.fillGrayLevel),
-    fillColorHue: clampHue(
-      candidate.fillColorHue ?? DEFAULT_MAP_BOUNDARY_STYLE.fillColorHue,
-    ),
-    fillColorHex: normalizedFillHex,
-    countryHighlightEnabled:
-      candidate.countryHighlightEnabled ??
-      DEFAULT_MAP_BOUNDARY_STYLE.countryHighlightEnabled,
-    countryFillColorHue: clampHue(
-      candidate.countryFillColorHue ??
-        DEFAULT_MAP_BOUNDARY_STYLE.countryFillColorHue,
-    ),
-    countryFillColorHex: normalizeHexOverride(candidate.countryFillColorHex),
-    countryFillOpacityStep: clampBoundaryStep(
-      candidate.countryFillOpacityStep ??
-        DEFAULT_MAP_BOUNDARY_STYLE.countryFillOpacityStep,
-    ),
-    countryStrokeColorHue: clampHue(
-      candidate.countryStrokeColorHue ??
-        DEFAULT_MAP_BOUNDARY_STYLE.countryStrokeColorHue,
-    ),
-    countryStrokeColorHex: normalizeHexOverride(
-      candidate.countryStrokeColorHex,
-    ),
-    countryStrokeThicknessStep: clampBoundaryStep(
-      candidate.countryStrokeThicknessStep ??
-        DEFAULT_MAP_BOUNDARY_STYLE.countryStrokeThicknessStep,
-    ),
-    countryStrokeOpacityStep: clampBoundaryStep(
-      candidate.countryStrokeOpacityStep ??
-        DEFAULT_MAP_BOUNDARY_STYLE.countryStrokeOpacityStep,
-    ),
-  });
+  return migrateLegacyCountryHighlightColorToAmber(
+    migrateLegacyFillColorToAmber({
+      strokeColorEnabled,
+      strokeColorHue: clampHue(
+        candidate.strokeColorHue ?? DEFAULT_MAP_BOUNDARY_STYLE.strokeColorHue,
+      ),
+      strokeColorHex: normalizeHexOverride(candidate.strokeColorHex),
+      strokeWidthEnabled: strokeColorEnabled
+        ? (candidate.strokeWidthEnabled ??
+          DEFAULT_MAP_BOUNDARY_STYLE.strokeWidthEnabled)
+        : false,
+      strokeThicknessStep: migrateLegacyThickness(candidate),
+      strokeOpacityStep: clampBoundaryStep(
+        candidate.strokeOpacityStep ??
+          DEFAULT_MAP_BOUNDARY_STYLE.strokeOpacityStep,
+      ),
+      fillEnabled: fill.fillEnabled,
+      fillOpacityStep: fill.fillOpacityStep,
+      fillColorMode,
+      fillGrayLevel:
+        fillColorMode === "grayscale"
+          ? (grayscaleFromHex ?? clampGrayLevel(candidate.fillGrayLevel))
+          : clampGrayLevel(candidate.fillGrayLevel),
+      fillColorHue: clampHue(
+        candidate.fillColorHue ?? DEFAULT_MAP_BOUNDARY_STYLE.fillColorHue,
+      ),
+      fillColorHex: normalizedFillHex,
+      countryHighlightEnabled:
+        candidate.countryHighlightEnabled ??
+        DEFAULT_MAP_BOUNDARY_STYLE.countryHighlightEnabled,
+      countryFillColorHue: clampHue(
+        candidate.countryFillColorHue ??
+          DEFAULT_MAP_BOUNDARY_STYLE.countryFillColorHue,
+      ),
+      countryFillColorHex: normalizeHexOverride(candidate.countryFillColorHex),
+      countryFillOpacityStep: clampBoundaryStep(
+        candidate.countryFillOpacityStep ??
+          DEFAULT_MAP_BOUNDARY_STYLE.countryFillOpacityStep,
+      ),
+      countryStrokeColorHue: clampHue(
+        candidate.countryStrokeColorHue ??
+          DEFAULT_MAP_BOUNDARY_STYLE.countryStrokeColorHue,
+      ),
+      countryStrokeColorHex: normalizeHexOverride(
+        candidate.countryStrokeColorHex,
+      ),
+      countryStrokeThicknessStep: clampBoundaryStep(
+        candidate.countryStrokeThicknessStep ??
+          DEFAULT_MAP_BOUNDARY_STYLE.countryStrokeThicknessStep,
+      ),
+      countryStrokeOpacityStep: clampBoundaryStep(
+        candidate.countryStrokeOpacityStep ??
+          DEFAULT_MAP_BOUNDARY_STYLE.countryStrokeOpacityStep,
+      ),
+    }),
+  );
 }
 
 export function resolveBoundaryStrokeOpacity(step: number): number {

@@ -11,7 +11,6 @@ import * as THREE from "three";
 import { resolveContinentFocusFillRgba } from "@/constants/map-boundary-style";
 import {
   MAP_CONTINENT_FOCUS_FADE_MS,
-  continentFocusFillOpacityFactor,
   continentPreviewFillOpacityFactor,
 } from "@/constants/map-continent-focus";
 import { buildGlobeBoundaryFills } from "@/lib/globe-boundary-fills";
@@ -56,12 +55,13 @@ function GlobeContinentFocusFillMesh({
   if (opacity <= 0.001) return null;
 
   return (
-    <mesh geometry={geometry}>
+    <mesh geometry={geometry} renderOrder={2}>
       <meshBasicMaterial
         color={color}
         transparent
         opacity={opacity}
         depthWrite={false}
+        depthTest={false}
         side={THREE.DoubleSide}
       />
     </mesh>
@@ -97,6 +97,14 @@ export function GlobeContinentFocusLayers({
   const allCountryBoundaries = getCountryBoundaryPolygons(countriesGeoJson);
 
   useEffect(() => {
+    if (selectedCountryName) {
+      blend.value = withTiming(0, {
+        duration: MAP_CONTINENT_FOCUS_FADE_MS,
+        easing: Easing.inOut(Easing.ease),
+      });
+      return;
+    }
+
     if (focusedRegion) {
       setDisplayRegion(focusedRegion);
       blend.value = withTiming(1, {
@@ -118,10 +126,10 @@ export function GlobeContinentFocusLayers({
         }
       },
     );
-  }, [blend, focusedRegion]);
+  }, [blend, focusedRegion, selectedCountryName]);
 
   useEffect(() => {
-    if (previewRegion && !focusedRegion) {
+    if (previewRegion && !focusedRegion && !selectedCountryName) {
       setDisplayPreviewRegion(previewRegion);
       previewBlend.value = withTiming(1, {
         duration: MAP_CONTINENT_FOCUS_FADE_MS * 0.6,
@@ -130,7 +138,7 @@ export function GlobeContinentFocusLayers({
       return;
     }
 
-    if (previewRegion && focusedRegion) {
+    if (previewRegion && (focusedRegion || selectedCountryName)) {
       setDisplayPreviewRegion(null);
       previewBlend.value = 0;
       return;
@@ -148,7 +156,7 @@ export function GlobeContinentFocusLayers({
         }
       },
     );
-  }, [focusedRegion, previewBlend, previewRegion]);
+  }, [focusedRegion, previewBlend, previewRegion, selectedCountryName]);
 
   useAnimatedReaction(
     () => blend.value,
@@ -195,12 +203,9 @@ export function GlobeContinentFocusLayers({
   const committedFill = useMemo(
     () =>
       parseCssColorToThree(
-        resolveContinentFocusFillRgba(
-          boundaryStyle,
-          renderBlend * continentFocusFillOpacityFactor(!!selectedCountryName),
-        ),
+        resolveContinentFocusFillRgba(boundaryStyle, renderBlend),
       ),
-    [boundaryStyle, renderBlend, selectedCountryName],
+    [boundaryStyle, renderBlend],
   );
 
   const previewFill = useMemo(
@@ -224,9 +229,13 @@ export function GlobeContinentFocusLayers({
     [previewPolygons],
   );
 
-  const showCommitted = displayRegion && renderBlend > 0.001;
+  const showCommitted =
+    displayRegion && renderBlend > 0.001 && !selectedCountryName;
   const showPreview =
-    displayPreviewRegion && renderPreviewBlend > 0.001 && !focusedRegion;
+    displayPreviewRegion &&
+    renderPreviewBlend > 0.001 &&
+    !focusedRegion &&
+    !selectedCountryName;
 
   if (!boundaryStyle.fillEnabled || (!showCommitted && !showPreview)) {
     return null;

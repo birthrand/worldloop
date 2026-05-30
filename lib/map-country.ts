@@ -1,9 +1,15 @@
+import { cca3FromCca2 } from "@/lib/cca2-to-cca3";
 import type { Country, MapCountry } from "@/types/country";
 
 /** Extract ISO alpha-2 from a flagcdn URL when present. */
 export function cca2FromFlagUrl(flag: string): string {
   const match = flag.match(/flagcdn\.com\/w\d+\/([a-z]{2})\.png/i);
   return match?.[1]?.toUpperCase() ?? "";
+}
+
+/** Resolve ISO alpha-3 from a flagcdn URL (via alpha-2 lookup). */
+export function cca3FromFlagUrl(flag: string): string {
+  return cca3FromCca2(cca2FromFlagUrl(flag));
 }
 
 /** Minimal `Country` for save / Explore when full detail is not loaded yet. */

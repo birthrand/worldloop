@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 
+import type { MapCluster } from "@/lib/map-clusters";
 import {
   areRegionBoundariesTappable,
   canFocusContinentFromMapTap,
   canRefocusContinentFromMapTap,
   isExploreMapZoom,
+  resolveEffectiveBoundaryRegion,
+  resolveNearestRegionFromCenter,
   shouldDelegateMapTapToCountrySelection,
   shouldSelectCountryAcrossFocusedContinentFromMapTap,
   shouldSelectCountryInFocusedContinentFromMapTap,
@@ -12,6 +15,22 @@ import {
   shouldShowMapOnboarding,
 } from "@/lib/map-signal-sources";
 import type { MapCountry } from "@/types/country";
+
+const africaCluster: MapCluster = {
+  id: "africa",
+  region: "Africa",
+  center: [0, 20],
+  countryCount: 54,
+  activity: "quiet",
+};
+
+const europeCluster: MapCluster = {
+  id: "europe",
+  region: "Europe",
+  center: [50, 10],
+  countryCount: 44,
+  activity: "quiet",
+};
 
 const france: MapCountry = {
   name: "France",
@@ -96,8 +115,9 @@ describe("map signal sources", () => {
     ).toBe(false);
   });
 
-  it("canFocusContinentFromMapTap allows world and 3D entry", () => {
-    expect(canFocusContinentFromMapTap(true, "Asia", "region")).toBe(true);
+  it("canFocusContinentFromMapTap only allows continent pick at world zoom", () => {
+    expect(canFocusContinentFromMapTap(true, "Asia", "region")).toBe(false);
+    expect(canFocusContinentFromMapTap(true, null, "world")).toBe(true);
     expect(canFocusContinentFromMapTap(false, null, "world")).toBe(true);
     expect(canFocusContinentFromMapTap(false, "Asia", "region")).toBe(false);
   });
@@ -180,6 +200,49 @@ describe("map signal sources", () => {
     expect(areRegionBoundariesTappable("Europe", "region")).toBe(true);
     expect(areRegionBoundariesTappable("Europe", "world")).toBe(false);
     expect(areRegionBoundariesTappable(null, "region")).toBe(false);
+  });
+
+  it("areRegionBoundariesTappable allows world-zoom globe picks when continent is focused", () => {
+    expect(
+      areRegionBoundariesTappable("Africa", "world", {
+        allowWorldZoomGlobe: true,
+      }),
+    ).toBe(true);
+    expect(
+      areRegionBoundariesTappable("Africa", "world", {
+        allowWorldZoomGlobe: false,
+      }),
+    ).toBe(false);
+  });
+
+  it("resolveNearestRegionFromCenter picks closest cluster", () => {
+    expect(
+      resolveNearestRegionFromCenter([africaCluster, europeCluster], 5, 18),
+    ).toBe("Africa");
+    expect(
+      resolveNearestRegionFromCenter([africaCluster, europeCluster], 48, 12),
+    ).toBe("Europe");
+  });
+
+  it("resolveEffectiveBoundaryRegion uses committed then preview intent", () => {
+    expect(
+      resolveEffectiveBoundaryRegion({
+        focusedRegion: "Europe",
+        previewRegion: "Africa",
+      }),
+    ).toBe("Europe");
+    expect(
+      resolveEffectiveBoundaryRegion({
+        focusedRegion: null,
+        previewRegion: "Africa",
+      }),
+    ).toBe("Africa");
+    expect(
+      resolveEffectiveBoundaryRegion({
+        focusedRegion: null,
+        previewRegion: null,
+      }),
+    ).toBe(null);
   });
 
   it("shouldShowMapOnboarding requires world-scale camera", () => {

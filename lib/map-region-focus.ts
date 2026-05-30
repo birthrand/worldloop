@@ -51,8 +51,12 @@ export function shouldSyncFocusedRegionForSelectionSource(
     return false;
   }
 
+  const countryRegion = normalizeCountryRegion(country).region;
+  const crossContinentMapTap =
+    source === "mapTap" && !!focusedRegion && focusedRegion !== countryRegion;
+
   return shouldSyncFocusedRegionForCountry(country, focusedRegion, {
-    explicitFocus: isExplicitCountryFocusSource(source),
+    explicitFocus: crossContinentMapTap || isExplicitCountryFocusSource(source),
   });
 }
 

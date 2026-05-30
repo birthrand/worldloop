@@ -30,11 +30,9 @@ function prepareMapForCountry(
   source: Exclude<SelectionSource, null> = "search",
 ): void {
   const mapUi = useMapUiStore.getState();
-  const map = useMapStore.getState();
 
   prefetchCountryFlag(country);
 
-  map.setMapMode("2d");
   mapUi.setCountryMarkerMode("flag");
   // Explore discovery starts at world zoom — region sync happens after the camera flight.
   if (source === "explore") {

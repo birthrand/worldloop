@@ -27,6 +27,7 @@ const SNAPSHOT_SETTLE_MS = 500;
 /** Fixed marker anchor box — label is positioned outside this so selection does not shift the pin. */
 const MARKER_ANCHOR_SIZE = 48;
 const PIN_SIZE = 36;
+const SELECTED_PIN_SIZE = 30;
 
 /** Survives marker re-snapshots so flags do not flash on every map action. */
 const loadedFlagUris = new Set<string>();
@@ -414,13 +415,16 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   pinSelected: {
-    borderWidth: 3,
+    width: SELECTED_PIN_SIZE,
+    height: SELECTED_PIN_SIZE,
+    borderRadius: SELECTED_PIN_SIZE / 2,
+    borderWidth: 2,
     borderColor: "#fbbf24",
     shadowColor: "#fbbf24",
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.75,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.65,
+    shadowRadius: 6,
+    elevation: 6,
   },
   flag: {
     width: PIN_SIZE,
@@ -433,9 +437,9 @@ const styles = StyleSheet.create({
     borderRadius: 13,
   },
   flagSelected: {
-    width: PIN_SIZE - 6,
-    height: PIN_SIZE - 6,
-    borderRadius: (PIN_SIZE - 6) / 2,
+    width: SELECTED_PIN_SIZE - 4,
+    height: SELECTED_PIN_SIZE - 4,
+    borderRadius: (SELECTED_PIN_SIZE - 4) / 2,
   },
   flagHidden: {
     opacity: 0,

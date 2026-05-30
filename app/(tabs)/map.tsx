@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "expo-router";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -12,6 +12,7 @@ import {
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { TAB_BAR_CONTENT_HEIGHT } from "@/components/bottom-tab-bar";
 import { MapCanvas, type MapCanvasHandle } from "@/components/map/map-canvas";
 import { MapControls } from "@/components/map/map-controls";
 import { MapCountryFocusPill } from "@/components/map/map-country-focus-pill";
@@ -26,17 +27,6 @@ import { MapTopChromeScrim } from "@/components/map/map-top-chrome-scrim";
 import { continentDisplayLabel } from "@/constants/regions";
 import { useMapLogic } from "@/hooks/use-map-logic";
 
-const TAB_BAR_STYLE = {
-  position: "absolute" as const,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: "transparent",
-  borderTopWidth: 0,
-  elevation: 0,
-  shadowOpacity: 0,
-};
-
 /** Preview card "back to continent" action — off until UX is finalized. */
 const PREVIEW_CONTINENT_BACK_ENABLED = false;
 
@@ -45,7 +35,7 @@ const PREVIEW_EXIT_MS = 320;
 
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation();
+  const tabBarHeight = useBottomTabBarHeight();
   const mapRef = useRef<MapCanvasHandle>(null);
 
   const map = useMapLogic(mapRef);
@@ -65,21 +55,6 @@ export default function MapScreen() {
     const timer = setTimeout(() => setPreviewExitHold(false), PREVIEW_EXIT_MS);
     return () => clearTimeout(timer);
   }, [map.isPreviewOpen]);
-
-  useLayoutEffect(() => {
-    const tabNavigation = navigation.getParent();
-    if (!tabNavigation) return;
-
-    tabNavigation.setOptions({
-      tabBarStyle: previewOverlayActive ? { display: "none" } : TAB_BAR_STYLE,
-    });
-  }, [previewOverlayActive, navigation]);
-
-  useEffect(() => {
-    return () => {
-      navigation.getParent()?.setOptions({ tabBarStyle: TAB_BAR_STYLE });
-    };
-  }, [navigation]);
 
   const regionChromeBottom = Math.max(insets.bottom, 16);
   const countryFocusPillBottom = 34;
@@ -105,6 +80,7 @@ export default function MapScreen() {
         selectedName={map.activeCountry?.name ?? null}
         focusTransitionName={map.focusTransitionCountryName}
         focusedRegion={map.focusedRegion}
+        boundaryFocusRegion={map.boundaryFocusRegion}
         continentOverlayRegion={map.continentOverlayRegion}
         previewRegion={map.previewRegion}
         tapRippleAt={map.tapRippleAt}
@@ -117,6 +93,7 @@ export default function MapScreen() {
         onGlobeTransitionComplete={map.handleGlobeTransitionComplete}
         onFlatTransitionComplete={map.handleFlatTransitionComplete}
         onGlobeCameraViewChange={map.handleGlobeCameraViewChange}
+        initialGlobeCameraDistance={map.globeEntryCameraDistance}
         lockUserGestures={previewOverlayActive || map.isMapAnimating}
         suspendMarkerSnapshot={map.isMapAnimating}
         markerRefreshToken={map.markerRefreshToken}
@@ -192,7 +169,9 @@ export default function MapScreen() {
           <View style={styles.previewWrap} pointerEvents="box-none">
             <MapCountryPreviewCard
               country={map.activeCountry}
-              bottomInset={insets.bottom}
+              bottomInset={
+                tabBarHeight || TAB_BAR_CONTENT_HEIGHT + insets.bottom
+              }
               onDismiss={map.dismissCountryPreview}
               onBackToContinent={
                 PREVIEW_CONTINENT_BACK_ENABLED &&
@@ -305,6 +284,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    overflow: "hidden",
   },
   pressed: {
     opacity: 0.85,

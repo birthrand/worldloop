@@ -12,6 +12,9 @@ const TAB_BAR_BG = "#0b132b";
 const TAB_ACTIVE = "#fbbf24";
 const TAB_INACTIVE = "#94a3b8";
 
+/** Bar chrome only — add safe-area bottom inset for full tab bar height. */
+export const TAB_BAR_CONTENT_HEIGHT = 62;
+
 type IoniconsName = keyof typeof Ionicons.glyphMap;
 
 type TabItem = {

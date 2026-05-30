@@ -13,7 +13,7 @@ import type { MapCountry } from "@/types/country";
 
 const PIN_GEOMETRY_RADIUS = 0.018;
 const BASE_SCALE = 1;
-const SELECTED_SCALE = 1.62;
+const SELECTED_SCALE = 1.28;
 const BASE_EMISSIVE = 0.42;
 const SELECTED_EMISSIVE = 0.95;
 const FOCUS_TRANSITION_EMISSIVE = 0.68;
@@ -29,6 +29,10 @@ type GlobeCountryPinProps = {
   isFocusTransitioning?: boolean;
   isDeemphasized?: boolean;
   onPress: (country: MapCountry) => void;
+  /** Skip taps that exceeded the orbit drag threshold. */
+  consumeTapThresholdExceeded: () => boolean;
+  /** Reset drag guard when R3F sees a new pointer down. */
+  beginPointerTap: () => void;
 };
 
 export function GlobeCountryPin({
@@ -38,10 +42,11 @@ export function GlobeCountryPin({
   isFocusTransitioning = false,
   isDeemphasized = false,
   onPress,
+  consumeTapThresholdExceeded,
+  beginPointerTap,
 }: GlobeCountryPinProps) {
   const { camera } = useThree();
   const meshRef = useRef<Mesh>(null);
-  const ringRef = useRef<Mesh>(null);
   const transitionElapsedRef = useRef(0);
   const transitionActiveRef = useRef(false);
 
@@ -86,10 +91,6 @@ export function GlobeCountryPin({
       material.emissiveIntensity = SELECTED_EMISSIVE;
       material.opacity = 1;
       material.transparent = false;
-
-      if (ringRef.current) {
-        ringRef.current.scale.setScalar(1.08);
-      }
       return;
     }
 
@@ -107,7 +108,12 @@ export function GlobeCountryPin({
     material.transparent = isDeemphasized || fadeT > 0.02;
   });
 
+  const handlePointerDown = () => {
+    beginPointerTap();
+  };
+
   const handlePress = (event: ThreeEvent<MouseEvent>) => {
+    if (consumeTapThresholdExceeded()) return;
     event.stopPropagation();
     onPress(country);
   };
@@ -124,7 +130,8 @@ export function GlobeCountryPin({
       <mesh
         ref={meshRef}
         scale={isSelected ? SELECTED_SCALE : BASE_SCALE}
-        onClick={handlePress}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePress}
       >
         <sphereGeometry args={[PIN_GEOMETRY_RADIUS, 16, 16]} />
         <meshStandardMaterial
@@ -139,26 +146,10 @@ export function GlobeCountryPin({
           }
           transparent={!isSelected && (isDeemphasized || initialFadeT > 0.02)}
           opacity={
-            isSelected
-              ? 1
-              : isDeemphasized
-                ? 0.34
-                : 1 - initialFadeT * 0.22
+            isSelected ? 1 : isDeemphasized ? 0.34 : 1 - initialFadeT * 0.22
           }
         />
       </mesh>
-
-      {isSelected ? (
-        <mesh ref={ringRef} onClick={handlePress}>
-          <sphereGeometry args={[0.072, 16, 16]} />
-          <meshBasicMaterial
-            color={SELECTED_PIN_COLOR}
-            transparent
-            opacity={0.48}
-            depthWrite={false}
-          />
-        </mesh>
-      ) : null}
     </group>
   );
 }

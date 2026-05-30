@@ -35,6 +35,7 @@ import {
   getCountryBoundaryPolygons,
   type CountryBoundaryPolygon,
 } from "@/lib/map-country-boundaries";
+import { shouldFillCountryHighlightGaps } from "@/lib/map-country-focus-polygons";
 import { summarizeRegion } from "@/lib/map-debug";
 import type { MapPressCoordinate } from "@/lib/map-map-tap-hit";
 import type { MapMarkerPresentation } from "@/lib/map-region-markers";
@@ -100,6 +101,7 @@ type WorldMapViewProps = {
   selectedName: string | null;
   focusTransitionName?: string | null;
   focusedRegion: string | null;
+  boundaryFocusRegion?: string | null;
   continentOverlayRegion?: string | null;
   previewRegion?: string | null;
   zoomTier: MapZoomTier;
@@ -129,6 +131,7 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
       selectedName,
       focusTransitionName = null,
       focusedRegion,
+      boundaryFocusRegion = focusedRegion,
       continentOverlayRegion = focusedRegion,
       previewRegion = null,
       zoomTier,
@@ -209,7 +212,7 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
     const allCountryBoundaries = getCountryBoundaryPolygons(countriesGeoJson);
 
     const showWorldBoundaries =
-      showBoundaryLines && !focusedRegion && !selectedName;
+      showBoundaryLines && !boundaryFocusRegion && !selectedName;
 
     const highlightCountryName = selectedName;
     const showCountryHighlight =
@@ -217,18 +220,23 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
     const showBoundaryStrokes =
       boundaryStyle.strokeColorEnabled && showBoundaryLines;
 
+    const fillCountryHighlightGaps = shouldFillCountryHighlightGaps(
+      continentOverlayRegion,
+      previewRegion,
+    );
+
     const countryBoundaries = useMemo(
       () =>
         filterBoundaryPolygonsByMapContext(allCountryBoundaries, {
           selectedCountryName: highlightCountryName,
-          focusedRegion,
+          focusedRegion: boundaryFocusRegion,
           countries: boundaryCountries,
           showWorldBoundaries,
         }),
       [
         allCountryBoundaries,
         boundaryCountries,
-        focusedRegion,
+        boundaryFocusRegion,
         highlightCountryName,
         showWorldBoundaries,
       ],
@@ -246,7 +254,7 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
       ? countryFocusStyleRenderKey(boundaryStyle)
       : boundaryStyleRenderKey(boundaryStyle, zoomTier);
     const boundariesTappable = areRegionBoundariesTappable(
-      focusedRegion,
+      boundaryFocusRegion,
       zoomTier,
     );
     const boundaryZIndex = showCountryHighlight
@@ -328,6 +336,9 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
           selectedCountryName={showFocusLayers ? selectedName : null}
           focusTransitionName={focusTransitionName}
           allPolygons={allCountryBoundaries}
+          fillGapsWhenContinentOverlay={
+            showFocusLayers && fillCountryHighlightGaps
+          }
         />
         {showFocusLayers && showBoundaryStrokes && !showCountryHighlight
           ? countryBoundaries.map((polygon) => (

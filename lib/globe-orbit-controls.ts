@@ -116,6 +116,8 @@ export function createGlobeOrbitControls() {
     const dy = touch.pageY - touchStartY;
     if (Math.hypot(dx, dy) > MAP_TAP_DRAG_THRESHOLD_PX) {
       interactionExceededTapThreshold = true;
+      // Mark immediately so R3F pointer-up can skip before RN release runs.
+      suppressNextTap = true;
     }
   };
 
@@ -362,6 +364,61 @@ export function createGlobeOrbitControls() {
     },
   };
 
+  const MOMENTUM_EPS = 0.00001;
+
+  const clearRotationMomentum = () => {
+    internals.sphericalDelta.set(0, 0, 0);
+    internals.panOffset.set(0, 0, 0);
+  };
+
+  /** Reposition the fixed-view camera and sync spherical coords — keeps drag momentum. */
+  const snapCameraToFixedView = (
+    viewDirection: Vector3,
+    target: Vector3,
+    distance: number,
+  ) => {
+    if (!scope.camera) return;
+
+    internals.scale = 1;
+
+    scope.camera.position.copy(viewDirection).multiplyScalar(distance);
+    scope.camera.lookAt(target);
+
+    const offset = new Vector3();
+    const quat = new Quaternion().setFromUnitVectors(
+      scope.camera.up,
+      new Vector3(0, 1, 0),
+    );
+    const quatInverse = quat.clone().invert();
+    offset.copy(scope.camera.position).sub(target);
+    offset.applyQuaternion(quat);
+    internals.spherical.setFromVector3(offset);
+  };
+
+  /** Full orbit reset after programmatic moves — clears stale deltas that cause zoom drift. */
+  const resetOrbitToFixedView = (
+    viewDirection: Vector3,
+    target: Vector3,
+    distance: number,
+  ) => {
+    clearRotationMomentum();
+    snapCameraToFixedView(viewDirection, target, distance);
+  };
+
+  /** @deprecated Use snapCameraToFixedView or resetOrbitToFixedView. */
+  const syncFromFixedView = resetOrbitToFixedView;
+
+  const hasActiveMomentum = () =>
+    internals.state !== STATE.NONE ||
+    Math.abs(internals.sphericalDelta.theta) > MOMENTUM_EPS ||
+    Math.abs(internals.sphericalDelta.phi) > MOMENTUM_EPS ||
+    internals.panOffset.lengthSq() > MOMENTUM_EPS ||
+    Math.abs(internals.scale - 1) > MOMENTUM_EPS;
+
+  const isZoomInteraction = () => internals.state === STATE.DOLLY;
+
+  const isActiveInteraction = () => internals.state !== STATE.NONE;
+
   const update = (() => {
     const offset = new Vector3();
     const lastPosition = new Vector3();
@@ -461,13 +518,22 @@ export function createGlobeOrbitControls() {
   };
 
   const endInteraction = () => {
+    // Carry drag intent into the R3F pointer-up that may fire after RN release.
     suppressNextTap = interactionExceededTapThreshold;
+    interactionExceededTapThreshold = false;
     resetTouchState();
     scope.onEnd();
   };
 
+  /** R3F pointer-down sync — RN responder may not run on tap-only touches. */
+  const beginPointerTap = () => {
+    interactionExceededTapThreshold = false;
+    suppressNextTap = false;
+  };
+
   const consumeTapThresholdExceeded = () => {
-    const exceeded = suppressNextTap;
+    const exceeded = interactionExceededTapThreshold || suppressNextTap;
+    interactionExceededTapThreshold = false;
     suppressNextTap = false;
     return exceeded;
   };
@@ -478,7 +544,15 @@ export function createGlobeOrbitControls() {
       ...functions,
       update,
       resetTouchState,
+      beginPointerTap,
       consumeTapThresholdExceeded,
+      syncFromFixedView,
+      snapCameraToFixedView,
+      resetOrbitToFixedView,
+      clearRotationMomentum,
+      hasActiveMomentum,
+      isZoomInteraction,
+      isActiveInteraction,
     },
     events: {
       onLayout(event: LayoutChangeEvent) {

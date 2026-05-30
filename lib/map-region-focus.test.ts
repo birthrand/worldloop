@@ -8,6 +8,7 @@ import {
 
 const brazil = { region: "Americas" };
 const france = { region: "Europe" };
+const unitedStates = { region: "North America" };
 
 describe("map region focus", () => {
   it("adopts country continent when no exploration intent exists", () => {
@@ -38,7 +39,7 @@ describe("map region focus", () => {
   it("maps selection sources to explicit vs incidental sync", () => {
     expect(
       shouldSyncFocusedRegionForSelectionSource(brazil, "Europe", "mapTap"),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       shouldSyncFocusedRegionForSelectionSource(brazil, "Europe", "search"),
     ).toBe(true);
@@ -48,6 +49,19 @@ describe("map region focus", () => {
     expect(shouldSyncFocusedRegionForSelectionSource(brazil, null, "fab")).toBe(
       false,
     );
+  });
+
+  it("retargets continent intent on cross-continent map tap", () => {
+    expect(
+      shouldSyncFocusedRegionForSelectionSource(
+        unitedStates,
+        "South America",
+        "mapTap",
+      ),
+    ).toBe(true);
+    expect(
+      shouldSyncFocusedRegionForSelectionSource(france, "Europe", "mapTap"),
+    ).toBe(true);
   });
 
   it("flags external entry sources as explicit focus", () => {

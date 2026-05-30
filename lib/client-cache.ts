@@ -13,17 +13,6 @@ type CacheEnvelope<T> = {
   data: T;
 };
 
-function logCacheEvent(
-  key: string,
-  data: unknown,
-  isFresh: boolean,
-  isStale: boolean,
-): void {
-  if (__DEV__) {
-    console.log("[client-cache]", { key, hit: !!data, isFresh, isStale });
-  }
-}
-
 export async function getClientCache<T>(key: string): Promise<{
   data: T | null;
   isFresh: boolean;
@@ -33,7 +22,6 @@ export async function getClientCache<T>(key: string): Promise<{
   try {
     const raw = await readCacheString(key);
     if (!raw) {
-      logCacheEvent(key, null, false, false);
       return { data: null, isFresh: false, isStale: false, savedAt: null };
     }
 
@@ -41,7 +29,6 @@ export async function getClientCache<T>(key: string): Promise<{
 
     if (envelope.v !== CLIENT_CACHE_SCHEMA_VERSION) {
       await deleteCacheKey(key);
-      logCacheEvent(key, null, false, false);
       return { data: null, isFresh: false, isStale: false, savedAt: null };
     }
 
@@ -50,7 +37,6 @@ export async function getClientCache<T>(key: string): Promise<{
     const isFresh = expiresAt > now;
     const isStale = !isFresh;
 
-    logCacheEvent(key, envelope.data, isFresh, isStale);
     return {
       data: envelope.data,
       isFresh,
@@ -59,7 +45,6 @@ export async function getClientCache<T>(key: string): Promise<{
     };
   } catch {
     await deleteCacheKey(key);
-    logCacheEvent(key, null, false, false);
     return { data: null, isFresh: false, isStale: false, savedAt: null };
   }
 }

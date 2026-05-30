@@ -136,7 +136,10 @@ export function MapCountryPreviewCard({
     <Animated.View
       entering={PREVIEW_CARD_ENTER}
       exiting={PREVIEW_CARD_EXIT}
-      style={[styles.card, { paddingBottom: Math.max(bottomInset - 16, 0) }]}
+      style={[
+        styles.card,
+        { paddingBottom: bottomInset > 0 ? bottomInset : 16 },
+      ]}
     >
       <View style={styles.topRow}>
         <View style={styles.titleTextWrap}>
@@ -323,6 +326,7 @@ function Stat({
 const styles = StyleSheet.create({
   card: {
     paddingTop: 14,
+    marginBottom: -80,
     paddingHorizontal: 16,
     gap: 10,
     borderTopLeftRadius: 24,
@@ -453,7 +457,7 @@ const styles = StyleSheet.create({
   actionStack: {
     flexDirection: "row",
     alignItems: "stretch",
-    marginVertical: 4,
+    marginTop: 4,
     minHeight: 48,
     borderRadius: 12,
     backgroundColor: "#101828",

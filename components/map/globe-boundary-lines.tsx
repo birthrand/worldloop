@@ -6,7 +6,6 @@ import {
   boundaryStyleRenderKey,
   resolveBoundaryStrokeColor,
 } from "@/constants/map-boundary-style";
-import { resolveCountryFocusBoundaryStrokeColor } from "@/constants/map-country-focus";
 import {
   buildGlobeBoundaryLines,
   parseCssColorToThree,
@@ -26,6 +25,8 @@ type GlobeBoundaryLinesProps = {
   focusTransitionName?: string | null;
   /** Intent — which polygons to load (continent filter). */
   focusedRegion: string | null;
+  /** Effective region for boundary strokes (may infer from view center). */
+  boundaryFocusRegion?: string | null;
   /** Live globe camera tier — stroke width/color scaling. */
   zoomTier: MapZoomTier;
 };
@@ -61,6 +62,7 @@ export function GlobeBoundaryLines({
   selectedName,
   focusTransitionName = null,
   focusedRegion,
+  boundaryFocusRegion = focusedRegion,
   zoomTier,
 }: GlobeBoundaryLinesProps) {
   const showBoundaryLines = useMapUiStore((s) => s.showBoundaryLines);
@@ -73,26 +75,27 @@ export function GlobeBoundaryLines({
     boundaryStyle.strokeColorEnabled && showBoundaryLines;
 
   const showWorldBoundaries =
-    showBoundaryLines && !focusedRegion && !highlightCountryName;
+    showBoundaryLines && !boundaryFocusRegion && !highlightCountryName;
 
   const countryBoundaries = useMemo(() => {
+    if (!showBoundaryStrokes || showCountryHighlight) return [];
     const all = getCountryBoundaryPolygons(countriesGeoJson);
     return filterBoundaryPolygonsByMapContext(all, {
-      selectedCountryName: highlightCountryName,
-      focusedRegion,
+      selectedCountryName: null,
+      focusedRegion: boundaryFocusRegion,
       countries: boundaryCountries,
       showWorldBoundaries,
     });
   }, [
     boundaryCountries,
-    focusedRegion,
+    boundaryFocusRegion,
     highlightCountryName,
+    showBoundaryStrokes,
+    showCountryHighlight,
     showWorldBoundaries,
   ]);
 
-  const strokeColor = showCountryHighlight
-    ? resolveCountryFocusBoundaryStrokeColor(boundaryStyle)
-    : resolveBoundaryStrokeColor(boundaryStyle, zoomTier);
+  const strokeColor = resolveBoundaryStrokeColor(boundaryStyle, zoomTier);
   const styleKey = boundaryStyleRenderKey(boundaryStyle, zoomTier);
 
   const lineSegments = useMemo(
@@ -105,7 +108,11 @@ export function GlobeBoundaryLines({
     [strokeColor],
   );
 
-  if (!showBoundaryStrokes || lineSegments.length === 0) {
+  if (
+    !showBoundaryStrokes ||
+    showCountryHighlight ||
+    lineSegments.length === 0
+  ) {
     return null;
   }
 

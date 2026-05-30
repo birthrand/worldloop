@@ -11,15 +11,20 @@ import * as THREE from "three";
 
 import {
   MAP_COUNTRY_FOCUS_FADE_MS,
-  resolveCountryFocusFillRgba,
+  resolveGlobeCountryFocusFillRgba,
+  resolveGlobeCountryFocusStrokeRgba,
 } from "@/constants/map-country-focus";
 import { buildGlobeBoundaryFills } from "@/lib/globe-boundary-fills";
-import { parseCssColorToThree } from "@/lib/globe-boundary-lines";
+import {
+  buildGlobeBoundaryLines,
+  parseCssColorToThree,
+} from "@/lib/globe-boundary-lines";
 import {
   filterBoundaryPolygonsByMapContext,
   getCountryBoundaryPolygons,
   type CountryBoundaryPolygon,
 } from "@/lib/map-country-boundaries";
+import { resolveCountryFocusRenderPolygons } from "@/lib/map-country-focus-polygons";
 import { useMapUiStore } from "@/store/use-map-ui-store";
 
 const countriesGeoJson = require("@/assets/geo/ne_50m_admin_0_countries/ne_50m_admin_0_countries.json");
@@ -70,14 +75,44 @@ function GlobeCountryFocusSlotMesh({
   );
 }
 
+function GlobeCountryFocusStrokeLine({
+  geometry,
+  color,
+  opacity,
+}: {
+  geometry: THREE.BufferGeometry;
+  color: THREE.Color;
+  opacity: number;
+}) {
+  useEffect(() => {
+    return () => geometry.dispose();
+  }, [geometry]);
+
+  if (opacity <= 0.001) return null;
+
+  return (
+    <line geometry={geometry}>
+      <lineBasicMaterial
+        color={color}
+        transparent
+        opacity={opacity}
+        depthTest
+        depthWrite={false}
+      />
+    </line>
+  );
+}
+
 type GlobeCountryFocusLayersProps = {
   selectedCountryName: string | null;
   focusTransitionName?: string | null;
+  fillGapsWhenContinentOverlay?: boolean;
 };
 
 export function GlobeCountryFocusLayers({
   selectedCountryName,
   focusTransitionName: _focusTransitionName = null,
+  fillGapsWhenContinentOverlay = false,
 }: GlobeCountryFocusLayersProps) {
   const boundaryStyle = useMapUiStore((s) => s.boundaryStyle);
   const highlightName = selectedCountryName;
@@ -118,25 +153,51 @@ export function GlobeCountryFocusLayers({
 
   const countryPolygons = useMemo(() => {
     if (!highlightName || renderBlend <= 0.001) return [];
-    return filterBoundaryPolygonsByMapContext(allCountryBoundaries, {
+    const filtered = filterBoundaryPolygonsByMapContext(allCountryBoundaries, {
       selectedCountryName: highlightName,
       focusedRegion: null,
       countries: [],
     })
       .filter(isRenderablePolygon)
       .slice(0, COUNTRY_FOCUS_SLOT_COUNT);
-  }, [allCountryBoundaries, highlightName, renderBlend]);
+
+    return resolveCountryFocusRenderPolygons(
+      filtered,
+      fillGapsWhenContinentOverlay,
+    );
+  }, [
+    allCountryBoundaries,
+    fillGapsWhenContinentOverlay,
+    highlightName,
+    renderBlend,
+  ]);
 
   const fill = useMemo(
     () =>
       parseCssColorToThree(
-        resolveCountryFocusFillRgba(boundaryStyle, renderBlend),
+        resolveGlobeCountryFocusFillRgba(boundaryStyle, renderBlend),
       ),
     [boundaryStyle, renderBlend],
   );
 
   const fillMeshes = useMemo(
-    () => buildGlobeBoundaryFills(countryPolygons),
+    () =>
+      buildGlobeBoundaryFills(countryPolygons, undefined, {
+        omitHoles: fillGapsWhenContinentOverlay,
+      }),
+    [countryPolygons, fillGapsWhenContinentOverlay],
+  );
+
+  const stroke = useMemo(
+    () =>
+      parseCssColorToThree(
+        resolveGlobeCountryFocusStrokeRgba(boundaryStyle, renderBlend),
+      ),
+    [boundaryStyle, renderBlend],
+  );
+
+  const strokeLines = useMemo(
+    () => buildGlobeBoundaryLines(countryPolygons),
     [countryPolygons],
   );
 
@@ -144,14 +205,29 @@ export function GlobeCountryFocusLayers({
     return null;
   }
 
+  const isVisible =
+    !!highlightName && renderBlend > 0.001 && countryPolygons.length > 0;
+
+  if (!isVisible) {
+    return null;
+  }
+
   return (
     <group>
-      {Array.from({ length: COUNTRY_FOCUS_SLOT_COUNT }, (_, slotIndex) => (
+      {fillMeshes.map((mesh) => (
         <GlobeCountryFocusSlotMesh
-          key={`globe-country-focus-slot-${slotIndex}`}
-          geometry={fillMeshes[slotIndex]?.geometry ?? null}
+          key={`globe-country-focus-fill-${mesh.id}`}
+          geometry={mesh.geometry}
           color={fill.threeColor}
           opacity={fill.opacity}
+        />
+      ))}
+      {strokeLines.map((segment) => (
+        <GlobeCountryFocusStrokeLine
+          key={`globe-country-focus-stroke-${segment.id}`}
+          geometry={segment.geometry}
+          color={stroke.threeColor}
+          opacity={stroke.opacity}
         />
       ))}
     </group>

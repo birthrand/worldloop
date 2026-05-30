@@ -9,7 +9,6 @@ import {
 import { StyleSheet, View } from "react-native";
 import type { Region } from "react-native-maps";
 import Animated, {
-  Easing,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
@@ -29,11 +28,7 @@ import {
   type MapZoomTier,
   type WorldMapViewHandle,
 } from "@/components/map/world-map-view";
-import {
-  MAP_CONTINENT_FOCUS_FADE_MS,
-  MAP_FOCUS_SCRIM_RGB,
-  MAP_SCRIM_MAX_OPACITY,
-} from "@/constants/map-continent-focus";
+import { MAP_FOCUS_SCRIM_RGB } from "@/constants/map-continent-focus";
 import type { MapCluster } from "@/lib/map-clusters";
 import type { MapPressCoordinate } from "@/lib/map-map-tap-hit";
 import type { MapMarkerPresentation } from "@/lib/map-region-markers";
@@ -63,6 +58,7 @@ type MapCanvasProps = {
   selectedName: string | null;
   focusTransitionName?: string | null;
   focusedRegion: string | null;
+  boundaryFocusRegion?: string | null;
   /** Continent focus fill/scrim — may lag focusedRegion after cross-region flights. */
   continentOverlayRegion?: string | null;
   previewRegion?: string | null;
@@ -76,6 +72,8 @@ type MapCanvasProps = {
   onGlobeTransitionComplete: () => void;
   onFlatTransitionComplete: () => void;
   onGlobeCameraViewChange?: (state: GlobeCameraViewState) => void;
+  /** Seeds globe camera distance when entering 3D (from 2D latitudeDelta). */
+  initialGlobeCameraDistance?: number;
   onCountryPress: (country: MapCountry) => void;
   onBoundaryCountryPress: (country: MapCountry) => void;
   onClusterPress: (cluster: MapCluster) => void;
@@ -98,6 +96,7 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
       selectedName,
       focusTransitionName = null,
       focusedRegion,
+      boundaryFocusRegion = focusedRegion,
       continentOverlayRegion = focusedRegion,
       previewRegion = null,
       tapRippleAt = null,
@@ -110,6 +109,7 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
       onGlobeTransitionComplete,
       onFlatTransitionComplete,
       onGlobeCameraViewChange,
+      initialGlobeCameraDistance,
       onCountryPress,
       onBoundaryCountryPress,
       onClusterPress,
@@ -135,7 +135,6 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
       shouldShowGlobeLayer(mapMode, mapViewTransition) ? 1 : 0,
     );
     const flatDimOpacity = useSharedValue(0);
-    const continentFocusBlend = useSharedValue(focusedRegion ? 1 : 0);
 
     const globePaintedRef = useRef(false);
     const enteringGlobeStartedRef = useRef(false);
@@ -272,17 +271,6 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
     }));
 
     useEffect(() => {
-      continentFocusBlend.value = withTiming(focusedRegion ? 1 : 0, {
-        duration: MAP_CONTINENT_FOCUS_FADE_MS,
-        easing: Easing.inOut(Easing.ease),
-      });
-    }, [focusedRegion]);
-
-    const continentFocusScrimStyle = useAnimatedStyle(() => ({
-      opacity: continentFocusBlend.value * MAP_SCRIM_MAX_OPACITY,
-    }));
-
-    useEffect(() => {
       if (!tapRippleAt) {
         setRippleScreen(null);
         return;
@@ -323,6 +311,7 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
       selectedName,
       focusTransitionName,
       focusedRegion,
+      boundaryFocusRegion,
       continentOverlayRegion,
       previewRegion,
       zoomTier,
@@ -372,19 +361,18 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
               selectedName={selectedName}
               focusTransitionName={focusTransitionName}
               focusedRegion={focusedRegion}
+              boundaryFocusRegion={boundaryFocusRegion}
               zoomTier={zoomTier}
               previewRegion={previewRegion}
               countryMarkerMode={countryMarkerMode}
               onClusterPress={onClusterPress}
               onCountryPress={onCountryPress}
+              onBoundaryCountryPress={onBoundaryCountryPress}
               onBackgroundPress={onMapPress}
               onCanvasPainted={handleGlobePainted}
               onCameraViewChange={onGlobeCameraViewChange}
+              initialCameraDistance={initialGlobeCameraDistance}
               lockUserGestures={lockUserGestures || !isGlobeInteractive}
-            />
-            <Animated.View
-              pointerEvents="none"
-              style={[styles.continentFocusScrim, continentFocusScrimStyle]}
             />
           </Animated.View>
         ) : null}
@@ -410,10 +398,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   flatDim: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: MAP_FOCUS_SCRIM_RGB,
-  },
-  continentFocusScrim: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: MAP_FOCUS_SCRIM_RGB,
   },

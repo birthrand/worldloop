@@ -28,7 +28,7 @@ describe("resolveRegionSettleDecision", () => {
       resolveRegionSettleDecision({
         latitudeDelta: 24,
         mapCenter: { latitude: 35, longitude: 139 },
-        is3d: false,
+        settleEnabled: true,
         isMapAnimating: true,
         suppressWorldReset: false,
         explicitLock: null,
@@ -44,7 +44,7 @@ describe("resolveRegionSettleDecision", () => {
       resolveRegionSettleDecision({
         latitudeDelta: 120,
         mapCenter: { latitude: 20, longitude: 0 },
-        is3d: false,
+        settleEnabled: true,
         isMapAnimating: false,
         suppressWorldReset: false,
         explicitLock: { region: "Asia", anchor: [35, 105] },
@@ -57,6 +57,43 @@ describe("resolveRegionSettleDecision", () => {
       clearPending: true,
       resetWorld: true,
       clearSuppressWorldReset: false,
+    });
+  });
+
+  it("skips when region settle is disabled (e.g. flat map under 3D)", () => {
+    expect(
+      resolveRegionSettleDecision({
+        latitudeDelta: 24,
+        mapCenter: { latitude: 35, longitude: 139 },
+        settleEnabled: false,
+        isMapAnimating: false,
+        suppressWorldReset: false,
+        explicitLock: null,
+        currentFocusedRegion: "Asia",
+        nearestRegion: "Asia",
+        pendingCandidate: null,
+      }),
+    ).toEqual({ kind: "skip", reason: "disabled" });
+  });
+
+  it("uses globe distance for explore tier on 3D viewport", () => {
+    expect(
+      resolveRegionSettleDecision({
+        latitudeDelta: 120,
+        globeDistance: 2.75,
+        useGlobeDistance: true,
+        mapCenter: { latitude: -10, longitude: -55 },
+        settleEnabled: true,
+        isMapAnimating: false,
+        suppressWorldReset: false,
+        explicitLock: null,
+        currentFocusedRegion: null,
+        nearestRegion: "South America",
+        pendingCandidate: null,
+      }),
+    ).toMatchObject({
+      kind: "explore_tier",
+      scheduleRegionSwitch: "South America",
     });
   });
 
@@ -85,7 +122,7 @@ describe("resolveRegionSettleDecision", () => {
       resolveRegionSettleDecision({
         latitudeDelta: 24,
         mapCenter: { latitude: 48, longitude: 2 },
-        is3d: false,
+        settleEnabled: true,
         isMapAnimating: false,
         suppressWorldReset: false,
         explicitLock: null,
@@ -109,7 +146,7 @@ describe("resolveRegionSettleDecision", () => {
       resolveRegionSettleDecision({
         latitudeDelta: 24,
         mapCenter: { latitude: anchorLat + offset, longitude: anchorLng },
-        is3d: false,
+        settleEnabled: true,
         isMapAnimating: false,
         suppressWorldReset: false,
         explicitLock: { region: "Asia", anchor: [anchorLat, anchorLng] },
@@ -134,6 +171,17 @@ describe("shouldCommitScheduledRegionSwitch", () => {
         expectedRegion: "Europe",
       }),
     ).toBe(false);
+  });
+
+  it("commits globe explore zoom from distance tier", () => {
+    expect(
+      shouldCommitScheduledRegionSwitch({
+        globeDistance: 2.75,
+        useGlobeDistance: true,
+        pendingCandidate: "South America",
+        expectedRegion: "South America",
+      }),
+    ).toBe(true);
   });
 
   it("commits when the pending candidate still matches", () => {

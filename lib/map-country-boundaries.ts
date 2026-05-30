@@ -60,6 +60,8 @@ const GEO_ADMIN_ALIASES_BY_API_NAME: Record<string, readonly string[]> = {
     "Dem. Rep. Congo",
     "Democratic Republic of the Congo",
   ],
+  /** REST Countries `name.common` — geo uses full ADMIN label. */
+  "DR Congo": ["Dem. Rep. Congo", "Democratic Republic of the Congo"],
   "South Georgia": ["South Georgia and the Islands"],
 };
 

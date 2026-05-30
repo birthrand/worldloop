@@ -89,13 +89,13 @@ export function shouldDelegateMapTapToCountrySelection(input: {
   return input.tappedCountry.region === focusedContinent;
 }
 
-/** Intent + live camera: map tap may start a new continent focus from world/3D. */
+/** Intent + live camera: map tap may start continent focus only at world zoom. */
 export function canFocusContinentFromMapTap(
-  is3d: boolean,
-  focusedRegion: string | null,
+  _is3d: boolean,
+  _focusedRegion: string | null,
   cameraTier: CameraZoomTier,
 ): boolean {
-  return is3d || cameraTier === "world" || !focusedRegion;
+  return cameraTier === "world";
 }
 
 /** Block continent re-focus when the same continent is already active at world zoom. */
@@ -143,10 +143,54 @@ export function shouldShowFeaturedChipsInMapChrome(
 
 /** Intent + live camera: country boundaries accept taps in explore zoom. */
 export function areRegionBoundariesTappable(
-  focusedRegion: string | null,
+  boundaryFocusRegion: string | null,
   cameraTier: CameraZoomTier,
+  options?: { allowWorldZoomGlobe?: boolean },
 ): boolean {
-  return !!focusedRegion && cameraTier !== "world";
+  if (!boundaryFocusRegion) return false;
+  if (cameraTier !== "world") return true;
+  return options?.allowWorldZoomGlobe === true;
+}
+
+/** Nearest app region label for a map center (continent cluster). */
+export function resolveNearestRegionFromCenter(
+  clusters: MapCluster[],
+  latitude: number,
+  longitude: number,
+): string | null {
+  if (
+    clusters.length === 0 ||
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude)
+  ) {
+    return null;
+  }
+
+  let nearest: MapCluster | null = null;
+  let best = Number.POSITIVE_INFINITY;
+
+  for (const cluster of clusters) {
+    const dLat = cluster.center[0] - latitude;
+    const dLng = cluster.center[1] - longitude;
+    const d = dLat * dLat + dLng * dLng;
+    if (d < best) {
+      best = d;
+      nearest = cluster;
+    }
+  }
+
+  return nearest?.region ?? null;
+}
+
+/**
+ * Region used for boundary outlines + tap targets.
+ * Matches 2D: committed continent intent, then world-preview intent — never inferred.
+ */
+export function resolveEffectiveBoundaryRegion(input: {
+  focusedRegion: string | null;
+  previewRegion: string | null;
+}): string | null {
+  return input.focusedRegion ?? input.previewRegion;
 }
 
 // --- Region snapshots (flights / interpolation only) ---

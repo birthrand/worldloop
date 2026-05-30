@@ -4,6 +4,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 
 import {
   DEFAULT_MAP_BOUNDARY_STYLE,
+  migrateLegacyCountryHighlightColorToAmber,
   migrateLegacyFillColorToAmber,
   normalizeBoundaryStyle,
   type MapBoundaryStyleSettings,
@@ -165,6 +166,8 @@ export const useMapUiStore = create<MapUiState>()(
         if (version < 4) {
           boundaryStyle = normalizeBoundaryStyle(boundaryStyle);
         }
+        boundaryStyle =
+          migrateLegacyCountryHighlightColorToAmber(boundaryStyle);
 
         return { ...settings, boundaryStyle };
       },
@@ -187,8 +190,10 @@ export const useMapUiStore = create<MapUiState>()(
             persisted?.countryMarkerMode,
             persisted?.showCountryFlags,
           ),
-          boundaryStyle: migrateLegacyFillColorToAmber(
-            normalizeBoundaryStyle(persisted?.boundaryStyle),
+          boundaryStyle: migrateLegacyCountryHighlightColorToAmber(
+            migrateLegacyFillColorToAmber(
+              normalizeBoundaryStyle(persisted?.boundaryStyle),
+            ),
           ),
         };
       },
