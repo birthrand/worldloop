@@ -18,6 +18,9 @@ export const GLOBE_REGION_CAMERA_DISTANCE = 2.75;
 /** Above this distance the globe is in world view (no continent selected). */
 export const GLOBE_WORLD_ZOOM_DISTANCE = 3.45;
 
+/** Default globe camera distance — world view framing (see globe-view). */
+export const GLOBE_WORLD_CAMERA_DISTANCE = 3.88;
+
 /** Opacity for sibling flags when one country stays softly highlighted at continent zoom. */
 export const MARKER_DEEMPHASIZED_OPACITY = 0.34;
 

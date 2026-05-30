@@ -24,17 +24,11 @@ type GlobeBoundaryLinesProps = {
   boundaryCountries: MapCountry[];
   selectedName: string | null;
   focusTransitionName?: string | null;
+  /** Intent — which polygons to load (continent filter). */
   focusedRegion: string | null;
+  /** Live globe camera tier — stroke width/color scaling. */
+  zoomTier: MapZoomTier;
 };
-
-function resolveGlobeZoomTier(
-  selectedName: string | null,
-  focusedRegion: string | null,
-): MapZoomTier {
-  if (selectedName) return "country";
-  if (focusedRegion) return "region";
-  return "world";
-}
 
 function BoundaryLineSegment({
   geometry,
@@ -67,6 +61,7 @@ export function GlobeBoundaryLines({
   selectedName,
   focusTransitionName = null,
   focusedRegion,
+  zoomTier,
 }: GlobeBoundaryLinesProps) {
   const showBoundaryLines = useMapUiStore((s) => s.showBoundaryLines);
   const boundaryStyle = useMapUiStore((s) => s.boundaryStyle);
@@ -76,7 +71,6 @@ export function GlobeBoundaryLines({
     !!highlightCountryName && boundaryStyle.countryHighlightEnabled;
   const showBoundaryStrokes =
     boundaryStyle.strokeColorEnabled && showBoundaryLines;
-  const zoomTier = resolveGlobeZoomTier(highlightCountryName, focusedRegion);
 
   const showWorldBoundaries =
     showBoundaryLines && !focusedRegion && !highlightCountryName;

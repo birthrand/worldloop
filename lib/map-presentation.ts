@@ -22,3 +22,11 @@ export function showRegionChrome(
 ): boolean {
   return !!focusedRegion && !activeCountry && mode !== "preview";
 }
+
+/** Presentation chrome — country focus pill (not preview). */
+export function showCountryFocusPill(
+  mode: MapPresentationMode,
+  activeCountry: MapCountry | null,
+): boolean {
+  return !!activeCountry && mode !== "preview";
+}

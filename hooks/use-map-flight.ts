@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { Region } from "react-native-maps";
 
-import { logMapDebug, summarizeRegion } from "@/lib/map-debug";
-
 export type FlightPhase = {
   region: Region;
   duration: number;
@@ -75,12 +73,6 @@ export function useMapFlight({
       if (!keepActive) {
         setActive(false);
       }
-      logMapDebug("flight", "cancel", {
-        cancelledRunId,
-        nextRunId: runIdRef.current,
-        wasActive,
-        keepActive,
-      });
     },
     [clearTimers, setActive],
   );
@@ -97,34 +89,12 @@ export function useMapFlight({
       const runId = ++runIdRef.current;
       setActive(true);
 
-      logMapDebug("flight", "flyTo start", {
-        runId,
-        wasActive,
-        phaseCount: phases.length,
-        phases: phases.map((p, i) => ({
-          index: i,
-          duration: p.duration,
-          region: summarizeRegion(p.region),
-        })),
-      });
-
       let elapsed = 0;
       phases.forEach((phase, index) => {
         const issue = () => {
           if (runIdRef.current !== runId) {
-            logMapDebug("flight", "phase skipped (stale run)", {
-              runId,
-              currentRunId: runIdRef.current,
-              phaseIndex: index,
-            });
             return;
           }
-          logMapDebug("flight", "phase issue animateToRegion", {
-            runId,
-            phaseIndex: index,
-            duration: phase.duration,
-            region: summarizeRegion(phase.region),
-          });
           animateToRegion(phase.region, phase.duration);
         };
 
@@ -149,13 +119,8 @@ export function useMapFlight({
       );
       const completeId = setTimeout(() => {
         if (runIdRef.current !== runId) {
-          logMapDebug("flight", "complete skipped (stale run)", {
-            runId,
-            currentRunId: runIdRef.current,
-          });
           return;
         }
-        logMapDebug("flight", "flyTo settled", { runId, totalDuration });
         setActive(false);
         onComplete?.();
       }, totalDuration);

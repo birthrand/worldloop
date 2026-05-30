@@ -35,9 +35,10 @@ import {
   getCountryBoundaryPolygons,
   type CountryBoundaryPolygon,
 } from "@/lib/map-country-boundaries";
-import { logMapDebug, summarizeRegion } from "@/lib/map-debug";
+import { summarizeRegion } from "@/lib/map-debug";
 import type { MapPressCoordinate } from "@/lib/map-map-tap-hit";
 import type { MapMarkerPresentation } from "@/lib/map-region-markers";
+import { areRegionBoundariesTappable } from "@/lib/map-signal-sources";
 import {
   useMapUiStore,
   type CountryMarkerDisplayMode,
@@ -106,6 +107,7 @@ type WorldMapViewProps = {
   markerPresentation?: MapMarkerPresentation;
   markerRevealGeneration?: number;
   onCountryPress: (country: MapCountry) => void;
+  onBoundaryCountryPress: (country: MapCountry) => void;
   onMapPress: (coordinate?: MapPressCoordinate) => void;
   onMapReady?: () => void;
   /** Throttled continuous viewport updates — drives live zoom-tier/marker density. */
@@ -134,6 +136,7 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
       markerPresentation = "full",
       markerRevealGeneration = 0,
       onCountryPress,
+      onBoundaryCountryPress,
       onMapPress,
       onMapReady,
       onRegionChange,
@@ -159,23 +162,10 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
         input.lat !== output.lat ||
         input.latDelta !== output.latDelta
       ) {
-        logMapDebug("camera", "world-map-view region sanitized", {
-          duration,
-          input,
-          output,
-          hasMapRef: !!mapRef.current,
-        });
+        // Region was clamped to safe bounds before animateToRegion.
       }
       regionRef.current = safeRegion;
-      try {
-        mapRef.current?.animateToRegion(safeRegion, duration);
-      } catch (err) {
-        logMapDebug("camera", "ERROR world-map-view animateToRegion threw", {
-          error: err instanceof Error ? err.message : String(err),
-          output,
-        });
-        throw err;
-      }
+      mapRef.current?.animateToRegion(safeRegion, duration);
     }, []);
 
     useImperativeHandle(
@@ -255,7 +245,10 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
     const boundaryRenderKey = showCountryHighlight
       ? countryFocusStyleRenderKey(boundaryStyle)
       : boundaryStyleRenderKey(boundaryStyle, zoomTier);
-    const boundariesTappable = zoomTier === "country" && !!focusedRegion;
+    const boundariesTappable = areRegionBoundariesTappable(
+      focusedRegion,
+      zoomTier,
+    );
     const boundaryZIndex = showCountryHighlight
       ? MAP_COUNTRY_FOCUS_STROKE_Z
       : focusedRegion
@@ -267,9 +260,9 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
         const country = boundaryCountries.find((c) =>
           countryNamesMatch(c.name, polygon.countryName),
         );
-        if (country) onCountryPress(country);
+        if (country) onBoundaryCountryPress(country);
       },
-      [boundaryCountries, onCountryPress],
+      [boundaryCountries, onBoundaryCountryPress],
     );
 
     return (
@@ -375,7 +368,7 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
                 !!focusCountryName &&
                 focusCountryName !== country.name
               }
-              displayMode={countryMarkerMode}
+              displayMode={isSelected ? "flag" : countryMarkerMode}
               presentation={markerPresentation}
               revealGeneration={markerRevealGeneration}
               keepLive={keepSingleMarkerLive || isHighlighted}

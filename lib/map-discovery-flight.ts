@@ -1,28 +1,26 @@
 import type { Region } from "react-native-maps";
 
-import {
-  regionForClusterFocus,
-  regionForMapCountry,
-  regionForWorldViewCountry,
-  WORLD_INITIAL_REGION,
-} from "@/constants/map-regions";
+import { WORLD_INITIAL_REGION } from "@/constants/map-regions";
 import type { FlightPhase } from "@/hooks/use-map-flight";
 import type { MapCluster } from "@/lib/map-clusters";
 import { REGION_FOCUS_INITIAL_DELTA } from "@/lib/map-region-markers";
+import {
+  flightRegionForClusterFocus,
+  flightRegionForCountry,
+  flightRegionForWorldViewCountry,
+} from "@/lib/map-signal-sources";
 import type { SelectionSource } from "@/store/use-identity-store";
 import type { MapCountry } from "@/types/country";
 
 const WORLD_PHASE_MS = 700;
 const CONTINENT_PHASE_MS = 600;
 const COUNTRY_PHASE_MS = 750;
-/** Explore → Map: one pan at world zoom to the country's coordinates. */
-const EXPLORE_WORLD_PAN_MS = 900;
+/** Explore → Map and random FAB — one pan at world zoom to the country. */
+const WORLD_VIEW_PAN_MS = 900;
 /** Direct map taps are already near the target — snap in faster. */
 const COUNTRY_TAP_MS = 520;
 /** Preview shuffle — one continuous retarget from the current camera. */
 const COUNTRY_RETARGET_MS = 680;
-/** Random FAB — same single-flight pattern, but framed at continent zoom. */
-const FAB_CONTINENT_RETARGET_MS = 680;
 
 /** One continuous camera move — avoids stacked animateToRegion crashes on iOS. */
 const COUNTRY_RETARGET_SOURCES = new Set<Exclude<SelectionSource, null>>([
@@ -41,14 +39,17 @@ export type DiscoveryFlightParams = {
   mode?: "focus" | "preview";
 };
 
+const WORLD_VIEW_PAN_SOURCES = new Set<Exclude<SelectionSource, null>>([
+  "explore",
+  "fab",
+]);
+
 /**
  * Builds camera phases for country navigation.
  * Marker density/UI derive separately from live zoom — phases only move the camera.
  *
  * Map tap and preview shuffle retarget in one continuous country-zoom flight from
- * the current viewport. Random FAB uses the same pattern at continent zoom.
- *
- * Explore → Map pans at world zoom only; search may prepend a world pan then continent → country.
+ * the current viewport. Explore and the random FAB pan at world zoom.
  */
 export function buildDiscoveryPhases({
   pick,
@@ -57,27 +58,17 @@ export function buildDiscoveryPhases({
   includeWorld,
   mode = "focus",
 }: DiscoveryFlightParams): FlightPhase[] {
-  const countryRegion = regionForMapCountry(pick);
-  const continentOnCountry = regionForMapCountry(
+  const countryRegion = flightRegionForCountry(pick);
+  const continentOnCountry = flightRegionForCountry(
     pick,
     REGION_FOCUS_INITIAL_DELTA,
   );
 
-  if (source === "explore") {
+  if (WORLD_VIEW_PAN_SOURCES.has(source)) {
     return [
       {
-        region: regionForWorldViewCountry(pick),
-        duration: EXPLORE_WORLD_PAN_MS,
-      },
-    ];
-  }
-
-  if (source === "fab") {
-    // Continent zoom, centered on the picked country (not the cluster centroid).
-    return [
-      {
-        region: regionForMapCountry(pick, REGION_FOCUS_INITIAL_DELTA),
-        duration: FAB_CONTINENT_RETARGET_MS,
+        region: flightRegionForWorldViewCountry(pick),
+        duration: WORLD_VIEW_PAN_MS,
       },
     ];
   }
@@ -89,8 +80,8 @@ export function buildDiscoveryPhases({
   }
 
   const continentRegion: Region = cluster
-    ? regionForClusterFocus(cluster)
-    : regionForMapCountry(pick, REGION_FOCUS_INITIAL_DELTA);
+    ? flightRegionForClusterFocus(cluster)
+    : flightRegionForCountry(pick, REGION_FOCUS_INITIAL_DELTA);
 
   const phases: FlightPhase[] = [];
   if (includeWorld) {

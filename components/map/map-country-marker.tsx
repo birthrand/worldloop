@@ -13,7 +13,6 @@ import Animated, {
 
 import { resolveFlagCdnUrl } from "@/lib/flag-url";
 import { cca2FromFlagUrl, getMapDisplayLatLng } from "@/lib/map-country";
-import { logMapDebug } from "@/lib/map-debug";
 import {
   type MapMarkerPresentation,
   MAP_FOCUS_TRANSITION_2D_MS,
@@ -58,12 +57,6 @@ const FlagImage = memo(function FlagImage({
       style={[style, !loaded && !keepVisibleWhileLoading && styles.flagHidden]}
       contentFit="cover"
       onLoadEnd={onLoad}
-      onError={(event) => {
-        logMapDebug("marker", "flag image error", {
-          flagUri,
-          error: event?.error,
-        });
-      }}
     />
   );
 });

@@ -163,6 +163,7 @@ type GlobeSceneProps = {
   selectedName: string | null;
   focusTransitionName: string | null;
   focusedRegion: string | null;
+  zoomTier: GlobeZoomTier;
   previewRegion?: string | null;
   showGlobePins: boolean;
   onCountryPress: (country: MapCountry) => void;
@@ -184,6 +185,7 @@ function GlobeScene({
   selectedName,
   focusTransitionName,
   focusedRegion,
+  zoomTier,
   previewRegion = null,
   showGlobePins,
   onCountryPress,
@@ -501,6 +503,7 @@ function GlobeScene({
           selectedName={selectedName}
           focusTransitionName={focusTransitionName}
           focusedRegion={focusedRegion}
+          zoomTier={zoomTier}
         />
 
         {showGlobePins
@@ -580,6 +583,8 @@ type GlobeViewProps = {
   selectedName: string | null;
   focusTransitionName?: string | null;
   focusedRegion: string | null;
+  /** Live globe camera tier from the map controller (stroke scaling). */
+  zoomTier?: GlobeZoomTier;
   previewRegion?: string | null;
   countryMarkerMode?: CountryMarkerDisplayMode;
   onClusterPress: (cluster: MapCluster) => void;
@@ -600,6 +605,7 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
       selectedName,
       focusTransitionName = null,
       focusedRegion,
+      zoomTier = "world",
       previewRegion = null,
       countryMarkerMode = "flag",
       onClusterPress,
@@ -620,8 +626,10 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
     >([]);
     const showGlobePins =
       !!focusedRegion &&
-      isGlobeYellowPinsVisible(countryMarkerMode) &&
-      countries.length > 0;
+      countries.length > 0 &&
+      (isGlobeYellowPinsVisible(countryMarkerMode) ||
+        !!selectedName ||
+        !!focusTransitionName);
 
     const selectedCountry = useMemo(
       () =>
@@ -740,6 +748,7 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
             selectedName={selectedName}
             focusTransitionName={focusTransitionName}
             focusedRegion={focusedRegion}
+            zoomTier={zoomTier}
             previewRegion={previewRegion}
             showGlobePins={showGlobePins}
             onCountryPress={onCountryPress}

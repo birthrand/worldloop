@@ -109,7 +109,7 @@ export default function MapScreen() {
         previewRegion={map.previewRegion}
         tapRippleAt={map.tapRippleAt}
         tapRippleToken={map.tapRippleToken}
-        zoomTier={map.is3d ? "region" : map.cameraTier}
+        zoomTier={map.cameraTier}
         countryMarkerMode={map.countryMarkerMode}
         markerPresentation={map.markerReveal.presentation}
         markerRevealGeneration={map.markerReveal.revealGeneration}
@@ -121,6 +121,7 @@ export default function MapScreen() {
         suspendMarkerSnapshot={map.isMapAnimating}
         markerRefreshToken={map.markerRefreshToken}
         onCountryPress={map.handleCountryPress}
+        onBoundaryCountryPress={map.handleBoundaryCountryPress}
         onClusterPress={map.requestContinentFocus}
         onMapPress={map.handleMapPress}
         onFlatRegionChange={map.handleFlatRegionChange}
@@ -146,7 +147,7 @@ export default function MapScreen() {
               style={{ paddingTop: insets.top + 12, zIndex: 1 }}
             >
               <MapSearchRow />
-              {map.is3d || map.cameraTier === "world" || !map.focusedRegion ? (
+              {map.shouldShowFeaturedChips ? (
                 <MapFeaturedChips
                   onAllPress={() => void map.handleAllPress()}
                   onTerrainPress={() => void map.handleTerrainPress()}
@@ -247,6 +248,7 @@ export default function MapScreen() {
           <MapControls
             mapMode={map.mapMode}
             mapViewTransition={map.mapViewTransition}
+            boundaryPreviewZoomTier={map.cameraTier}
             onMapModeToggle={map.handleMapModeToggle}
             onReset={map.handleReset}
             onZoomIn={() => mapRef.current?.zoomBy("in")}

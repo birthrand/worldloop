@@ -41,7 +41,7 @@ function prepareMapForCountry(
     mapUi.setFocusedRegion(null);
     mapUi.setDisplayMode("globalPulse");
   } else {
-    syncMapRegionFocusForCountry(country);
+    syncMapRegionFocusForCountry(country, { explicitFocus: true });
   }
   useRecentlyViewedStore.getState().recordView(country);
 }

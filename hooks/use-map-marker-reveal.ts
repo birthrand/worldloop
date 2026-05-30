@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { logMapDebug } from "@/lib/map-debug";
 import {
   MARKER_REVEAL_BATCH_INTERVAL_MS,
   MARKER_REVEAL_BATCH_SIZE,
@@ -96,16 +95,10 @@ export function useMapMarkerReveal({
   const prevCandidateSetKeyRef = useRef<string | null>(null);
 
   /** Single place to advance the generation so the ref and state never drift. */
-  const bumpGeneration = (reason: string, extra?: Record<string, unknown>) => {
+  const bumpGeneration = () => {
     generationRef.current += 1;
     const next = generationRef.current;
     setRevealGeneration(next);
-    logMapDebug("reveal", "generation reset", {
-      generation: next,
-      focusedRegion,
-      reason,
-      ...extra,
-    });
     return next;
   };
 
@@ -160,15 +153,7 @@ export function useMapMarkerReveal({
     revealedCountRef.current = 0;
     pendingRegionRef.current = null;
     setRenderedCountries([]);
-    bumpGeneration("prepare region swap", {
-      revealRegion: revealRegionRef.current,
-      prepareSwapToken,
-    });
-    logMapDebug("reveal", "prepare region swap — markers cleared", {
-      prepareSwapToken,
-      focusedRegion,
-      revealRegion: revealRegionRef.current,
-    });
+    bumpGeneration();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- stable ref-based clears
   }, [prepareSwapToken]);
 
@@ -188,17 +173,6 @@ export function useMapMarkerReveal({
         // Do not clear renderedCountries here — unmounting during a camera
         // flight crashes react-native-maps. Cross-region continent navigation
         // uses prepareSwapToken to clear markers before focusedRegion updates.
-        logMapDebug("reveal", "region changed while paused — pending", {
-          focusedRegion,
-          previousRegion: revealRegionRef.current,
-          pendingRegion: focusedRegion,
-        });
-      } else {
-        logMapDebug("reveal", "paused — holding markers", {
-          focusedRegion,
-          candidateCount: sortedCandidates.length,
-          revealed: revealedCountRef.current,
-        });
       }
       return;
     }
@@ -231,11 +205,6 @@ export function useMapMarkerReveal({
         );
         revealedCountRef.current = next;
         setRenderedCountries(sortedCandidates.slice(0, next));
-        logMapDebug("reveal", "batch mounted", {
-          focusedRegion,
-          to: next,
-          total,
-        });
         if (next >= total) {
           clearRevealInterval();
         }
@@ -257,15 +226,7 @@ export function useMapMarkerReveal({
       revealedCountRef.current = 0;
       prevCandidateSetKeyRef.current = null;
       setRenderedCountries([]);
-      const generationAtStart = bumpGeneration("new region");
-      logMapDebug("reveal", "start batched reveal (new region)", {
-        focusedRegion,
-        priorityCount,
-        total,
-        batchSize: MARKER_REVEAL_BATCH_SIZE,
-        intervalMs: MARKER_REVEAL_BATCH_INTERVAL_MS,
-        clearDelayMs: regionClearDelayMs,
-      });
+      const generationAtStart = bumpGeneration();
 
       swapTimerRef.current = setTimeout(() => {
         swapTimerRef.current = null;
@@ -302,7 +263,6 @@ export function useMapMarkerReveal({
     // After a paused flight the camera may have moved, shrinking the viewport
     // pool (e.g. 59 → 16) while revealedCount still reflects the old snapshot.
     if (revealedExceedsPool || candidateSetChanged) {
-      const previousRevealed = revealedCountRef.current;
       revealedCountRef.current = clampCount(revealedCountRef.current, total);
       const startCount = clampCount(
         Math.max(revealedCountRef.current, priorityCount),
@@ -310,14 +270,6 @@ export function useMapMarkerReveal({
       );
       revealedCountRef.current = startCount;
       setRenderedCountries(sortedCandidates.slice(0, startCount));
-      logMapDebug("reveal", "resync markers (same region)", {
-        focusedRegion,
-        previousRevealed,
-        startCount,
-        total,
-        candidateSetChanged,
-        revealedExceedsPool,
-      });
       if (startCount < total) {
         startBatchInterval(generationRef.current);
       }
@@ -328,14 +280,6 @@ export function useMapMarkerReveal({
       Math.max(revealedCountRef.current, priorityCount),
       total,
     );
-    if (startCount !== revealedCountRef.current) {
-      logMapDebug("reveal", "resume reveal (same region)", {
-        focusedRegion,
-        from: revealedCountRef.current,
-        startCount,
-        total,
-      });
-    }
     revealedCountRef.current = startCount;
     setRenderedCountries(sortedCandidates.slice(0, startCount));
     if (startCount < total) {

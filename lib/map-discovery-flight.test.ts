@@ -15,23 +15,26 @@ const japan: MapCountry = {
 };
 
 describe("buildDiscoveryPhases", () => {
-  it("uses a single world-view pan for Explore → Map handoff", () => {
-    const phases = buildDiscoveryPhases({
-      pick: japan,
-      cluster: null,
-      source: "explore",
-      includeWorld: false,
-    });
+  it.each(["explore", "fab"] as const)(
+    "uses a single world-view pan for %s",
+    (source) => {
+      const phases = buildDiscoveryPhases({
+        pick: japan,
+        cluster: null,
+        source,
+        includeWorld: false,
+      });
 
-    expect(phases).toHaveLength(1);
-    expect(phases[0]?.duration).toBe(900);
-    expect(phases[0]?.region).toMatchObject({
-      latitude: 36,
-      longitude: 138,
-      latitudeDelta: WORLD_INITIAL_REGION.latitudeDelta,
-      longitudeDelta: WORLD_INITIAL_REGION.longitudeDelta,
-    });
-  });
+      expect(phases).toHaveLength(1);
+      expect(phases[0]?.duration).toBe(900);
+      expect(phases[0]?.region).toMatchObject({
+        latitude: 36,
+        longitude: 138,
+        latitudeDelta: WORLD_INITIAL_REGION.latitudeDelta,
+        longitudeDelta: WORLD_INITIAL_REGION.longitudeDelta,
+      });
+    },
+  );
 
   it("runs continent-only for search focus; adds country phase for preview", () => {
     const focusPhases = buildDiscoveryPhases({

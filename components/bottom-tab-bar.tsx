@@ -8,6 +8,8 @@ import { useContext } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { recordPressedButton } from "@/lib/navigation-debug";
+
 const TAB_BAR_BG = "#0b132b";
 const TAB_ACTIVE = "#fbbf24";
 const TAB_INACTIVE = "#94a3b8";
@@ -63,6 +65,8 @@ export function BottomTabBar({ state, navigation }: BottomTabBarProps) {
     });
 
     if (!isFocused && !event.defaultPrevented) {
+      const tabItem = TAB_ITEMS.find((t) => t.routeName === route.name);
+      recordPressedButton(`tab:${tabItem?.label ?? route.name}`);
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       navigation.navigate(route.name, route.params);
     }

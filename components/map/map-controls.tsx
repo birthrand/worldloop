@@ -7,6 +7,7 @@ import { MapBoundaryControlsModal } from "@/components/map/map-boundary-controls
 import { MapCircularFab } from "@/components/map/map-circular-fab";
 import { applyBoundaryStyleDraft } from "@/constants/map-boundary-style";
 import { MAP_CONTROL_STACK } from "@/constants/map-chrome-styles";
+import type { CameraZoomTier } from "@/lib/map-camera-zoom";
 import type { MapViewTransition } from "@/lib/map-view-transition";
 import type { MapMode } from "@/store/use-map-store";
 import {
@@ -39,6 +40,8 @@ type MapControlsProps = {
   randomDeemphasized?: boolean;
   /** Blocks the random FAB while a camera flight is sequencing (prevents overlapping animateToRegion). */
   randomDisabled?: boolean;
+  /** Live camera tier — boundary style preview in the modal (not selection intent). */
+  boundaryPreviewZoomTier?: CameraZoomTier;
 };
 
 export function MapControls({
@@ -56,6 +59,7 @@ export function MapControls({
   onRandomCountryPress,
   randomDeemphasized = false,
   randomDisabled = false,
+  boundaryPreviewZoomTier = "world",
 }: MapControlsProps) {
   const [isActionRailExpanded, setIsActionRailExpanded] =
     useState(defaultExpanded);
@@ -72,8 +76,6 @@ export function MapControls({
   const setShowBoundaryLines = useMapUiStore((s) => s.setShowBoundaryLines);
   const boundaryStyle = useMapUiStore((s) => s.boundaryStyle);
   const setBoundaryStyle = useMapUiStore((s) => s.setBoundaryStyle);
-  const focusedRegion = useMapUiStore((s) => s.focusedRegion);
-  const boundaryPreviewZoomTier = focusedRegion ? "region" : "world";
 
   const is3d = mapMode === "3d";
   const isTransitioning =

@@ -31,6 +31,7 @@ import {
 } from "@/components/map/world-map-view";
 import {
   MAP_CONTINENT_FOCUS_FADE_MS,
+  MAP_FOCUS_SCRIM_RGB,
   MAP_SCRIM_MAX_OPACITY,
 } from "@/constants/map-continent-focus";
 import type { MapCluster } from "@/lib/map-clusters";
@@ -76,6 +77,7 @@ type MapCanvasProps = {
   onFlatTransitionComplete: () => void;
   onGlobeCameraViewChange?: (state: GlobeCameraViewState) => void;
   onCountryPress: (country: MapCountry) => void;
+  onBoundaryCountryPress: (country: MapCountry) => void;
   onClusterPress: (cluster: MapCluster) => void;
   onMapPress: (coordinate?: MapPressCoordinate) => void;
   onFlatMapReady?: () => void;
@@ -109,6 +111,7 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
       onFlatTransitionComplete,
       onGlobeCameraViewChange,
       onCountryPress,
+      onBoundaryCountryPress,
       onClusterPress,
       onMapPress,
       onFlatMapReady,
@@ -327,6 +330,7 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
       markerPresentation,
       markerRevealGeneration,
       onCountryPress,
+      onBoundaryCountryPress,
       onMapPress,
       onMapReady: onFlatMapReady,
       onRegionChange: onFlatRegionChange,
@@ -368,6 +372,7 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
               selectedName={selectedName}
               focusTransitionName={focusTransitionName}
               focusedRegion={focusedRegion}
+              zoomTier={zoomTier}
               previewRegion={previewRegion}
               countryMarkerMode={countryMarkerMode}
               onClusterPress={onClusterPress}
@@ -399,17 +404,17 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
 const styles = StyleSheet.create({
   root: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#0b132b",
+    backgroundColor: MAP_FOCUS_SCRIM_RGB,
   },
   layer: {
     ...StyleSheet.absoluteFillObject,
   },
   flatDim: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#0b132b",
+    backgroundColor: MAP_FOCUS_SCRIM_RGB,
   },
   continentFocusScrim: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#0b132b",
+    backgroundColor: MAP_FOCUS_SCRIM_RGB,
   },
 });

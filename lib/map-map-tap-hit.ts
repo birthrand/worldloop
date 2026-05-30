@@ -118,8 +118,9 @@ export function findMapCountryByBoundaryName(
 ): MapCountry | null {
   if (!geoAdminName) return null;
   return (
-    countries.find((country) => countryNamesMatch(country.name, geoAdminName)) ??
-    null
+    countries.find((country) =>
+      countryNamesMatch(country.name, geoAdminName),
+    ) ?? null
   );
 }
 
@@ -140,11 +141,7 @@ export function findMapCountryAtCoordinate(
     const bbox = ringBBox(polygon.coordinates);
     if (!pointInBBox(coordinate, bbox)) continue;
     if (
-      !pointInPolygonWithHoles(
-        coordinate,
-        polygon.coordinates,
-        polygon.holes,
-      )
+      !pointInPolygonWithHoles(coordinate, polygon.coordinates, polygon.holes)
     ) {
       continue;
     }
@@ -190,6 +187,18 @@ function findCountryNearCoast(
   }
 
   return best?.country ?? null;
+}
+
+/** Resolves a map tap to a country (polygon hit, then coast bias). */
+export function resolveMapCountryAtCoordinate(
+  polygons: CountryBoundaryPolygon[],
+  countries: MapCountry[],
+  coordinate: MapPressCoordinate,
+): MapCountry | null {
+  return (
+    findMapCountryAtCoordinate(polygons, countries, coordinate) ??
+    findCountryNearCoast(polygons, countries, coordinate)
+  );
 }
 
 /** World-view tap: land hit → app's continent cluster for that country's region. */
