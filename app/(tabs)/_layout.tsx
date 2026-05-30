@@ -2,13 +2,11 @@ import { Tabs } from "expo-router";
 import { View } from "react-native";
 
 import { BottomTabBar } from "@/components/bottom-tab-bar";
-import { NavigationDebugSync } from "@/components/navigation-debug-sync";
 import { SearchOverlay } from "@/components/search/search-overlay";
 
 export default function TabsLayout() {
   return (
     <View style={{ flex: 1 }}>
-      <NavigationDebugSync />
       <Tabs
         initialRouteName="explore"
         tabBar={(props) => <BottomTabBar {...props} />}

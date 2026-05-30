@@ -30,15 +30,7 @@ import { deriveCameraZoomState } from "@/lib/map-camera-zoom";
 import { buildMapClusters, type MapCluster } from "@/lib/map-clusters";
 import { getMapDisplayLatLng, isValidLatLng } from "@/lib/map-country";
 import { getCountryBoundaryPolygons } from "@/lib/map-country-boundaries";
-import {
-  buildMapInteractionLogContext,
-  installMapDebugErrorHandler,
-  logMapInteraction,
-  MAP_DEBUG_ENABLED,
-  selectionSourceToTrigger,
-  summarizeRegion,
-  type MapInteractionTrigger,
-} from "@/lib/map-debug";
+import { summarizeRegion } from "@/lib/map-debug";
 import { buildDiscoveryPhases } from "@/lib/map-discovery-flight";
 import { resolveExternalMapFocusEligibility } from "@/lib/map-external-focus";
 import {
@@ -90,7 +82,6 @@ import {
   canFocusContinentFromMapTap,
   canRefocusContinentFromMapTap,
   flightRegionForClusterFocus,
-  isExploreMapZoom,
   shouldDelegateMapTapToCountrySelection,
   shouldSelectCountryAcrossFocusedContinentFromMapTap,
   shouldSelectCountryInFocusedContinentFromMapTap,
@@ -101,12 +92,6 @@ import {
   isGlobeMapUi,
   type MapViewTransition,
 } from "@/lib/map-view-transition";
-import {
-  buildPredictedMapSceneSwitch,
-  deriveMapScene,
-  recordPressedButton,
-  syncMapScene,
-} from "@/lib/navigation-debug";
 import { useCountryFeedStore } from "@/store/use-country-feed-store";
 import { useExperienceStore } from "@/store/use-experience-store";
 import {
@@ -307,43 +292,6 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
   const cameraTier = cameraZoomState.tier;
   const isDetailZoom = cameraZoomState.isDetailZoom;
 
-  const buildMapInteractionLogBase = useCallback(
-    () =>
-      buildMapInteractionLogContext({
-        is3d,
-        mapMode,
-        cameraTier,
-        cameraZoomState,
-        lastMapRegion,
-        globeCameraDistance,
-        globeViewCenter,
-      }),
-    [
-      cameraTier,
-      cameraZoomState,
-      globeCameraDistance,
-      globeViewCenter,
-      is3d,
-      lastMapRegion,
-      mapMode,
-    ],
-  );
-
-  const buildPresentationInteractionDebug = useCallback(
-    (trigger: MapInteractionTrigger) => ({
-      ...buildMapInteractionLogBase(),
-      trigger,
-      focusedContinent: useMapUiStore.getState().focusedRegion,
-      continentOverlay: continentOverlayRegion,
-      presentationMode: useMapPresentationStore.getState().mode,
-      isPreviewOpen: isCountryPreviewOpen(
-        useMapPresentationStore.getState().mode,
-        useIdentityStore.getState().activeCountry,
-      ),
-    }),
-    [buildMapInteractionLogBase, continentOverlayRegion],
-  );
-
   const handleGlobeTransitionComplete = useCallback(() => {
     setMapViewTransition("ready");
   }, []);
@@ -499,10 +447,6 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
   const selectedMapName = activeCountryName ?? focusTransitionCountryName;
 
   const isPreviewOpen = isCountryPreviewOpen(presentationMode, activeCountry);
-
-  useEffect(() => {
-    installMapDebugErrorHandler();
-  }, []);
 
   useEffect(() => {
     if (mapCountriesFullyLoaded || status === "loading") return;
@@ -752,7 +696,6 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
 
   const requestContinentFocus = useCallback(
     (cluster: MapCluster) => {
-      recordPressedButton("map:cluster-marker");
       if (
         !canRefocusContinentFromMapTap(
           focusedRegion,
@@ -1127,9 +1070,6 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
         country: pick,
         mode,
         source,
-        debug: buildPresentationInteractionDebug(
-          selectionSourceToTrigger(source),
-        ),
       });
       setFocusTransitionCountryName(pick.name);
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -1213,8 +1153,6 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
       lockExplicitRegion,
       mapMode,
       mapViewTransition,
-      presentationMode,
-      buildPresentationInteractionDebug,
       resolveCountryFlightDuration,
       setDisplayMode,
       setFocusedRegion,
@@ -1230,7 +1168,6 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
   );
 
   const openCountryPreview = useCallback(() => {
-    recordPressedButton("map:country-pill:open-details");
     const country = useIdentityStore.getState().activeCountry;
     setPresentationMode("preview");
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -1250,7 +1187,6 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
 
   /** Preview sheet only — keeps the current viewport zoom and pan. */
   const openCountryPreviewAtViewport = useCallback(() => {
-    recordPressedButton("map:country-boundary:open-preview");
     setPresentationMode("preview");
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }, [setPresentationMode]);
@@ -1267,7 +1203,6 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
         country: pick,
         mode: "focus",
         source: "mapTap",
-        debug: buildPresentationInteractionDebug("boundaryPress"),
       });
       syncRegionFocusForCountry(pick);
       clearFocusTransition();
@@ -1277,7 +1212,6 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     },
     [
-      buildPresentationInteractionDebug,
       cancelCameraFlight,
       cancelIntent,
       clearFocusTransition,
@@ -1289,76 +1223,21 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
 
   const handleBoundaryCountryPress = useCallback(
     (country: MapCountry) => {
-      recordPressedButton("map:country-boundary");
       const isSelected = activeCountry?.name === country.name;
 
       if (isSelected && isPreviewOpen) {
-        logMapInteraction({
-          action: "ignored — preview already open",
-          source: "boundaryTap",
-          trigger: "boundaryPress",
-          tappedCountry: country,
-          tappedContinent: country.region,
-          selectedCountry: activeCountry,
-          isSelected: true,
-          focusedContinent: focusedRegion,
-          continentOverlay: continentOverlayRegion,
-          presentationMode,
-          isPreviewOpen,
-          ...buildMapInteractionLogBase(),
-        });
         return;
       }
       if (isSelected) {
-        logMapInteraction({
-          action: "open preview — re-tap selected country",
-          source: "boundaryTap",
-          trigger: "boundaryPress",
-          tappedCountry: country,
-          tappedContinent: country.region,
-          selectedCountry: activeCountry,
-          isSelected: true,
-          focusedContinent: focusedRegion,
-          continentOverlay: continentOverlayRegion,
-          presentationMode,
-          isPreviewOpen,
-          screenSwitch: buildPredictedMapSceneSwitch(
-            "map:country-preview",
-            "map:country-boundary",
-          ),
-          ...buildMapInteractionLogBase(),
-        });
         openCountryPreviewAtViewport();
         return;
       }
-      logMapInteraction({
-        action: "select country at viewport",
-        source: "boundaryTap",
-        trigger: "boundaryPress",
-        tappedCountry: country,
-        tappedContinent: country.region,
-        selectedCountry: activeCountry,
-        isSelected: false,
-        focusedContinent: focusedRegion,
-        continentOverlay: continentOverlayRegion,
-        presentationMode,
-        isPreviewOpen,
-        screenSwitch: buildPredictedMapSceneSwitch(
-          "map:country-focus",
-          "map:country-boundary",
-        ),
-        ...buildMapInteractionLogBase(),
-      });
       selectCountryAtViewport(country);
     },
     [
       activeCountry,
-      buildMapInteractionLogBase,
-      continentOverlayRegion,
-      focusedRegion,
       isPreviewOpen,
       openCountryPreviewAtViewport,
-      presentationMode,
       selectCountryAtViewport,
     ],
   );
@@ -1371,30 +1250,10 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
   );
 
   const clearCountryFocus = useCallback(() => {
-    recordPressedButton("map:country-pill:dismiss");
     // Exiting country focus but staying in the continent — keep the pin around
     // as a normal flag so it doesn't blink out from under the camera.
     const currentCountry = useIdentityStore.getState().activeCountry;
     const deselectedName = currentCountry?.name ?? null;
-
-    logMapInteraction({
-      action: "deselect country",
-      source: "deselection",
-      trigger: "deselection",
-      tappedCountry: currentCountry,
-      tappedContinent: currentCountry?.region ?? null,
-      selectedCountry: currentCountry,
-      isSelected: true,
-      focusedContinent: useMapUiStore.getState().focusedRegion,
-      continentOverlay: continentOverlayRegion,
-      presentationMode,
-      isPreviewOpen,
-      ...buildMapInteractionLogBase(),
-      extra: {
-        lingeringPin:
-          !!deselectedName && !!useMapUiStore.getState().focusedRegion,
-      },
-    });
 
     cancelCameraFlight();
     resetMapPresentation();
@@ -1407,13 +1266,9 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
         : null,
     );
   }, [
-    buildMapInteractionLogBase,
     cancelCameraFlight,
     clearActiveCountry,
     clearFocusTransition,
-    continentOverlayRegion,
-    isPreviewOpen,
-    presentationMode,
     resetExperience,
   ]);
 
@@ -1423,7 +1278,6 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
   }, []);
 
   const handleMapModeToggle = useCallback(() => {
-    recordPressedButton("map:fab:toggle-3d");
     cancelIntent();
     const pending = resolveMapModeTogglePending({
       currentMode: mapMode,
@@ -1686,82 +1540,21 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
 
   const handleCountryPress = useCallback(
     (country: MapCountry) => {
-      recordPressedButton("map:country-marker");
       const isSelected = activeCountry?.name === country.name;
 
       if (isSelected && isPreviewOpen) {
-        logMapInteraction({
-          action: "ignored — preview already open",
-          source: "markerTap",
-          trigger: "markerPress",
-          tappedCountry: country,
-          tappedContinent: country.region,
-          selectedCountry: activeCountry,
-          isSelected: true,
-          focusedContinent: focusedRegion,
-          continentOverlay: continentOverlayRegion,
-          presentationMode,
-          isPreviewOpen,
-          ...buildMapInteractionLogBase(),
-        });
         return;
       }
       if (isSelected) {
-        logMapInteraction({
-          action: "open preview — re-tap selected marker",
-          source: "markerTap",
-          trigger: "markerPress",
-          tappedCountry: country,
-          tappedContinent: country.region,
-          selectedCountry: activeCountry,
-          isSelected: true,
-          focusedContinent: focusedRegion,
-          continentOverlay: continentOverlayRegion,
-          presentationMode,
-          isPreviewOpen,
-          screenSwitch: buildPredictedMapSceneSwitch(
-            "map:country-preview",
-            "map:country-marker",
-          ),
-          ...buildMapInteractionLogBase(),
-        });
         openCountryPreview();
         return;
       }
-      logMapInteraction({
-        action: "focus country — marker tap",
-        source: "markerTap",
-        trigger: "markerPress",
-        tappedCountry: country,
-        tappedContinent: country.region,
-        selectedCountry: activeCountry,
-        isSelected: false,
-        focusedContinent: focusedRegion,
-        continentOverlay: continentOverlayRegion,
-        presentationMode,
-        isPreviewOpen,
-        screenSwitch: buildPredictedMapSceneSwitch(
-          "map:country-focus",
-          "map:country-marker",
-        ),
-        ...buildMapInteractionLogBase(),
-      });
       focusCountryOnMap(country, "mapTap");
     },
-    [
-      activeCountry,
-      buildMapInteractionLogBase,
-      continentOverlayRegion,
-      focusCountryOnMap,
-      focusedRegion,
-      isPreviewOpen,
-      openCountryPreview,
-      presentationMode,
-    ],
+    [activeCountry, focusCountryOnMap, isPreviewOpen, openCountryPreview],
   );
 
   const handleAllPress = useCallback(async () => {
-    recordPressedButton("map:chip:all");
     if (countries.length === 0) return;
     const generation = ++randomPickGenerationRef.current;
     useRecentlyViewedStore.getState().seedIfEmpty();
@@ -1799,36 +1592,10 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
 
     setActiveChip("all");
     setFeaturedShortcut("all");
-    logMapInteraction({
-      action: "shuffle tap — all shortcut",
-      source: "shuffle",
-      trigger: "shuffle",
-      tappedCountry: pick,
-      tappedContinent: pick.region,
-      selectedCountry: activeCountry,
-      focusedContinent: focusedRegion,
-      continentOverlay: continentOverlayRegion,
-      presentationMode,
-      isPreviewOpen,
-      ...buildMapInteractionLogBase(),
-      extra: { shuffleKind: "all" },
-    });
     focusCountryOnMap(pick, "shuffle");
-  }, [
-    activeCountry,
-    buildMapInteractionLogBase,
-    continentOverlayRegion,
-    countries,
-    focusCountryOnMap,
-    focusedRegion,
-    isPreviewOpen,
-    presentationMode,
-    setActiveChip,
-    setFeaturedShortcut,
-  ]);
+  }, [countries, focusCountryOnMap, setActiveChip, setFeaturedShortcut]);
 
   const handleTerrainPress = useCallback(async () => {
-    recordPressedButton("map:chip:terrain");
     if (countries.length === 0) return;
     const generation = ++randomPickGenerationRef.current;
     const feed = useCountryFeedStore.getState();
@@ -1853,36 +1620,10 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
 
     setActiveChip("nature");
     setFeaturedShortcut("terrain");
-    logMapInteraction({
-      action: "shuffle tap — terrain shortcut",
-      source: "shuffle",
-      trigger: "shuffle",
-      tappedCountry: pick,
-      tappedContinent: pick.region,
-      selectedCountry: activeCountry,
-      focusedContinent: focusedRegion,
-      continentOverlay: continentOverlayRegion,
-      presentationMode,
-      isPreviewOpen,
-      ...buildMapInteractionLogBase(),
-      extra: { shuffleKind: "terrain" },
-    });
     focusCountryOnMap(pick, "shuffle");
-  }, [
-    activeCountry,
-    buildMapInteractionLogBase,
-    continentOverlayRegion,
-    countries,
-    focusCountryOnMap,
-    focusedRegion,
-    isPreviewOpen,
-    presentationMode,
-    setActiveChip,
-    setFeaturedShortcut,
-  ]);
+  }, [countries, focusCountryOnMap, setActiveChip, setFeaturedShortcut]);
 
   const handleSavedPress = useCallback(async () => {
-    recordPressedButton("map:chip:saved");
     if (countries.length === 0) return;
     const generation = ++randomPickGenerationRef.current;
     const saved = useSavedCountriesStore.getState().savedCountries;
@@ -1902,36 +1643,10 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
 
     setActiveChip("all");
     setFeaturedShortcut("saved");
-    logMapInteraction({
-      action: "shuffle tap — saved shortcut",
-      source: "shuffle",
-      trigger: "shuffle",
-      tappedCountry: pick,
-      tappedContinent: pick.region,
-      selectedCountry: activeCountry,
-      focusedContinent: focusedRegion,
-      continentOverlay: continentOverlayRegion,
-      presentationMode,
-      isPreviewOpen,
-      ...buildMapInteractionLogBase(),
-      extra: { shuffleKind: "saved" },
-    });
     focusCountryOnMap(pick, "shuffle");
-  }, [
-    activeCountry,
-    buildMapInteractionLogBase,
-    continentOverlayRegion,
-    countries,
-    focusCountryOnMap,
-    focusedRegion,
-    isPreviewOpen,
-    presentationMode,
-    setActiveChip,
-    setFeaturedShortcut,
-  ]);
+  }, [countries, focusCountryOnMap, setActiveChip, setFeaturedShortcut]);
 
   const handleRandomCountry = useCallback(async () => {
-    recordPressedButton("map:fab-random");
     if (
       !shouldAcceptRandomFabTap({
         isMapAnimating: isMapAnimatingRef.current,
@@ -1977,23 +1692,7 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
       return;
     }
 
-    const pickLatLng = getMapDisplayLatLng(pick);
-
     const showHint = !hasSeenRandomCountryHint;
-    logMapInteraction({
-      action: "fab tap — random country",
-      source: "fab",
-      trigger: "fab",
-      tappedCountry: pick,
-      tappedContinent: pick.region,
-      selectedCountry: activeCountry,
-      focusedContinent: focusedRegion,
-      continentOverlay: continentOverlayRegion,
-      presentationMode,
-      isPreviewOpen,
-      ...buildMapInteractionLogBase(),
-      extra: { pickLatLng },
-    });
     focusCountryOnMap(pick, "fab");
     if (showHint) {
       setRandomCountryHint(pick);
@@ -2002,16 +1701,11 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
   }, [
     activeChip,
     activeCountry,
-    buildMapInteractionLogBase,
-    continentOverlayRegion,
     dismissRandomCountryHint,
     focusCountryOnMap,
-    focusedRegion,
     hasSeenRandomCountryHint,
-    isPreviewOpen,
     loadMapCountries,
     mapCountriesFullyLoaded,
-    presentationMode,
   ]);
 
   const handleNextCountry = useCallback(async () => {
@@ -2058,20 +1752,6 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
         pickRandomMapCountry(countries, activeCountry.name);
       if (!pick) return;
 
-      logMapInteraction({
-        action: "shuffle tap — next country in preview",
-        source: "shuffle",
-        trigger: "shuffle",
-        tappedCountry: pick,
-        tappedContinent: pick.region,
-        selectedCountry: activeCountry,
-        focusedContinent: focusedRegion,
-        continentOverlay: continentOverlayRegion,
-        presentationMode,
-        isPreviewOpen,
-        ...buildMapInteractionLogBase(),
-        extra: { shuffleKind: "nextCountry" },
-      });
       advanceToCountryPreview(pick);
     } catch (err) {
       isMapAnimatingRef.current = false;
@@ -2088,13 +1768,9 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
     activeChip,
     activeCountry,
     advanceToCountryPreview,
-    buildMapInteractionLogBase,
-    continentOverlayRegion,
     countries,
     featuredShortcut,
     focusedRegion,
-    isPreviewOpen,
-    presentationMode,
     mapMode,
   ]);
 
@@ -2121,13 +1797,11 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
   ]);
 
   const handleReset = useCallback(() => {
-    recordPressedButton("map:fab:reset");
     flyToWorldView();
     setActiveChip("all");
   }, [flyToWorldView, setActiveChip]);
 
   const handleBackToWorld = useCallback(() => {
-    recordPressedButton("map:region-chrome:world");
     flyToWorldView();
   }, [flyToWorldView]);
 
@@ -2143,7 +1817,6 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
   );
 
   const handleBackToContinent = useCallback(() => {
-    recordPressedButton("map:region-chrome:continent");
     if (!focusedRegion) return;
 
     const cluster = clusters.find((c) => c.region === focusedRegion);
@@ -2203,40 +1876,12 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
 
   const handleMapPress = useCallback(
     (coordinate?: MapPressCoordinate) => {
-      recordPressedButton("map:surface-tap");
-      const interactionBase = {
-        ...buildMapInteractionLogBase(),
-        trigger: "mapPress" as const,
-        selectedCountry: activeCountry,
-        focusedContinent: focusedRegion,
-        continentOverlay: continentOverlayRegion,
-        presentationMode,
-        isPreviewOpen,
-        coordinate: coordinate ?? null,
-      };
-
       if (presentationMode === "preview") {
-        logMapInteraction({
-          action: "dismiss preview",
-          source: "mapTap",
-          screenSwitch: buildPredictedMapSceneSwitch(
-            "map:country-focus",
-            "map:surface-tap",
-          ),
-          ...interactionBase,
-        });
         dismissCountryPreview();
         return;
       }
 
       if (!coordinate) {
-        logMapInteraction({
-          action: activeCountry
-            ? "deselect — tap without coordinate"
-            : "ignored — tap without coordinate",
-          source: "mapTap",
-          ...interactionBase,
-        });
         if (activeCountry) {
           clearCountryFocus();
         }
@@ -2250,7 +1895,6 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
       );
 
       if (tappedCountry) {
-        const isExploreZoom = isExploreMapZoom(focusedRegion, cameraTier);
         const selectInFocusedContinent =
           shouldSelectCountryInFocusedContinentFromMapTap({
             focusedRegion,
@@ -2274,38 +1918,11 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
         showTapRipple(coordinate);
 
         if (delegateCountrySelection) {
-          logMapInteraction({
-            action: "country hit — delegate to boundary handler",
-            source: "mapTap",
-            tappedCountry,
-            tappedContinent: tappedCountry.region,
-            isExploreZoom,
-            ...interactionBase,
-            extra: {
-              delegateReason: selectInFocusedContinent
-                ? isExploreZoom
-                  ? "exploreZoom"
-                  : "focusedContinentAtWorld"
-                : "countryFocusIntent",
-            },
-          });
           handleBoundaryCountryPress(tappedCountry);
           return;
         }
 
         if (selectAcrossFocusedContinent) {
-          logMapInteraction({
-            action: "country hit — focus country (cross-continent)",
-            source: "mapTap",
-            tappedCountry,
-            tappedContinent: tappedCountry.region,
-            isExploreZoom,
-            screenSwitch: buildPredictedMapSceneSwitch(
-              "map:country-focus",
-              "map:surface-tap",
-            ),
-            ...interactionBase,
-          });
           focusCountryOnMap(tappedCountry, "mapTap");
           return;
         }
@@ -2315,20 +1932,6 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
           focusedRegion,
           cameraTier,
         );
-        logMapInteraction({
-          action: willFocusContinent
-            ? "country hit — focus continent"
-            : "country hit — ignored (explore zoom, different continent)",
-          source: "mapTap",
-          tappedCountry,
-          tappedContinent: tappedCountry.region,
-          isExploreZoom,
-          screenSwitch: willFocusContinent
-            ? buildPredictedMapSceneSwitch("map:continent", "map:surface-tap")
-            : null,
-          ...interactionBase,
-          extra: { willFocusContinent },
-        });
 
         if (willFocusContinent) {
           const cluster =
@@ -2342,15 +1945,8 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
 
       // No boundary hit — ocean, rivers, empty map, etc.
       showTapRipple(coordinate);
-      const isExploreZoom = isExploreMapZoom(focusedRegion, cameraTier);
 
       if (activeCountry) {
-        logMapInteraction({
-          action: "empty tap — deselect country",
-          source: "mapTap",
-          isExploreZoom,
-          ...interactionBase,
-        });
         clearCountryFocus();
         return;
       }
@@ -2370,20 +1966,6 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
         ) &&
         !!cluster;
 
-      logMapInteraction({
-        action: willFocusContinentFromOcean
-          ? "empty tap — focus continent"
-          : "empty tap — no action",
-        source: "mapTap",
-        tappedContinent: cluster?.region ?? null,
-        isExploreZoom,
-        screenSwitch: willFocusContinentFromOcean
-          ? buildPredictedMapSceneSwitch("map:continent", "map:surface-tap")
-          : null,
-        ...interactionBase,
-        extra: { clusterFound: !!cluster },
-      });
-
       if (willFocusContinentFromOcean && cluster) {
         requestContinentFocus(cluster);
       }
@@ -2391,18 +1973,15 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
     [
       activeCountry,
       allBoundaryPolygons,
-      buildMapInteractionLogBase,
       cameraTier,
       clearCountryFocus,
       clusters,
-      continentOverlayRegion,
       countries,
       dismissCountryPreview,
       focusCountryOnMap,
       focusedRegion,
       handleBoundaryCountryPress,
       is3d,
-      isPreviewOpen,
       presentationMode,
       requestContinentFocus,
       showTapRipple,
@@ -2429,27 +2008,6 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
       hasActiveCountry: activeCountry !== null,
       hasFocusTransition: focusTransitionCountryName !== null,
     });
-
-  useEffect(() => {
-    if (!MAP_DEBUG_ENABLED) return;
-    syncMapScene(
-      deriveMapScene({
-        showOnboarding,
-        isPreviewOpen,
-        presentationMode,
-        activeCountry,
-        focusedRegion,
-        cameraTier,
-      }),
-    );
-  }, [
-    activeCountry,
-    cameraTier,
-    focusedRegion,
-    isPreviewOpen,
-    presentationMode,
-    showOnboarding,
-  ]);
 
   return {
     status,

@@ -144,8 +144,6 @@ export function MapCountryPreviewCard({
             style={styles.countryName}
             numberOfLines={3}
             ellipsizeMode="tail"
-            includeFontPadding={false}
-            textAlignVertical="center"
             adjustsFontSizeToFit
             minimumFontScale={
               COUNTRY_NAME_MIN_FONT_SIZE / COUNTRY_NAME_FONT_SIZE
