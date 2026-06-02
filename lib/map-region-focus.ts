@@ -1,4 +1,4 @@
-import { normalizeCountryRegion } from "@/lib/app-region";
+import { normalizeAppRegion, normalizeCountryRegion } from "@/lib/app-region";
 import type { SelectionSource } from "@/store/use-identity-store";
 import { useMapUiStore } from "@/store/use-map-ui-store";
 import type { MapCountry } from "@/types/country";
@@ -22,7 +22,7 @@ export function shouldSyncFocusedRegionForCountry(
   focusedRegion: string | null,
   options?: SyncRegionFocusOptions,
 ): boolean {
-  const countryRegion = normalizeCountryRegion(country).region;
+  const countryRegion = normalizeAppRegion(country.region);
 
   if (!focusedRegion) {
     return true;
@@ -51,7 +51,7 @@ export function shouldSyncFocusedRegionForSelectionSource(
     return false;
   }
 
-  const countryRegion = normalizeCountryRegion(country).region;
+  const countryRegion = normalizeAppRegion(country.region);
   const crossContinentMapTap =
     source === "mapTap" && !!focusedRegion && focusedRegion !== countryRegion;
 

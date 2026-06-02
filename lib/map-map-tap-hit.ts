@@ -224,9 +224,11 @@ export function findClusterAtWorldCoordinate(
   clusters: MapCluster[],
   coordinate: MapPressCoordinate,
 ): MapCluster | null {
-  const country =
-    findMapCountryAtCoordinate(polygons, countries, coordinate) ??
-    findCountryNearCoast(polygons, countries, coordinate);
+  const country = resolveMapCountryAtCoordinate(
+    polygons,
+    countries,
+    coordinate,
+  );
   if (!country) return null;
   return clusters.find((cluster) => cluster.region === country.region) ?? null;
 }

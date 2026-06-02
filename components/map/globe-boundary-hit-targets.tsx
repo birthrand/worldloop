@@ -4,7 +4,6 @@ import * as THREE from "three";
 
 import type { MapZoomTier } from "@/components/map/world-map-view";
 import { buildGlobeBoundaryHitTargets } from "@/lib/globe-boundary-fills";
-import { logGlobeTap } from "@/lib/globe-tap-debug";
 import {
   countryNamesMatch,
   filterBoundaryPolygonsByMapContext,
@@ -119,20 +118,9 @@ export function GlobeBoundaryHitTargets({
   const handleBoundaryPress = useCallback(
     (countryName: string | null) => {
       if (consumeTapThresholdExceeded()) {
-        logGlobeTap({
-          source: "boundary-mesh",
-          stage: "skip",
-          outcome: "ignored-drag-threshold",
-          country: countryName,
-        });
         return;
       }
       if (!countryName) {
-        logGlobeTap({
-          source: "boundary-mesh",
-          stage: "skip",
-          outcome: "missing-country-name",
-        });
         return;
       }
 
@@ -141,38 +129,10 @@ export function GlobeBoundaryHitTargets({
           countryNamesMatch(entry.name, countryName),
         ) ?? null;
       if (country) {
-        logGlobeTap({
-          source: "boundary-mesh",
-          stage: "input",
-          outcome: "boundary-mesh-hit",
-          country: country.name,
-          region: country.region,
-          focusedRegion,
-          boundaryFocusRegion,
-          cameraTier: zoomTier,
-        });
         onBoundaryCountryPress(country);
-        return;
       }
-
-      logGlobeTap({
-        source: "boundary-mesh",
-        stage: "skip",
-        outcome: "country-not-in-list",
-        country: countryName,
-        focusedRegion,
-        boundaryFocusRegion,
-        cameraTier: zoomTier,
-      });
     },
-    [
-      boundaryCountries,
-      boundaryFocusRegion,
-      consumeTapThresholdExceeded,
-      focusedRegion,
-      onBoundaryCountryPress,
-      zoomTier,
-    ],
+    [boundaryCountries, consumeTapThresholdExceeded, onBoundaryCountryPress],
   );
 
   if (

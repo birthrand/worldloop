@@ -15,8 +15,7 @@ type CountryPresentationMode = Extract<
   "focus" | "preview"
 >;
 
-/** Region + UI prep before camera flight — identity commits later via `commitMapPresentation`. */
-export function stageMapPresentationForFlight(
+function syncFocusedRegionForSelection(
   country: MapCountry,
   source: Exclude<SelectionSource, null>,
 ): void {
@@ -28,6 +27,14 @@ export function stageMapPresentationForFlight(
       explicitFocus: isExplicitCountryFocusSource(source),
     });
   }
+}
+
+/** Region + UI prep before camera flight — identity commits later via `commitMapPresentation`. */
+export function stageMapPresentationForFlight(
+  country: MapCountry,
+  source: Exclude<SelectionSource, null>,
+): void {
+  syncFocusedRegionForSelection(country, source);
 }
 
 /** After camera acknowledges the flight — commit identity and presentation mode. */
@@ -42,14 +49,7 @@ export function commitMapPresentation({
 }): void {
   useMapPresentationStore.getState().setMode(mode);
   selectCountryOnMap(country, source);
-  const focusedRegion = useMapUiStore.getState().focusedRegion;
-  if (
-    shouldSyncFocusedRegionForSelectionSource(country, focusedRegion, source)
-  ) {
-    syncMapRegionFocusForCountry(country, {
-      explicitFocus: isExplicitCountryFocusSource(source),
-    });
-  }
+  syncFocusedRegionForSelection(country, source);
 }
 
 /** Immediate transition (no camera deferral) — e.g. preview on already-focused country. */

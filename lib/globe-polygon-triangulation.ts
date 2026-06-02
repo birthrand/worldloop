@@ -1,6 +1,13 @@
 import earcut from "earcut";
 import type { LatLng } from "react-native-maps";
 
+import { vector3ToLatLng } from "@/lib/latlng-to-sphere";
+import {
+  latLngRingToUnitVectors,
+  projectUnitVectorsToTangentPlane,
+  sphericalCentroidUnit,
+} from "@/lib/sphere-math";
+
 const DEG2RAD = Math.PI / 180;
 const COORD_EPSILON = 1e-6;
 
@@ -61,12 +68,21 @@ export function ringSphericalCentroid(ring: LatLng[]): {
   y /= len;
   z /= len;
 
-  const lat = (Math.asin(Math.max(-1, Math.min(1, y))) * 180) / Math.PI;
-  const lng = (((Math.atan2(z, -x) * 180) / Math.PI + 540) % 360) - 180;
+  const [lat, lng] = vector3ToLatLng(x, y, z);
   return { lat, lng };
 }
 
-/** Stereographic projection — stable for large country polygons on the sphere. */
+/**
+ * Project a ring to 2D using the tangent plane at the spherical centroid.
+ * Vertices are converted to unit sphere first — no stereographic lat/lng flattening.
+ */
+export function projectRingToTangentPlaneFlat(ring: LatLng[]): number[] {
+  const vectors = latLngRingToUnitVectors(ring);
+  const normal = sphericalCentroidUnit(vectors);
+  return projectUnitVectorsToTangentPlane(vectors, normal);
+}
+
+/** @deprecated Stereographic — prefer `projectRingToTangentPlaneFlat`. */
 export function projectToStereographicFlat(
   ring: LatLng[],
   center: { lat: number; lng: number },
@@ -85,16 +101,7 @@ export function projectToStereographicFlat(
     const cosLamDiff = Math.cos(lam - lam0);
     const sinLamDiff = Math.sin(lam - lam0);
     const denom = 1 + sinPhi1 * sinPhi + cosPhi1 * cosPhi * cosLamDiff;
-
-    if (denom < 1e-6) {
-      flat.push(
-        (point.longitude - center.lng) * cosPhi1,
-        point.latitude - center.lat,
-      );
-      continue;
-    }
-
-    const k = 2 / denom;
+    const k = 2 / Math.max(denom, 1e-12);
     flat.push(
       k * cosPhi * sinLamDiff,
       k * (cosPhi1 * sinPhi - sinPhi1 * cosPhi * cosLamDiff),
@@ -119,22 +126,24 @@ export function triangulatePolygonWithHolesFlat(
   return earcut(flat, holeIndices);
 }
 
-/** Build flat coords + hole indices for outer ring and holes (same projection). */
+/** Build flat coords + hole indices for outer ring and holes (shared tangent-plane pole). */
 export function polygonRingsToFlat(
   outer: LatLng[],
   holes: LatLng[][],
 ): { flat: number[]; holeIndices: number[]; points: LatLng[] } {
   const unwrappedOuter = unwrapRingLongitudes(outer);
-  const center = ringSphericalCentroid(unwrappedOuter);
   const points: LatLng[] = [...unwrappedOuter];
-  const flat = projectToStereographicFlat(unwrappedOuter, center);
+  const allVectors = latLngRingToUnitVectors(points);
+  const normal = sphericalCentroidUnit(allVectors);
+  const flat = projectUnitVectorsToTangentPlane(allVectors, normal);
   const holeIndices: number[] = [];
 
   for (const hole of holes) {
     holeIndices.push(points.length);
     const unwrappedHole = unwrapRingLongitudes(hole);
     points.push(...unwrappedHole);
-    flat.push(...projectToStereographicFlat(unwrappedHole, center));
+    const holeVectors = latLngRingToUnitVectors(unwrappedHole);
+    flat.push(...projectUnitVectorsToTangentPlane(holeVectors, normal));
   }
 
   return { flat, holeIndices, points };
@@ -146,10 +155,9 @@ export function ringToProjectionFlat(ring: LatLng[]): {
   points: LatLng[];
 } {
   const points = unwrapRingLongitudes(ring);
-  const center = ringSphericalCentroid(points);
   return {
     points,
-    flat: projectToStereographicFlat(points, center),
+    flat: projectRingToTangentPlaneFlat(points),
   };
 }
 
@@ -197,8 +205,18 @@ export function splitRingAtAntimeridian(ring: LatLng[]): LatLng[][] {
 
   if (seamSplits.length === 0) return [ring];
 
+  const chainHemisphere = (chain: LatLng[]): "east" | "west" => {
+    for (const point of chain) {
+      if (!coordsNear(Math.abs(point.longitude), 180)) {
+        return point.longitude >= 0 ? "east" : "west";
+      }
+    }
+    return chain[0]!.longitude >= 0 ? "east" : "west";
+  };
+
   const chains: LatLng[][] = [];
   let current: LatLng[] = [];
+  let leadSegment: LatLng[] | null = null;
 
   for (const point of expanded) {
     const prev = current[current.length - 1];
@@ -213,12 +231,43 @@ export function splitRingAtAntimeridian(ring: LatLng[]): LatLng[][] {
       );
 
     if (isSeamEnter) {
-      if (current.length >= 3) chains.push(current);
+      if (chains.length === 0 && leadSegment === null && current.length > 0) {
+        leadSegment = current;
+      } else if (current.length >= 3) {
+        chains.push(current);
+      }
       current = [point];
       continue;
     }
 
     current.push(point);
+  }
+
+  if (leadSegment && leadSegment.length > 0) {
+    if (chains.length > 0) {
+      const firstHemisphere = chainHemisphere(chains[0]!);
+      const lastHemisphere = chainHemisphere(chains[chains.length - 1]!);
+      const leadHemisphere = chainHemisphere(leadSegment);
+
+      if (
+        firstHemisphere === lastHemisphere &&
+        firstHemisphere === leadHemisphere
+      ) {
+        chains[chains.length - 1]!.push(...leadSegment);
+      } else if (
+        current.length > 0 &&
+        leadHemisphere === chainHemisphere(current)
+      ) {
+        const merged = [...leadSegment, ...current];
+        if (merged.length >= 3) chains.push(merged);
+        current = [];
+      }
+    } else if (
+      current.length > 0 &&
+      chainHemisphere(leadSegment) === chainHemisphere(current)
+    ) {
+      current = [...leadSegment, ...current];
+    }
   }
 
   if (current.length >= 3) chains.push(current);

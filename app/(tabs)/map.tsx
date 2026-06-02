@@ -26,6 +26,7 @@ import { MapSearchRow } from "@/components/map/map-search-row";
 import { MapTopChromeScrim } from "@/components/map/map-top-chrome-scrim";
 import { continentDisplayLabel } from "@/constants/regions";
 import { useMapLogic } from "@/hooks/use-map-logic";
+import { resolveGlobeAutoRotateEnabled } from "@/lib/globe-rotation";
 
 /** Preview card "back to continent" action — off until UX is finalized. */
 const PREVIEW_CONTINENT_BACK_ENABLED = false;
@@ -42,6 +43,12 @@ export default function MapScreen() {
   const [previewExitHold, setPreviewExitHold] = useState(false);
   const wasPreviewOpenRef = useRef(false);
   const previewOverlayActive = map.isPreviewOpen || previewExitHold;
+  const globeAutoRotateEnabled = resolveGlobeAutoRotateEnabled({
+    hasCountryFocus:
+      !!map.activeCountry?.name || !!map.focusTransitionCountryName,
+    hasContinentFocus: !!map.focusedRegion,
+    hasContinentPreview: !!map.previewRegion,
+  });
 
   useEffect(() => {
     if (map.isPreviewOpen) {
@@ -95,6 +102,7 @@ export default function MapScreen() {
         onGlobeCameraViewChange={map.handleGlobeCameraViewChange}
         initialGlobeCameraDistance={map.globeEntryCameraDistance}
         lockUserGestures={previewOverlayActive || map.isMapAnimating}
+        autoRotateEnabled={globeAutoRotateEnabled}
         suspendMarkerSnapshot={map.isMapAnimating}
         markerRefreshToken={map.markerRefreshToken}
         onCountryPress={map.handleCountryPress}

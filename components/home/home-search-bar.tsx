@@ -10,7 +10,7 @@ export function HomeSearchBar() {
     <Pressable
       accessibilityRole="button"
       accessibilityLabel="Search countries"
-      onPress={openSearch}
+      onPress={() => openSearch()}
       className="h-12 flex-row items-center gap-3 rounded-2xl bg-white/8 px-4"
     >
       <Ionicons name="search" size={20} color="#94a3b8" />

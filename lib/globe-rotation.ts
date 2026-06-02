@@ -6,6 +6,39 @@ import { latLngToVector3, vector3ToLatLng } from "@/lib/latlng-to-sphere";
 const INITIAL_VIEW_LAT = 4;
 const INITIAL_VIEW_LNG = -36;
 
+/** Idle 3D globe slowly spins when the user is not interacting. */
+export const GLOBE_AUTO_ROTATE_ENABLED = true;
+
+/** Radians per second — ~0.025 ≈ one full turn in ~4.2 minutes. */
+export const GLOBE_AUTO_ROTATE_SPEED = 0.025;
+
+/** Resume idle spin this long after the user stops dragging (default state only). */
+export const GLOBE_AUTO_ROTATE_INACTIVITY_MS = 4000;
+
+export type GlobeAutoRotateContext = {
+  /** Country selected or mid-focus flight. */
+  hasCountryFocus: boolean;
+  /** Continent explore mode is active. */
+  hasContinentFocus: boolean;
+  /** Continent intent preview before commit. */
+  hasContinentPreview: boolean;
+};
+
+/**
+ * Idle auto-rotation runs only in the default world view (no country/continent anchor).
+ * When a region or country is focused, the globe stays anchored until selection clears.
+ */
+export function resolveGlobeAutoRotateEnabled(
+  context: GlobeAutoRotateContext,
+): boolean {
+  if (!GLOBE_AUTO_ROTATE_ENABLED) return false;
+  return (
+    !context.hasCountryFocus &&
+    !context.hasContinentFocus &&
+    !context.hasContinentPreview
+  );
+}
+
 const scratchVector = new THREE.Vector3();
 const scratchInverse = new THREE.Quaternion();
 
@@ -18,7 +51,10 @@ export function latLngToUnitSphereVector(
   lat: number,
   lng: number,
 ): THREE.Vector3 {
-  return scratchVector.set(...latLngToVector3(lat, lng, 1)).normalize();
+  return scratchVector
+    .set(...latLngToVector3(lat, lng, 1))
+    .normalize()
+    .clone();
 }
 
 /**

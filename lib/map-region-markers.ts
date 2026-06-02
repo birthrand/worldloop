@@ -5,6 +5,22 @@ import type { MapCountry } from "@/types/country";
 /** Flag pins shown at continent/region zoom — zoom in to reveal the rest. */
 export const REGION_ZOOM_MARKER_CAP = 16;
 
+/**
+ * Max flags when a country is selected — focal pin + nearby suggestions.
+ * Interior countries: up to 7 neighbors (8 total including focal).
+ */
+export const SELECTED_COUNTRY_MARKER_CAP = 8;
+
+/** Same-continent suggestions at a continental edge (excludes focal). */
+export const BRIDGE_SAME_REGION_CAP = 4;
+/** Cross-continent suggestions from the nearest foreign continent. */
+export const BRIDGE_CROSS_REGION_CAP = 4;
+/**
+ * Bridge when the nearest foreign-continent country is closer than this rank
+ * among same-continent neighbors (data-driven "continental edge" detection).
+ */
+export const CROSS_CONTINENT_BRIDGE_RANK = 6;
+
 /** Below this latitudeDelta (2D), show every filtered country in the focused region. */
 export const MAP_COUNTRY_ZOOM_LATITUDE_DELTA = 28;
 /** Cluster focus lands here; any zoom-in movement beyond this reveals all flags. */
@@ -113,6 +129,120 @@ export function capMapCountriesByPopulation(
     .slice(0, limit);
 }
 
+/** Nearest countries to a selected pin — hides distant ones in the same region. */
+export function capMapCountriesByProximity(
+  countries: MapCountry[],
+  focalCountryName: string,
+  limit = REGION_ZOOM_MARKER_CAP,
+): MapCountry[] {
+  if (countries.length <= limit) return countries;
+
+  const focal = countries.find((country) => country.name === focalCountryName);
+  if (!focal) return capMapCountriesByPopulation(countries, limit);
+
+  const [focalLat, focalLng] = getMapDisplayLatLng(focal);
+
+  return sortCountriesByDistanceFrom(countries, focalLat, focalLng).slice(
+    0,
+    limit,
+  );
+}
+
+type SelectedCountryMarkerContext = {
+  /** Full chip-filtered pool — used to find cross-continent neighbors. */
+  allCountries: MapCountry[];
+  focusedRegion: string;
+};
+
+/**
+ * True when a foreign-continent country is closer than the Nth nearest
+ * same-continent neighbor — a data-driven signal for continental edge.
+ */
+export function shouldBridgeToNearbyContinent(
+  focal: MapCountry,
+  sameRegionCountries: MapCountry[],
+  foreignCountries: MapCountry[],
+  bridgeRank = CROSS_CONTINENT_BRIDGE_RANK,
+): boolean {
+  if (foreignCountries.length === 0) return false;
+
+  const [focalLat, focalLng] = getMapDisplayLatLng(focal);
+  const sameDistances = sameRegionCountries
+    .filter((country) => country.name !== focal.name)
+    .map((country) => squaredDistanceToViewport(country, focalLat, focalLng))
+    .sort((a, b) => a - b);
+
+  const nearestForeignDistance = Math.min(
+    ...foreignCountries.map((country) =>
+      squaredDistanceToViewport(country, focalLat, focalLng),
+    ),
+  );
+  if (!Number.isFinite(nearestForeignDistance)) return false;
+
+  const rankIndex = bridgeRank - 1;
+  const nthSameDistance =
+    sameDistances.length === 0
+      ? Infinity
+      : sameDistances[Math.min(rankIndex, sameDistances.length - 1)];
+
+  return nearestForeignDistance < nthSameDistance;
+}
+
+/** Selected pin neighbors — same continent, or split with closest foreign continent. */
+export function resolveNearbySelectedCountryMarkers(
+  sameRegionCountries: MapCountry[],
+  focalCountryName: string,
+  context: SelectedCountryMarkerContext,
+): MapCountry[] {
+  const focal =
+    sameRegionCountries.find((country) => country.name === focalCountryName) ??
+    context.allCountries.find((country) => country.name === focalCountryName);
+  if (!focal) {
+    return capMapCountriesByPopulation(sameRegionCountries);
+  }
+
+  const foreignCountries = context.allCountries.filter(
+    (country) =>
+      country.region !== context.focusedRegion &&
+      country.name !== focalCountryName,
+  );
+
+  if (
+    !shouldBridgeToNearbyContinent(focal, sameRegionCountries, foreignCountries)
+  ) {
+    return capMapCountriesByProximity(
+      sameRegionCountries,
+      focalCountryName,
+      SELECTED_COUNTRY_MARKER_CAP,
+    );
+  }
+
+  const [focalLat, focalLng] = getMapDisplayLatLng(focal);
+  const sameRegionNeighbors = sortCountriesByDistanceFrom(
+    sameRegionCountries.filter((country) => country.name !== focal.name),
+    focalLat,
+    focalLng,
+  ).slice(0, BRIDGE_SAME_REGION_CAP);
+
+  const foreignSorted = sortCountriesByDistanceFrom(
+    foreignCountries,
+    focalLat,
+    focalLng,
+  );
+  const closestForeignRegion = foreignSorted[0]?.region;
+  const crossRegionNeighbors = closestForeignRegion
+    ? foreignSorted
+        .filter((country) => country.region === closestForeignRegion)
+        .slice(0, BRIDGE_CROSS_REGION_CAP)
+    : [];
+
+  return uniqueCountriesByName([
+    focal,
+    ...sameRegionNeighbors,
+    ...crossRegionNeighbors,
+  ]).slice(0, BRIDGE_SAME_REGION_CAP + BRIDGE_CROSS_REGION_CAP + 1);
+}
+
 /** Ensures a focal country stays in the marker list (e.g. random FAB at continent zoom). */
 export function ensureMapCountryInMarkerList(
   countries: MapCountry[],
@@ -125,16 +255,57 @@ export function ensureMapCountryInMarkerList(
   return focal ? [...countries, focal] : countries;
 }
 
-/** Full region list at detail zoom; capped major countries at continent zoom. */
+/**
+ * Marker density for a focused region:
+ * - Selected country → nearest neighbors (with optional cross-continent bridge)
+ * - Detail zoom, no selection → full region list
+ * - Continent zoom, no selection → top countries by population
+ */
 export function resolveRegionMarkerCountries(
   countries: MapCountry[],
   isDetailZoom: boolean,
   focalCountryName?: string | null,
+  selectedContext?: SelectedCountryMarkerContext | null,
 ): MapCountry[] {
-  const resolved = isDetailZoom
-    ? countries
-    : capMapCountriesByPopulation(countries);
+  const resolved = focalCountryName
+    ? selectedContext
+      ? resolveNearbySelectedCountryMarkers(
+          countries,
+          focalCountryName,
+          selectedContext,
+        )
+      : capMapCountriesByProximity(
+          countries,
+          focalCountryName,
+          SELECTED_COUNTRY_MARKER_CAP,
+        )
+    : isDetailZoom
+      ? countries
+      : capMapCountriesByPopulation(countries);
   return ensureMapCountryInMarkerList(resolved, focalCountryName);
+}
+
+function sortCountriesByDistanceFrom(
+  countries: MapCountry[],
+  focalLat: number,
+  focalLng: number,
+): MapCountry[] {
+  return [...countries].sort(
+    (a, b) =>
+      squaredDistanceToViewport(a, focalLat, focalLng) -
+      squaredDistanceToViewport(b, focalLat, focalLng),
+  );
+}
+
+function uniqueCountriesByName(countries: MapCountry[]): MapCountry[] {
+  const seen = new Set<string>();
+  const result: MapCountry[] = [];
+  for (const country of countries) {
+    if (seen.has(country.name)) continue;
+    seen.add(country.name);
+    result.push(country);
+  }
+  return result;
 }
 
 function squaredDistanceToViewport(

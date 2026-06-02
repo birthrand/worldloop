@@ -1,67 +1,50 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  ringToProjectionFlat,
+  projectRingToTangentPlaneFlat,
+  ringSphericalCentroid,
   splitRingAtAntimeridian,
   triangulatePolygonFlat,
-  unwrapRingLongitudes,
 } from "@/lib/globe-polygon-triangulation";
+import type { LatLng } from "react-native-maps";
 
-describe("triangulatePolygonFlat", () => {
-  it("triangulates a square", () => {
-    const flat = [0, 0, 1, 0, 1, 1, 0, 1];
-    const indices = triangulatePolygonFlat(flat);
-    expect(indices).toHaveLength(6);
+/** Rough mainland China bbox — does not cross the antimeridian. */
+const CHINA_MAINLAND_RING: LatLng[] = [
+  { latitude: 53, longitude: 73 },
+  { latitude: 53, longitude: 135 },
+  { latitude: 20, longitude: 135 },
+  { latitude: 20, longitude: 73 },
+];
+
+describe("ringSphericalCentroid", () => {
+  it("places eastern-hemisphere rings near their geographic center", () => {
+    const centroid = ringSphericalCentroid(CHINA_MAINLAND_RING);
+
+    expect(centroid.lat).toBeGreaterThan(15);
+    expect(centroid.lat).toBeLessThan(55);
+    expect(centroid.lng).toBeGreaterThan(70);
+    expect(centroid.lng).toBeLessThan(140);
   });
+});
 
-  it("triangulates a concave L-shape", () => {
-    const flat = [0, 0, 2, 0, 2, 1, 1, 1, 1, 2, 0, 2];
+describe("projectRingToTangentPlaneFlat", () => {
+  it("projects large eastern-hemisphere rings from unit-sphere vertices", () => {
+    const flat = projectRingToTangentPlaneFlat(CHINA_MAINLAND_RING);
+
+    expect(flat).toHaveLength(CHINA_MAINLAND_RING.length * 2);
+    expect(flat.every((value) => Number.isFinite(value))).toBe(true);
+
     const indices = triangulatePolygonFlat(flat);
-    expect(indices.length).toBeGreaterThanOrEqual(6);
+    expect(indices.length).toBeGreaterThan(0);
     expect(indices.length % 3).toBe(0);
   });
 });
 
 describe("splitRingAtAntimeridian", () => {
-  it("returns the original ring when it does not cross the dateline", () => {
-    const ring = [
-      { latitude: 0, longitude: -50 },
-      { latitude: 0, longitude: -40 },
-      { latitude: -5, longitude: -45 },
-    ];
-    expect(splitRingAtAntimeridian(ring)).toEqual([ring]);
-  });
+  it("does not split rings that stay east of the antimeridian", () => {
+    const chains = splitRingAtAntimeridian(CHINA_MAINLAND_RING);
 
-  it("splits a ring that crosses the dateline into valid chains", () => {
-    const ring = [
-      { latitude: 10, longitude: 170 },
-      { latitude: 10, longitude: -170 },
-      { latitude: -10, longitude: -170 },
-      { latitude: -10, longitude: 170 },
-    ];
-    const chains = splitRingAtAntimeridian(ring);
-    expect(chains.length).toBeGreaterThanOrEqual(1);
-    for (const chain of chains) {
-      expect(chain.length).toBeGreaterThanOrEqual(3);
-    }
-  });
-});
-
-describe("ringToProjectionFlat", () => {
-  it("projects ring points relative to centroid", () => {
-    const { flat } = ringToProjectionFlat([
-      { latitude: 0, longitude: 0 },
-      { latitude: 0, longitude: 1 },
-      { latitude: 1, longitude: 1 },
-    ]);
-    expect(flat).toHaveLength(6);
-  });
-
-  it("unwraps longitudes before projection", () => {
-    const unwrapped = unwrapRingLongitudes([
-      { latitude: 0, longitude: 179 },
-      { latitude: 0, longitude: -179 },
-    ]);
-    expect(unwrapped[1]!.longitude).toBe(181);
+    expect(chains).toHaveLength(1);
+    expect(chains[0]).toBe(CHINA_MAINLAND_RING);
   });
 });

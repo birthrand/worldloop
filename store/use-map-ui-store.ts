@@ -87,8 +87,11 @@ type MapUiState = {
 };
 
 /** Fields that belong to the current map session only — never written to AsyncStorage. */
-const MAP_EXPLORATION_SESSION_DEFAULTS = {
-  displayMode: "globalPulse" as MapDisplayMode,
+const MAP_EXPLORATION_SESSION_DEFAULTS: Pick<
+  MapUiState,
+  "displayMode" | "focusedRegion" | "featuredShortcut"
+> = {
+  displayMode: "globalPulse",
   focusedRegion: null,
   featuredShortcut: "all",
 };

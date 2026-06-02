@@ -20,6 +20,8 @@ import {
   continentFocusFillOpacityFactor,
   continentPreviewFillOpacityFactor,
   mapFocusScrimRgba,
+  resolveContinentFocusCoreStrokeWidth,
+  resolveContinentFocusStrokeRgba,
 } from "@/constants/map-continent-focus";
 import {
   filterBoundaryPolygonsByMapContext,
@@ -60,6 +62,7 @@ export function MapContinentFocusLayers({
   boundaryCountries,
 }: MapContinentFocusLayersProps) {
   const boundaryStyle = useMapUiStore((s) => s.boundaryStyle);
+  const boundaryStyleRevision = useMapUiStore((s) => s.boundaryStyleRevision);
   const blend = useSharedValue(0);
   const previewBlend = useSharedValue(0);
   const lastBlendStep = useSharedValue(-1);
@@ -184,6 +187,16 @@ export function MapContinentFocusLayers({
     boundaryStyle,
     renderPreviewBlend * continentPreviewFillOpacityFactor(),
   );
+  const continentStrokeWidth = selectedCountryName
+    ? 0
+    : resolveContinentFocusCoreStrokeWidth(boundaryStyle);
+  const transparentStroke = "rgba(0, 0, 0, 0)";
+  const committedStrokeColor = selectedCountryName
+    ? transparentStroke
+    : resolveContinentFocusStrokeRgba(boundaryStyle, renderBlend);
+  const previewStrokeColor = selectedCountryName
+    ? transparentStroke
+    : resolveContinentFocusStrokeRgba(boundaryStyle, renderPreviewBlend);
 
   const showCommitted = displayRegion && renderBlend > 0.001;
   const showPreview =
@@ -216,12 +229,12 @@ export function MapContinentFocusLayers({
       {showPreview
         ? previewPolygons.map((polygon) => (
             <Polygon
-              key={`continent-preview-${polygon.id}`}
+              key={`continent-preview-${polygon.id}-${boundaryStyleRevision}`}
               coordinates={polygon.coordinates}
               holes={polygon.holes}
               fillColor={previewFillColor}
-              strokeColor="rgba(0,0,0,0)"
-              strokeWidth={0}
+              strokeColor={previewStrokeColor}
+              strokeWidth={continentStrokeWidth}
               zIndex={MAP_CONTINENT_FOCUS_POLYGON_Z}
             />
           ))
@@ -229,12 +242,12 @@ export function MapContinentFocusLayers({
       {showCommitted
         ? continentPolygons.map((polygon) => (
             <Polygon
-              key={`continent-focus-${polygon.id}`}
+              key={`continent-focus-${polygon.id}-${boundaryStyleRevision}`}
               coordinates={polygon.coordinates}
               holes={polygon.holes}
               fillColor={fillColor}
-              strokeColor="rgba(0,0,0,0)"
-              strokeWidth={0}
+              strokeColor={committedStrokeColor}
+              strokeWidth={continentStrokeWidth}
               zIndex={MAP_CONTINENT_FOCUS_POLYGON_Z + 1}
             />
           ))
