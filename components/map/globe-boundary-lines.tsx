@@ -2,10 +2,7 @@ import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 
 import type { MapZoomTier } from "@/components/map/world-map-view";
-import {
-  boundaryStyleRenderKey,
-  resolveBoundaryStrokeColor,
-} from "@/constants/map-boundary-style";
+import { resolveBoundaryStrokeColor } from "@/constants/map-boundary-style";
 import {
   buildGlobeBoundaryLines,
   parseCssColorToThree,
@@ -40,21 +37,25 @@ function BoundaryLineSegment({
   color: THREE.Color;
   opacity: number;
 }) {
-  useEffect(() => {
-    return () => geometry.dispose();
-  }, [geometry]);
+  const lineObject = useMemo(() => {
+    const material = new THREE.LineBasicMaterial({
+      color,
+      transparent: opacity < 1,
+      opacity,
+      depthTest: true,
+      depthWrite: false,
+    });
+    return new THREE.Line(geometry, material);
+  }, [geometry, color, opacity]);
 
-  return (
-    <line geometry={geometry}>
-      <lineBasicMaterial
-        color={color}
-        transparent={opacity < 1}
-        opacity={opacity}
-        depthTest
-        depthWrite={false}
-      />
-    </line>
-  );
+  useEffect(() => {
+    return () => {
+      geometry.dispose();
+      lineObject.material.dispose();
+    };
+  }, [geometry, lineObject]);
+
+  return <primitive object={lineObject} />;
 }
 
 export function GlobeBoundaryLines({
@@ -96,11 +97,10 @@ export function GlobeBoundaryLines({
   ]);
 
   const strokeColor = resolveBoundaryStrokeColor(boundaryStyle, zoomTier);
-  const styleKey = boundaryStyleRenderKey(boundaryStyle, zoomTier);
 
   const lineSegments = useMemo(
     () => buildGlobeBoundaryLines(countryBoundaries),
-    [countryBoundaries, strokeColor, styleKey],
+    [countryBoundaries],
   );
 
   const { threeColor, opacity } = useMemo(

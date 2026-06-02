@@ -1,4 +1,4 @@
-/** Disabled — use `lib/globe-tap-debug.ts` for 3D tap routing instead. */
+/** Disabled — globe camera traces are off in dev. */
 export const GLOBE_CAMERA_DEBUG = false;
 
 export type GlobeCameraLogPayload = {

@@ -50,6 +50,10 @@ export function countryMatchesExploreRegion(
   targetRegion: string,
 ): boolean {
   return (
-    normalizeAppRegion(country.region, undefined, country.name) === targetRegion
+    normalizeAppRegion(
+      country.region,
+      undefined,
+      country.name,
+    ).toLowerCase() === targetRegion.toLowerCase()
   );
 }

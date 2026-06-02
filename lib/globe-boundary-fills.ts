@@ -1,6 +1,10 @@
 import * as THREE from "three";
 
 import {
+  diagnoseBoundaryFillPolygon,
+  logBoundaryFillHoleDiagnostics,
+} from "@/lib/globe-boundary-fill-debug";
+import {
   canonicalLatLng,
   polygonRingsToFlat,
   ringSphericalCentroid,
@@ -9,8 +13,8 @@ import {
   triangulatePolygonFlat,
   triangulatePolygonWithHolesFlat,
 } from "@/lib/globe-polygon-triangulation";
-import { latLngToVector3 } from "@/lib/latlng-to-sphere";
 import type { CountryBoundaryPolygon } from "@/lib/map-country-boundaries";
+import { latLngRingToUnitVectors } from "@/lib/sphere-math";
 import type { LatLng } from "react-native-maps";
 
 export const GLOBE_FILL_RADIUS = 1.003;
@@ -34,13 +38,13 @@ function pointsToSphereGeometry(
 ): THREE.BufferGeometry | null {
   if (points.length < 3 || indices.length < 3) return null;
 
-  const positions = new Float32Array(points.length * 3);
-  points.forEach((point, index) => {
-    const [x, y, z] = latLngToVector3(point.latitude, point.longitude, radius);
+  const unitVectors = latLngRingToUnitVectors(points);
+  const positions = new Float32Array(unitVectors.length * 3);
+  unitVectors.forEach((vector, index) => {
     const offset = index * 3;
-    positions[offset] = x;
-    positions[offset + 1] = y;
-    positions[offset + 2] = z;
+    positions[offset] = vector.x * radius;
+    positions[offset + 1] = vector.y * radius;
+    positions[offset + 2] = vector.z * radius;
   });
 
   const geometry = new THREE.BufferGeometry();
@@ -96,6 +100,8 @@ function holesForChain(chain: LatLng[], holes: LatLng[][]): LatLng[][] {
 export type GlobeBoundaryFillOptions = {
   /** Solid fill — skip lake/bay holes (used when continent overlay sits below). */
   omitHoles?: boolean;
+  /** Dev-only triangulation diagnostics for country highlight fills. */
+  debugFillOverlay?: boolean;
 };
 
 function polygonToSphereGeometries(
@@ -161,6 +167,12 @@ export function buildGlobeBoundaryFills(
 ): GlobeBoundaryFill[] {
   const fills: GlobeBoundaryFill[] = [];
   const omitHoles = options.omitHoles ?? false;
+  const debugFillOverlay = options.debugFillOverlay ?? false;
+  const fillDiagnostics = debugFillOverlay
+    ? polygons
+        .map((polygon) => diagnoseBoundaryFillPolygon(polygon, omitHoles))
+        .filter((entry): entry is NonNullable<typeof entry> => entry != null)
+    : [];
 
   for (const polygon of polygons) {
     const geometries = polygonToSphereGeometries(polygon, radius, omitHoles);
@@ -170,6 +182,10 @@ export function buildGlobeBoundaryFills(
         geometry,
       });
     });
+  }
+
+  if (debugFillOverlay) {
+    logBoundaryFillHoleDiagnostics(fillDiagnostics);
   }
 
   return fills;

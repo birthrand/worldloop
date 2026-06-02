@@ -97,7 +97,7 @@ export const DEFAULT_MAP_BOUNDARY_STYLE: MapBoundaryStyleSettings = {
   countryFillOpacityStep: 2,
   countryStrokeColorHue: DEFAULT_COUNTRY_HIGHLIGHT_COLOR_HUE,
   countryStrokeColorHex: DEFAULT_COUNTRY_HIGHLIGHT_COLOR_HEX,
-  countryStrokeThicknessStep: 4,
+  countryStrokeThicknessStep: 2,
   countryStrokeOpacityStep: 4,
 };
 
@@ -106,6 +106,12 @@ const STROKE_WIDTH_RANGE: Record<MapZoomTier, { min: number; max: number }> = {
   region: { min: 0.4, max: 1.2 },
   country: { min: 0.5, max: 1.2 },
 };
+
+/** 2D map focus outlines — scaled below boundary preview width (country + continent). */
+export const MAP_2D_BOUNDARY_CORE_STROKE_SCALE = 0.64;
+
+/** 2D map focus outline minimum (react-native-maps strokeWidth). */
+export const MAP_2D_BOUNDARY_CORE_STROKE_WIDTH_MIN = 0.75;
 
 function clampHue(value: number): number {
   return ((value % 360) + 360) % 360;

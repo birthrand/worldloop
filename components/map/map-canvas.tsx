@@ -82,6 +82,7 @@ type MapCanvasProps = {
   onFlatRegionChange?: (region: Region) => void;
   onRegionChangeComplete?: (region: Region) => void;
   lockUserGestures?: boolean;
+  autoRotateEnabled?: boolean;
   /** Keeps map markers updating while the camera animates (e.g. Explore → Map). */
   suspendMarkerSnapshot?: boolean;
   markerRefreshToken?: number;
@@ -118,6 +119,7 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
       onFlatRegionChange,
       onRegionChangeComplete,
       lockUserGestures = false,
+      autoRotateEnabled = true,
       suspendMarkerSnapshot = false,
       markerRefreshToken = 0,
     },
@@ -373,6 +375,7 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
               onCameraViewChange={onGlobeCameraViewChange}
               initialCameraDistance={initialGlobeCameraDistance}
               lockUserGestures={lockUserGestures || !isGlobeInteractive}
+              autoRotateEnabled={autoRotateEnabled}
             />
           </Animated.View>
         ) : null}

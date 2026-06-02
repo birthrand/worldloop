@@ -22,10 +22,12 @@ import { GlobeBoundaryLines } from "@/components/map/globe-boundary-lines";
 import { GlobeContinentFocusLayers } from "@/components/map/globe-continent-focus-layers";
 import { GlobeCountryFocusLayers } from "@/components/map/globe-country-focus-layers";
 import { GlobeCountryPin } from "@/components/map/globe-country-pin";
+import { GlobeFlagOverlay } from "@/components/map/globe-flag-overlay";
 import { GlobeLabelOverlay } from "@/components/map/globe-label-overlay";
 import { GlobeLabelProjector } from "@/components/map/globe-label-projector";
 import {
   GlobePinProjector,
+  globePinPositionsChanged,
   type GlobePinScreenPosition,
 } from "@/components/map/globe-pin-projector";
 import {
@@ -38,6 +40,9 @@ import {
   type GlobeOrbitControls,
 } from "@/lib/globe-orbit-controls";
 import {
+  GLOBE_AUTO_ROTATE_ENABLED,
+  GLOBE_AUTO_ROTATE_INACTIVITY_MS,
+  GLOBE_AUTO_ROTATE_SPEED,
   GLOBE_CAMERA_VIEW_DIRECTION,
   globeQuaternionDeltaForCameraOrbit,
   latLngFromWorldNormal,
@@ -48,7 +53,6 @@ import {
   projectLatLngToScreen,
   type GlobeScreenPosition,
 } from "@/lib/globe-screen-project";
-import { logGlobeTap } from "@/lib/globe-tap-debug";
 import { latLngToVector3 } from "@/lib/latlng-to-sphere";
 import { useGlobeTexture } from "@/lib/load-globe-texture";
 import type { MapCluster } from "@/lib/map-clusters";
@@ -178,11 +182,14 @@ type GlobeSceneProps = {
   onReady: (handle: GlobeCameraHandle) => void;
   onCanvasPainted?: () => void;
   onLabelPositions: (positions: GlobeLabelScreenPosition[]) => void;
+  onPinPositions: (positions: GlobePinScreenPosition[]) => void;
   onCameraViewChange?: (state: GlobeCameraViewState) => void;
   onGlobeSurfacePress: (coordinate: MapPressCoordinate) => void;
   layoutSize: { width: number; height: number };
   onProjectorReady: (project: LatLngProjector) => void;
   lockUserGestures: boolean;
+  /** False when a country or continent is anchored — disables idle spin. */
+  autoRotateEnabled: boolean;
   /** Seeds globe distance from the map controller (2D latitudeDelta sync). */
   initialCameraDistance?: number;
 };
@@ -204,18 +211,20 @@ function GlobeScene({
   onReady,
   onCanvasPainted,
   onLabelPositions,
+  onPinPositions,
   onCameraViewChange,
   onGlobeSurfacePress,
   layoutSize,
   onProjectorReady,
   lockUserGestures,
+  autoRotateEnabled,
   initialCameraDistance = DEFAULT_CAMERA_DISTANCE,
 }: GlobeSceneProps) {
   const texture = useGlobeTexture();
   const { camera } = useThree();
   const globeGroupRef = useRef<THREE.Group>(null);
   const globeQuaternionRef = useRef(new THREE.Quaternion());
-  const continentSinglePinActive =
+  const nearbyFlagPinMode =
     !!focusedRegion && (!!selectedName || !!focusTransitionName);
   const fillCountryHighlightGaps =
     !selectedName &&
@@ -235,11 +244,6 @@ function GlobeScene({
   const handleGlobeSurfacePress = useCallback(
     (event: ThreeEvent<MouseEvent>) => {
       if (controls.functions.consumeTapThresholdExceeded()) {
-        logGlobeTap({
-          source: "surface",
-          stage: "skip",
-          outcome: "ignored-drag-threshold",
-        });
         return;
       }
       event.stopPropagation();
@@ -249,18 +253,15 @@ function GlobeScene({
         event.point,
         globe.quaternion,
       );
-      logGlobeTap({
-        source: "surface",
-        stage: "input",
-        outcome: "surface-tap",
-        coordinate: { latitude, longitude },
-      });
       onGlobeSurfacePress({ latitude, longitude });
     },
     [controls.functions, onGlobeSurfacePress],
   );
 
   const flightRef = useRef<GlobeRotationFlight | null>(null);
+  /** Pauses idle spin after user drag until inactivity timeout elapses. */
+  const userExploringRef = useRef(false);
+  const lastInteractionEndedAtRef = useRef(0);
   const cameraDistanceRef = useRef(initialCameraDistance);
   const onCameraViewChangeRef = useRef(onCameraViewChange);
   onCameraViewChangeRef.current = onCameraViewChange;
@@ -315,6 +316,10 @@ function GlobeScene({
     (positions: GlobePinScreenPosition[]) => {
       if (!showGlobePins) return;
 
+      onPinPositions(positions);
+
+      if (nearbyFlagPinMode) return;
+
       const visible = new Set(
         positions.filter((p) => p.visible).map((p) => p.name),
       );
@@ -332,7 +337,7 @@ function GlobeScene({
         return visible;
       });
     },
-    [showGlobePins],
+    [nearbyFlagPinMode, onPinPositions, showGlobePins],
   );
 
   const focusLatLng = useCallback(
@@ -379,7 +384,7 @@ function GlobeScene({
       elapsed: 0,
       duration: 0.55,
     };
-    cameraDistanceRef.current = DEFAULT_CAMERA_DISTANCE;
+    // cameraDistanceRef.current = DEFAULT_CAMERA_DISTANCE;
     controls.scope.target.set(0, GLOBE_VIEW_TARGET_Y, 0);
     resetOrbitFromFixedCamera();
   }, [controls.scope.target, resetOrbitFromFixedCamera]);
@@ -408,10 +413,24 @@ function GlobeScene({
     ],
   );
 
+  const appliedInitialCameraDistanceRef = useRef(false);
   useEffect(() => {
+    if (
+      appliedInitialCameraDistanceRef.current ||
+      initialCameraDistance == null
+    ) {
+      return;
+    }
+    appliedInitialCameraDistanceRef.current = true;
     cameraDistanceRef.current = initialCameraDistance;
     resetOrbitFromFixedCamera();
   }, [initialCameraDistance, resetOrbitFromFixedCamera]);
+
+  useEffect(() => {
+    if (autoRotateEnabled) {
+      userExploringRef.current = false;
+    }
+  }, [autoRotateEnabled]);
 
   useEffect(() => {
     if (!flightRef.current) {
@@ -445,6 +464,10 @@ function GlobeScene({
     };
     controls.scope.onStart = () => {
       flightRef.current = null;
+      userExploringRef.current = true;
+    };
+    controls.scope.onEnd = () => {
+      lastInteractionEndedAtRef.current = Date.now();
     };
   }, [
     camera,
@@ -528,6 +551,24 @@ function GlobeScene({
             emitCameraView();
           }
         }
+      } else if (
+        GLOBE_AUTO_ROTATE_ENABLED &&
+        autoRotateEnabled &&
+        !lockUserGestures &&
+        !controls.functions.isActiveInteraction() &&
+        !controls.functions.hasActiveMomentum()
+      ) {
+        const inactivityElapsed =
+          Date.now() - lastInteractionEndedAtRef.current >=
+          GLOBE_AUTO_ROTATE_INACTIVITY_MS;
+
+        if (!userExploringRef.current || inactivityElapsed) {
+          if (userExploringRef.current && inactivityElapsed) {
+            userExploringRef.current = false;
+          }
+          globe.rotateY(GLOBE_AUTO_ROTATE_SPEED * delta);
+          emitCameraView();
+        }
       }
 
       snapOrbitFromFixedCamera();
@@ -605,7 +646,7 @@ function GlobeScene({
           fillGapsWhenContinentOverlay={fillCountryHighlightGaps}
         />
 
-        {showGlobePins
+        {showGlobePins && !nearbyFlagPinMode
           ? countries.map((country) => {
               if (!isValidLatLng(country.latlng)) return null;
               const focusCountryName =
@@ -615,11 +656,10 @@ function GlobeScene({
                 !!focusTransitionName &&
                 focusTransitionName === country.name &&
                 selectedName !== country.name;
-              const keepVisible = continentSinglePinActive
-                ? isSelected || isFocusTransitioning
-                : isSelected ||
-                  isFocusTransitioning ||
-                  visibleCirclePinNames.has(country.name);
+              const keepVisible =
+                isSelected ||
+                isFocusTransitioning ||
+                visibleCirclePinNames.has(country.name);
               if (!keepVisible) {
                 return null;
               }
@@ -632,9 +672,7 @@ function GlobeScene({
                   isSelected={isSelected}
                   isFocusTransitioning={isFocusTransitioning}
                   isDeemphasized={
-                    continentSinglePinActive &&
-                    !isSelected &&
-                    !isFocusTransitioning
+                    !!focusCountryName && !isSelected && !isFocusTransitioning
                   }
                   onPress={handlePinPress}
                   consumeTapThresholdExceeded={
@@ -698,6 +736,7 @@ type GlobeViewProps = {
   onCanvasPainted?: () => void;
   onCameraViewChange?: (state: GlobeCameraViewState) => void;
   lockUserGestures?: boolean;
+  autoRotateEnabled?: boolean;
   /** Seeds globe distance from the map controller when entering 3D. */
   initialCameraDistance?: number;
 };
@@ -723,6 +762,7 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
       onCanvasPainted,
       onCameraViewChange,
       lockUserGestures = false,
+      autoRotateEnabled = true,
       initialCameraDistance,
     },
     ref,
@@ -734,12 +774,17 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
     const [labelPositions, setLabelPositions] = useState<
       GlobeLabelScreenPosition[]
     >([]);
+    const [flagPinPositions, setFlagPinPositions] = useState<
+      GlobePinScreenPosition[]
+    >([]);
+    const nearbyFlagPinMode =
+      !!focusedRegion && (!!selectedName || !!focusTransitionName);
     const showGlobePins =
       !!focusedRegion &&
       countries.length > 0 &&
-      (isGlobeYellowPinsVisible(countryMarkerMode) ||
-        !!selectedName ||
-        !!focusTransitionName);
+      isGlobeYellowPinsVisible(countryMarkerMode);
+    const showNearbyFlagPins =
+      nearbyFlagPinMode && countryMarkerMode === "flag";
 
     const selectedCountry = useMemo(
       () =>
@@ -767,6 +812,18 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
       (positions: GlobeLabelScreenPosition[]) => {
         setLabelPositions((prev) => {
           if (!globeLabelPositionsChanged(prev, positions)) {
+            return prev;
+          }
+          return positions;
+        });
+      },
+      [],
+    );
+
+    const handlePinPositions = useCallback(
+      (positions: GlobePinScreenPosition[]) => {
+        setFlagPinPositions((prev) => {
+          if (!globePinPositionsChanged(prev, positions)) {
             return prev;
           }
           return positions;
@@ -868,11 +925,13 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
             onReady={handleReady}
             onCanvasPainted={onCanvasPainted}
             onLabelPositions={handleLabelPositions}
+            onPinPositions={handlePinPositions}
             onCameraViewChange={onCameraViewChange}
             onGlobeSurfacePress={handleGlobeSurfacePress}
             layoutSize={layoutSize}
             onProjectorReady={handleProjectorReady}
             lockUserGestures={lockUserGestures}
+            autoRotateEnabled={autoRotateEnabled}
             initialCameraDistance={initialCameraDistance}
           />
         </Canvas>
@@ -885,6 +944,16 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
           continentClustersByRegion={continentClustersByRegion}
           onContinentPress={handleContinentLabelPress}
         />
+
+        {showNearbyFlagPins ? (
+          <GlobeFlagOverlay
+            countries={countries}
+            positions={flagPinPositions}
+            selectedName={selectedName}
+            focusTransitionName={focusTransitionName}
+            onCountryPress={onCountryPress}
+          />
+        ) : null}
       </View>
     );
   },

@@ -13,7 +13,6 @@ export function resolveMapModeTogglePending(input: {
   currentMode: MapMode;
   activeCountryName: string | null;
   focusTransitionCountryName: string | null;
-  focusedRegion: string | null;
   presentationMode: MapPresentationMode;
 }): MapModeTogglePending {
   if (input.currentMode === "3d") {
@@ -32,8 +31,7 @@ export function resolveMapModeTogglePending(input: {
 
   return {
     pendingGlobeFocusName: countryFocus,
-    pendingGlobeRegionFocus:
-      countryFocus || !input.focusedRegion ? null : input.focusedRegion,
+    pendingGlobeRegionFocus: null,
     pendingFlatFocusName: null,
     pendingFlatPresentationMode: null,
   };

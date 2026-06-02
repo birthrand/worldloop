@@ -12,9 +12,10 @@ import {
 
 import {
   MAP_COUNTRY_FOCUS_FADE_MS,
-  MAP_COUNTRY_FOCUS_POLYGON_Z,
+  MAP_COUNTRY_FOCUS_STROKE_Z,
+  isCountryFocusFillEnabled,
+  resolveCountryFocusCoreStrokeWidth,
   resolveCountryFocusFillRgba,
-  resolveCountryFocusFillStrokeWidth,
   resolveCountryFocusStrokeRgba,
 } from "@/constants/map-country-focus";
 import {
@@ -117,9 +118,10 @@ export function MapCountryFocusLayers({
     );
   }, [allPolygons, fillGapsWhenContinentOverlay, highlightName, renderBlend]);
 
+  const showSelectionFill = isCountryFocusFillEnabled(boundaryStyle);
   const fillColor = resolveCountryFocusFillRgba(boundaryStyle, renderBlend);
   const strokeColor = resolveCountryFocusStrokeRgba(boundaryStyle, renderBlend);
-  const strokeWidth = resolveCountryFocusFillStrokeWidth(boundaryStyle);
+  const strokeWidth = resolveCountryFocusCoreStrokeWidth(boundaryStyle);
   const isVisible =
     boundaryStyle.countryHighlightEnabled &&
     !!highlightName &&
@@ -140,10 +142,10 @@ export function MapCountryFocusLayers({
             key={`country-focus-slot-${slotIndex}-${boundaryStyleRevision}`}
             coordinates={polygon?.coordinates ?? CLEARED_COORDS}
             holes={polygon?.holes}
-            fillColor={polygon ? fillColor : TRANSPARENT}
+            fillColor={polygon && showSelectionFill ? fillColor : TRANSPARENT}
             strokeColor={polygon ? strokeColor : TRANSPARENT}
             strokeWidth={polygon ? strokeWidth : 0}
-            zIndex={MAP_COUNTRY_FOCUS_POLYGON_Z}
+            zIndex={MAP_COUNTRY_FOCUS_STROKE_Z}
           />
         );
       })}

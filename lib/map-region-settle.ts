@@ -99,7 +99,9 @@ export function resolveRegionSettleDecision(input: {
   const explicitLock = input.explicitLock;
   if (explicitLock && nearestRegion !== explicitLock.region) {
     const dLat = input.mapCenter.latitude - explicitLock.anchor[0];
-    const dLng = input.mapCenter.longitude - explicitLock.anchor[1];
+    let dLng = input.mapCenter.longitude - explicitLock.anchor[1];
+    if (dLng > 180) dLng -= 360;
+    if (dLng < -180) dLng += 360;
     const distance = Math.sqrt(dLat * dLat + dLng * dLng);
     if (distance < EXPLICIT_REGION_RELEASE_DISTANCE_DEGREES) {
       return {

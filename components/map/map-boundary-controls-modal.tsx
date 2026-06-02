@@ -547,7 +547,7 @@ export function MapBoundaryControlsModal({
                   max={BOUNDARY_STEP_MAX}
                   unit="px"
                   disabled={!boundaryEnabled}
-                  accessibilityLabel="Boundary thickness"
+                  accessibilityLabel="Global boundary thickness"
                   tickCount={5}
                   showValueInput={false}
                   formatDisplay={formatThicknessStep}
@@ -716,7 +716,7 @@ export function MapBoundaryControlsModal({
                   max={BOUNDARY_STEP_MAX}
                   unit="px"
                   disabled={!countryHighlightEnabled}
-                  accessibilityLabel="Boundary thickness"
+                  accessibilityLabel="Country highlight boundary thickness"
                   tickCount={5}
                   showValueInput={false}
                   formatDisplay={formatThicknessStep}

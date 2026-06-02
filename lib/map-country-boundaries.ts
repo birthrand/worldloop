@@ -200,15 +200,22 @@ export function parseCountryBoundaryPolygons(
   return polygons;
 }
 
-let parsedCountryBoundaries: CountryBoundaryPolygon[] | null = null;
+const parsedCountryBoundariesByGeoJson = new Map<
+  GeoJsonFeatureCollection,
+  CountryBoundaryPolygon[]
+>();
 
 export function getCountryBoundaryPolygons(
   geoJson: GeoJsonFeatureCollection,
 ): CountryBoundaryPolygon[] {
-  if (!parsedCountryBoundaries) {
-    parsedCountryBoundaries = parseCountryBoundaryPolygons(geoJson);
+  const cached = parsedCountryBoundariesByGeoJson.get(geoJson);
+  if (cached) {
+    return cached;
   }
-  return parsedCountryBoundaries;
+
+  const parsed = parseCountryBoundaryPolygons(geoJson);
+  parsedCountryBoundariesByGeoJson.set(geoJson, parsed);
+  return parsed;
 }
 
 export function countryNamesMatch(

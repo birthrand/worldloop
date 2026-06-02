@@ -36,7 +36,6 @@ import {
   type CountryBoundaryPolygon,
 } from "@/lib/map-country-boundaries";
 import { shouldFillCountryHighlightGaps } from "@/lib/map-country-focus-polygons";
-import { summarizeRegion } from "@/lib/map-debug";
 import type { MapPressCoordinate } from "@/lib/map-map-tap-hit";
 import type { MapMarkerPresentation } from "@/lib/map-region-markers";
 import { areRegionBoundariesTappable } from "@/lib/map-signal-sources";
@@ -157,16 +156,7 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
     const lastRegionChangeEmitRef = useRef(0);
 
     const animateToRegion = useCallback((region: Region, duration = 500) => {
-      const input = summarizeRegion(region);
       const safeRegion = sanitizeRegion(region, regionRef.current);
-      const output = summarizeRegion(safeRegion);
-      if (
-        !input.finite ||
-        input.lat !== output.lat ||
-        input.latDelta !== output.latDelta
-      ) {
-        // Region was clamped to safe bounds before animateToRegion.
-      }
       regionRef.current = safeRegion;
       mapRef.current?.animateToRegion(safeRegion, duration);
     }, []);
@@ -219,6 +209,8 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
       !!highlightCountryName && boundaryStyle.countryHighlightEnabled;
     const showBoundaryStrokes =
       boundaryStyle.strokeColorEnabled && showBoundaryLines;
+    const continentOverlayActive =
+      showFocusLayers && !!(continentOverlayRegion || previewRegion);
 
     const fillCountryHighlightGaps = shouldFillCountryHighlightGaps(
       continentOverlayRegion,
@@ -340,7 +332,10 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
             showFocusLayers && fillCountryHighlightGaps
           }
         />
-        {showFocusLayers && showBoundaryStrokes && !showCountryHighlight
+        {showFocusLayers &&
+        showBoundaryStrokes &&
+        !showCountryHighlight &&
+        !continentOverlayActive
           ? countryBoundaries.map((polygon) => (
               <Polygon
                 key={`country-boundary-${polygon.id}-${boundaryRenderKey}-${boundaryStyleRevision}`}
@@ -379,7 +374,7 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
                 !!focusCountryName &&
                 focusCountryName !== country.name
               }
-              displayMode={isSelected ? "flag" : countryMarkerMode}
+              displayMode={countryMarkerMode}
               presentation={markerPresentation}
               revealGeneration={markerRevealGeneration}
               keepLive={keepSingleMarkerLive || isHighlighted}

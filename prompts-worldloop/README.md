@@ -16,6 +16,7 @@ Incremental backend implementation prompts for the WorldLoop API. Implement in n
 | 09  | [09-backend-security.md](./09-backend-security.md)           | Secrets, validation, rate limits                      |
 | 10  | [10-pregeneration-system.md](./10-pregeneration-system.md)   | Background AI pre-generation (optional)               |
 | 11  | [11-health-and-monitoring.md](./11-health-and-monitoring.md) | Health check and logging                              |
+| 12  | [12-discover-endpoint.md](./12-discover-endpoint.md)         | Spatial bbox discover (pairs with `prompts/15-*`)     |
 
 ## Dev prerequisites
 
@@ -42,3 +43,4 @@ Incremental backend implementation prompts for the WorldLoop API. Implement in n
 | Enrichment           | `03`, `04`, `05`       | Images, AI, feed                                  |
 | Hardening            | `09`, `06`, `07`, `11` | Security, search, map, health                     |
 | Optional             | `10`                   | Pre-generation                                    |
+| Geo discovery        | `12`                   | After client `prompts/15a`–`15d`; bbox query API  |

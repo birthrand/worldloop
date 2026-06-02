@@ -1,3 +1,5 @@
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import type { ParamListBase } from "@react-navigation/native";
 import * as Haptics from "expo-haptics";
 import { useFocusEffect, useNavigation } from "expo-router";
 import {
@@ -26,7 +28,6 @@ import {
   MARKER_REGION_SWAP_CLEAR_DELAY_MS,
   useMapMarkerReveal,
 } from "@/hooks/use-map-marker-reveal";
-import { logGlobeTap } from "@/lib/globe-tap-debug";
 import {
   deriveCameraZoomState,
   resolveGlobeDistanceFromLatitudeDelta,
@@ -311,17 +312,9 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
   const is3d = isGlobeMapUi(mapMode, mapViewTransition);
 
   useEffect(() => {
-    const syncTransitionForMode = (mode: MapMode) => {
-      setMapViewTransition((current) =>
-        syncMapViewTransitionForMode(mode, current),
-      );
-    };
-
-    syncTransitionForMode(useMapStore.getState().mapMode);
-
-    return useMapStore.persist.onFinishHydration(() => {
-      syncTransitionForMode(useMapStore.getState().mapMode);
-    });
+    setMapViewTransition((current) =>
+      syncMapViewTransitionForMode(useMapStore.getState().mapMode, current),
+    );
   }, []);
 
   /** Single source of truth for zoom-driven UI + marker density (live camera). */
@@ -372,14 +365,15 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
 
     const base = countries.filter((c) => c.region === focusedRegion);
     const visible = filterMapCountriesByChip(base, activeChip);
+    const allVisible = filterMapCountriesByChip(countries, activeChip);
 
-    // Density follows the live camera zoom, not the selection or flight phase.
-    const showAllRegionMarkers =
-      isDetailZoom || (pulsing && !!activeCountryName);
-
-    return showAllRegionMarkers
-      ? visible
-      : resolveRegionMarkerCountries(visible, false, focalMarkerName);
+    // Density follows camera zoom; a selected pin narrows to nearby neighbors.
+    return resolveRegionMarkerCountries(
+      visible,
+      isDetailZoom,
+      focalMarkerName,
+      focalMarkerName ? { allCountries: allVisible, focusedRegion } : null,
+    );
   }, [
     activeChip,
     activeCountryName,
@@ -389,7 +383,6 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
     focusedRegion,
     is3d,
     isDetailZoom,
-    pulsing,
   ]);
 
   const markerViewportCenter = useMemo(() => {
@@ -988,7 +981,7 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
 
   const GLOBE_MODE_TOGGLE_FLIGHT_MS = 900;
 
-  /** After 2D → 3D: country focus, continent focus (region distance), or flat zoom sync. */
+  /** After 2D → 3D: fly to selected country only (no viewport/continent sync). */
   useEffect(() => {
     if (mapMode !== "3d" || mapViewTransition !== "ready" || !globeCamera) {
       return;
@@ -1374,50 +1367,11 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
       const isSelected = activeCountry?.name === country.name;
 
       if (isSelected && isPreviewOpen) {
-        if (is3d) {
-          logGlobeTap({
-            source: "controller",
-            stage: "skip",
-            outcome: "preview-already-open",
-            country: country.name,
-            region: country.region,
-            focusedRegion,
-            boundaryFocusRegion,
-            cameraTier,
-            globeDistance: globeCameraDistance,
-          });
-        }
         return;
       }
       if (isSelected) {
-        if (is3d) {
-          logGlobeTap({
-            source: "controller",
-            stage: "action",
-            outcome: "open-preview",
-            country: country.name,
-            region: country.region,
-            focusedRegion,
-            boundaryFocusRegion,
-            cameraTier,
-            globeDistance: globeCameraDistance,
-          });
-        }
         openCountryPreviewAtViewport();
         return;
-      }
-      if (is3d) {
-        logGlobeTap({
-          source: "controller",
-          stage: "action",
-          outcome: "select-country",
-          country: country.name,
-          region: country.region,
-          focusedRegion,
-          boundaryFocusRegion,
-          cameraTier,
-          globeDistance: globeCameraDistance,
-        });
       }
       selectCountryAtViewport(country);
     },
@@ -1475,7 +1429,6 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
       currentMode: mapMode,
       activeCountryName,
       focusTransitionCountryName,
-      focusedRegion,
       presentationMode,
     });
 
@@ -1484,10 +1437,7 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
       pending.pendingFlatPresentationMode;
     pendingGlobeFocusNameRef.current = pending.pendingGlobeFocusName;
     pendingGlobeRegionFocusRef.current = pending.pendingGlobeRegionFocus;
-    pendingGlobeViewportSyncRef.current =
-      mapMode === "2d" &&
-      !pending.pendingGlobeFocusName &&
-      !pending.pendingGlobeRegionFocus;
+    pendingGlobeViewportSyncRef.current = false;
 
     if (mapMode === "2d") {
       const entryDistance = resolveGlobeDistanceFromLatitudeDelta(
@@ -1509,7 +1459,6 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
     activeCountryName,
     cancelIntent,
     focusTransitionCountryName,
-    focusedRegion,
     mapMode,
     presentationMode,
     setMapMode,
@@ -2125,7 +2074,8 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
 
   /** Re-tap Map tab while country details are open → dismiss and restore 2D/3D mode. */
   useEffect(() => {
-    const unsubscribe = navigation.addListener("tabPress", () => {
+    const tabNavigation = navigation as BottomTabNavigationProp<ParamListBase>;
+    const unsubscribe = tabNavigation.addListener("tabPress", () => {
       if (!isPreviewOpen) return;
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       dismissCountryPreview();
@@ -2158,35 +2108,12 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
   const handleMapPress = useCallback(
     (coordinate?: MapPressCoordinate) => {
       if (presentationMode === "preview") {
-        if (is3d) {
-          logGlobeTap({
-            source: "controller",
-            stage: "action",
-            outcome: "dismiss-preview",
-            coordinate,
-            focusedRegion,
-            boundaryFocusRegion,
-            cameraTier,
-            globeDistance: globeCameraDistance,
-          });
-        }
         dismissCountryPreview();
         return;
       }
 
       if (!coordinate) {
         if (activeCountry) {
-          if (is3d) {
-            logGlobeTap({
-              source: "controller",
-              stage: "action",
-              outcome: "clear-country-no-coordinate",
-              focusedRegion,
-              boundaryFocusRegion,
-              cameraTier,
-              globeDistance: globeCameraDistance,
-            });
-          }
           clearCountryFocus();
         }
         return;
@@ -2232,33 +2159,6 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
           cameraTier,
         );
 
-        if (is3d) {
-          logGlobeTap({
-            source: "controller",
-            stage: "routing",
-            outcome: delegateCountrySelection
-              ? "land-delegate-country"
-              : selectAcrossFocusedContinent
-                ? "land-cross-continent"
-                : willFocusContinent
-                  ? "land-focus-continent"
-                  : "land-select-fallback",
-            coordinate,
-            country: tappedCountry.name,
-            region: tappedCountry.region,
-            focusedRegion,
-            boundaryFocusRegion,
-            cameraTier,
-            globeDistance: globeCameraDistance,
-            flags: {
-              selectInFocusedContinent,
-              selectAcrossFocusedContinent,
-              delegateCountrySelection,
-              willFocusContinent,
-            },
-          });
-        }
-
         showTapRipple(coordinate);
 
         if (delegateCountrySelection) {
@@ -2267,20 +2167,6 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
         }
 
         if (selectAcrossFocusedContinent) {
-          if (is3d) {
-            logGlobeTap({
-              source: "controller",
-              stage: "action",
-              outcome: "focus-country-cross-continent",
-              coordinate,
-              country: tappedCountry.name,
-              region: tappedCountry.region,
-              focusedRegion,
-              boundaryFocusRegion,
-              cameraTier,
-              globeDistance: globeCameraDistance,
-            });
-          }
           focusCountryOnMap(tappedCountry, "mapTap");
           return;
         }
@@ -2289,34 +2175,7 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
           const cluster =
             clusters.find((c) => c.region === tappedCountry.region) ?? null;
           if (cluster) {
-            if (is3d) {
-              logGlobeTap({
-                source: "controller",
-                stage: "action",
-                outcome: "focus-continent-from-land",
-                coordinate,
-                country: tappedCountry.name,
-                region: cluster.region,
-                focusedRegion,
-                boundaryFocusRegion,
-                cameraTier,
-                globeDistance: globeCameraDistance,
-              });
-            }
             requestContinentFocus(cluster);
-          } else if (is3d) {
-            logGlobeTap({
-              source: "controller",
-              stage: "skip",
-              outcome: "focus-continent-no-cluster",
-              coordinate,
-              country: tappedCountry.name,
-              region: tappedCountry.region,
-              focusedRegion,
-              boundaryFocusRegion,
-              cameraTier,
-              globeDistance: globeCameraDistance,
-            });
           }
           return;
         }
@@ -2337,18 +2196,6 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
       showTapRipple(coordinate);
 
       if (activeCountry) {
-        if (is3d) {
-          logGlobeTap({
-            source: "controller",
-            stage: "action",
-            outcome: "clear-country-ocean-tap",
-            coordinate,
-            focusedRegion,
-            boundaryFocusRegion,
-            cameraTier,
-            globeDistance: globeCameraDistance,
-          });
-        }
         clearCountryFocus();
         return;
       }
@@ -2367,26 +2214,6 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
           cameraTier,
         ) &&
         !!cluster;
-
-      if (is3d) {
-        logGlobeTap({
-          source: "controller",
-          stage: "routing",
-          outcome: willFocusContinentFromOcean
-            ? "ocean-focus-continent"
-            : "ocean-noop",
-          coordinate,
-          region: cluster?.region ?? null,
-          focusedRegion,
-          boundaryFocusRegion,
-          cameraTier,
-          globeDistance: globeCameraDistance,
-          flags: {
-            willFocusContinentFromOcean,
-            hasCluster: !!cluster,
-          },
-        });
-      }
 
       if (willFocusContinentFromOcean && cluster) {
         requestContinentFocus(cluster);

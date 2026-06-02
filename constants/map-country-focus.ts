@@ -1,4 +1,6 @@
 import {
+  MAP_2D_BOUNDARY_CORE_STROKE_SCALE,
+  MAP_2D_BOUNDARY_CORE_STROKE_WIDTH_MIN,
   resolveBoundaryStrokeOpacity,
   resolveBoundaryStrokeWidth,
   type MapBoundaryStyleSettings,
@@ -12,15 +14,30 @@ import { hexToRgb, hslToRgb, type RgbColor } from "@/lib/color-utils";
 /** Selected-country fill — same amber as map pins (#fbbf24). */
 export const GLOBE_COUNTRY_FOCUS_FILL_RGB = MAP_FOCUS_ACCENT;
 
-/** Selected pin glow on 2D markers — country overlay uses the same alpha. */
-export const MAP_COUNTRY_FOCUS_FILL_OPACITY = 0.65;
+/**
+ * Selected-country fill — faint tint under the outline (stroke-first on map + globe).
+ */
+export const MAP_COUNTRY_FOCUS_FILL_OPACITY = 0.18;
 
-/** Globe 3D selected-country stroke — dark gray outline. */
-export const GLOBE_COUNTRY_FOCUS_STROKE_RGB = {
-  r: 82,
-  g: 82,
-  b: 82,
-} as const;
+/** @deprecated Use MAP_COUNTRY_FOCUS_FILL_OPACITY */
+export const GLOBE_COUNTRY_FOCUS_FILL_OPACITY = MAP_COUNTRY_FOCUS_FILL_OPACITY;
+
+/** @deprecated Use MAP_2D_BOUNDARY_CORE_STROKE_SCALE from map-boundary-style. */
+export const MAP_2D_COUNTRY_FOCUS_CORE_STROKE_SCALE =
+  MAP_2D_BOUNDARY_CORE_STROKE_SCALE;
+
+/** @deprecated Use MAP_2D_BOUNDARY_CORE_STROKE_WIDTH_MIN from map-boundary-style. */
+export const MAP_2D_COUNTRY_FOCUS_CORE_STROKE_WIDTH_MIN =
+  MAP_2D_BOUNDARY_CORE_STROKE_WIDTH_MIN;
+
+/** 2D / globe selection glow opacity vs core stroke. */
+export const MAP_COUNTRY_FOCUS_STROKE_GLOW_OPACITY_FACTOR = 0.42;
+
+/** Globe selection outline sits slightly above default boundary strokes. */
+export const GLOBE_COUNTRY_FOCUS_STROKE_RADIUS_OFFSET = 1.002;
+
+/** Outer glow pass for the selected-country outline on the globe. */
+export const GLOBE_COUNTRY_FOCUS_STROKE_GLOW_RADIUS_OFFSET = 1.0045;
 
 /** Minimum stroke width for the selected-country outline at detail zoom. */
 export const MAP_COUNTRY_FOCUS_STROKE_WIDTH_MIN = 1.4;
@@ -45,11 +62,21 @@ function resolveCountryFocusFillAlpha(blendFactor: number): number {
   return Math.min(1, Math.max(0, MAP_COUNTRY_FOCUS_FILL_OPACITY * blendFactor));
 }
 
+/** Optional selection fill — gated by fill toggle in boundary settings. */
+export function isCountryFocusFillEnabled(
+  settings: MapBoundaryStyleSettings,
+): boolean {
+  return settings.countryHighlightEnabled && settings.fillEnabled;
+}
+
+/** @deprecated Use isCountryFocusFillEnabled */
+export const isGlobeCountryFocusFillEnabled = isCountryFocusFillEnabled;
+
 export function resolveCountryFocusFillRgba(
   settings: MapBoundaryStyleSettings,
   blendFactor: number,
 ): string {
-  if (!settings.countryHighlightEnabled) {
+  if (!isCountryFocusFillEnabled(settings)) {
     return "rgba(0, 0, 0, 0)";
   }
 
@@ -58,15 +85,10 @@ export function resolveCountryFocusFillRgba(
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-/** Globe selected-country fill — same amber + pin-matched opacity as 2D. */
-export function resolveGlobeCountryFocusFillRgba(
-  settings: MapBoundaryStyleSettings,
-  blendFactor: number,
-): string {
-  return resolveCountryFocusFillRgba(settings, blendFactor);
-}
+/** @deprecated Use resolveCountryFocusFillRgba */
+export const resolveGlobeCountryFocusFillRgba = resolveCountryFocusFillRgba;
 
-/** Brighter edge on the fill polygon so the outline stays visible at country zoom. */
+/** Selected-country core outline (primary selection cue). */
 export function resolveCountryFocusStrokeRgba(
   settings: MapBoundaryStyleSettings,
   blendFactor: number,
@@ -76,13 +98,15 @@ export function resolveCountryFocusStrokeRgba(
   }
 
   const rgb = resolveCountryStrokeRgb(settings);
-  const baseOpacity = resolveBoundaryStrokeOpacity(settings.strokeOpacityStep);
+  const baseOpacity = resolveBoundaryStrokeOpacity(
+    settings.countryStrokeOpacityStep ?? settings.strokeOpacityStep,
+  );
   const alpha = Math.min(1, Math.max(0, baseOpacity * blendFactor));
   return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
 }
 
-/** Globe-only selected-country stroke — dark gray outline. */
-export function resolveGlobeCountryFocusStrokeRgba(
+/** Soft outer glow behind the selection outline. */
+export function resolveCountryFocusStrokeGlowRgba(
   settings: MapBoundaryStyleSettings,
   blendFactor: number,
 ): string {
@@ -90,13 +114,26 @@ export function resolveGlobeCountryFocusStrokeRgba(
     return "rgba(0, 0, 0, 0)";
   }
 
-  const { r, g, b } = GLOBE_COUNTRY_FOCUS_STROKE_RGB;
+  const rgb = resolveCountryStrokeRgb(settings);
   const baseOpacity = resolveBoundaryStrokeOpacity(
-    settings.countryStrokeOpacityStep,
+    settings.countryStrokeOpacityStep ?? settings.strokeOpacityStep,
   );
-  const alpha = Math.min(1, Math.max(0, baseOpacity * blendFactor));
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  const alpha = Math.min(
+    1,
+    Math.max(
+      0,
+      baseOpacity * MAP_COUNTRY_FOCUS_STROKE_GLOW_OPACITY_FACTOR * blendFactor,
+    ),
+  );
+  return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
 }
+
+/** @deprecated Use resolveCountryFocusStrokeRgba */
+export const resolveGlobeCountryFocusStrokeRgba = resolveCountryFocusStrokeRgba;
+
+/** @deprecated Use resolveCountryFocusStrokeGlowRgba */
+export const resolveGlobeCountryFocusStrokeGlowRgba =
+  resolveCountryFocusStrokeGlowRgba;
 
 /** Selected-country boundary stroke layer — always visible at country zoom tier. */
 export function resolveCountryFocusBoundaryStrokeColor(
@@ -107,7 +144,9 @@ export function resolveCountryFocusBoundaryStrokeColor(
   }
 
   const rgb = resolveCountryStrokeRgb(settings);
-  const opacity = resolveBoundaryStrokeOpacity(settings.strokeOpacityStep);
+  const opacity = resolveBoundaryStrokeOpacity(
+    settings.countryStrokeOpacityStep ?? settings.strokeOpacityStep,
+  );
   return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
 }
 
@@ -131,18 +170,31 @@ export function resolveCountryFocusBoundaryStrokeWidth(
   return Math.max(width, MAP_COUNTRY_FOCUS_STROKE_WIDTH_MIN);
 }
 
-export function resolveCountryFocusFillStrokeWidth(
+/** Core selection outline width on the 2D map (thinner than boundary preview). */
+export function resolveCountryFocusCoreStrokeWidth(
   settings: MapBoundaryStyleSettings,
 ): number {
   if (!settings.countryHighlightEnabled || !settings.strokeColorEnabled) {
     return 0;
   }
 
-  return Math.max(
-    resolveCountryFocusBoundaryStrokeWidth(settings) * 0.85,
-    MAP_COUNTRY_FOCUS_STROKE_WIDTH_MIN,
+  const width = resolveBoundaryStrokeWidth(
+    {
+      ...settings,
+      strokeColorEnabled: true,
+      strokeWidthEnabled: true,
+      strokeThicknessStep: settings.countryStrokeThicknessStep,
+    },
+    "country",
   );
+
+  const scaled = width * MAP_2D_BOUNDARY_CORE_STROKE_SCALE;
+  return Math.max(scaled, MAP_2D_BOUNDARY_CORE_STROKE_WIDTH_MIN);
 }
+
+/** @deprecated Use resolveCountryFocusCoreStrokeWidth */
+export const resolveCountryFocusFillStrokeWidth =
+  resolveCountryFocusCoreStrokeWidth;
 
 export function countryFocusStyleRenderKey(
   settings: MapBoundaryStyleSettings,
@@ -150,6 +202,6 @@ export function countryFocusStyleRenderKey(
   return [
     resolveCountryFocusFillRgba(settings, 1),
     resolveCountryFocusBoundaryStrokeColor(settings),
-    resolveCountryFocusBoundaryStrokeWidth(settings),
+    resolveCountryFocusCoreStrokeWidth(settings),
   ].join("|");
 }
