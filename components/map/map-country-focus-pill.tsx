@@ -3,6 +3,7 @@ import * as Haptics from "expo-haptics";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { FlagBadge } from "@/components/explore/flag-badge";
+import { cca3FromFlagUrl } from "@/lib/map-country";
 import type { MapCountry } from "@/types/country";
 
 type MapCountryFocusPillProps = {
@@ -13,11 +14,6 @@ type MapCountryFocusPillProps = {
 };
 
 const PILL_HEIGHT = 44;
-
-function shortCountryName(name: string): string {
-  if (name.length <= 2) return name;
-  return `${name.slice(0, 2)}...`;
-}
 
 export function MapCountryFocusPill({
   country,
@@ -35,6 +31,8 @@ export function MapCountryFocusPill({
     onDismiss();
   };
 
+  const countryCode = cca3FromFlagUrl(country.flag);
+
   return (
     <View style={[styles.wrap, { bottom }]} pointerEvents="box-none">
       <View style={styles.pill}>
@@ -49,7 +47,7 @@ export function MapCountryFocusPill({
         >
           <FlagBadge flag={country.flag} width={22} height={15} />
           <Text style={styles.countryLabel} numberOfLines={1}>
-            {shortCountryName(country.name)}
+            {countryCode}
           </Text>
           <Text style={styles.detailsLabel}>Details</Text>
           <Ionicons name="arrow-forward" size={14} color="#fbbf24" />
@@ -112,7 +110,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.1)",
   },
   countryLabel: {
-    width: 28,
+    minWidth: 28,
     fontSize: 13,
     lineHeight: 18,
     fontFamily: "Poppins-Medium",

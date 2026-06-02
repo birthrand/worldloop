@@ -12,7 +12,6 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { resolveFlagCdnUrl } from "@/lib/flag-url";
-import { logMapDebug } from "@/lib/map-debug";
 import { cca2FromFlagUrl, getMapDisplayLatLng } from "@/lib/map-country";
 import {
   type MapMarkerPresentation,
@@ -28,6 +27,7 @@ const SNAPSHOT_SETTLE_MS = 500;
 /** Fixed marker anchor box — label is positioned outside this so selection does not shift the pin. */
 const MARKER_ANCHOR_SIZE = 48;
 const PIN_SIZE = 36;
+const SELECTED_PIN_SIZE = 30;
 
 /** Survives marker re-snapshots so flags do not flash on every map action. */
 const loadedFlagUris = new Set<string>();
@@ -40,11 +40,14 @@ const FlagImage = memo(function FlagImage({
   flagUri,
   style,
   loaded,
+  keepVisibleWhileLoading,
   onLoad,
 }: {
   flagUri: string;
   style: object;
   loaded: boolean;
+  /** Focal pin — avoid opacity-0 snapshots while the CDN image loads. */
+  keepVisibleWhileLoading?: boolean;
   onLoad: () => void;
 }) {
   return (
@@ -52,15 +55,9 @@ const FlagImage = memo(function FlagImage({
       source={{ uri: flagUri }}
       recyclingKey={flagUri}
       cachePolicy="memory-disk"
-      style={[style, !loaded && styles.flagHidden]}
+      style={[style, !loaded && !keepVisibleWhileLoading && styles.flagHidden]}
       contentFit="cover"
       onLoadEnd={onLoad}
-      onError={(event) => {
-        logMapDebug("marker", "flag image error", {
-          flagUri,
-          error: event?.error,
-        });
-      }}
     />
   );
 });
@@ -118,7 +115,7 @@ function FlagPinBody({
       }),
     );
     return () => cancelAnimation(pulse);
-  }, [focusTransitioning, pulse]);
+  }, [focusTransitioning]);
 
   const pinAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: focusTransitioning ? pulse.value : 1 }],
@@ -135,6 +132,7 @@ function FlagPinBody({
             flagUri={flagUri}
             style={flagStyle}
             loaded={flagLoaded}
+            keepVisibleWhileLoading={selected || focusTransitioning}
             onLoad={onFlagLoad}
           />
         ) : (
@@ -178,7 +176,7 @@ export const MapCountryMarker = memo(function MapCountryMarker({
   const isEntering =
     presentation === "entering" && !selected && !focusTransitioning;
   const fadeOpacity = useSharedValue(0);
-  const fadeScale = useSharedValue(0.85);
+  const fadeScale = useSharedValue(1);
   const prevRevealGenerationRef = useRef(revealGeneration);
 
   useEffect(() => {
@@ -205,10 +203,9 @@ export const MapCountryMarker = memo(function MapCountryMarker({
     }
 
     fadeOpacity.value = withTiming(targetOpacity, { duration: 200 });
+    fadeScale.value = withTiming(1, { duration: 200 });
   }, [
     deemphasized,
-    fadeOpacity,
-    fadeScale,
     isEntering,
     revealGeneration,
     selected,
@@ -418,13 +415,16 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   pinSelected: {
-    borderWidth: 3,
+    width: SELECTED_PIN_SIZE,
+    height: SELECTED_PIN_SIZE,
+    borderRadius: SELECTED_PIN_SIZE / 2,
+    borderWidth: 2,
     borderColor: "#fbbf24",
     shadowColor: "#fbbf24",
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.75,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.65,
+    shadowRadius: 6,
+    elevation: 6,
   },
   flag: {
     width: PIN_SIZE,
@@ -437,9 +437,9 @@ const styles = StyleSheet.create({
     borderRadius: 13,
   },
   flagSelected: {
-    width: PIN_SIZE - 6,
-    height: PIN_SIZE - 6,
-    borderRadius: (PIN_SIZE - 6) / 2,
+    width: SELECTED_PIN_SIZE - 4,
+    height: SELECTED_PIN_SIZE - 4,
+    borderRadius: (SELECTED_PIN_SIZE - 4) / 2,
   },
   flagHidden: {
     opacity: 0,

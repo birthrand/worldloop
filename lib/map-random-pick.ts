@@ -1,14 +1,13 @@
 import { resolveFlatZoomTier } from "@/lib/map-camera-zoom";
+import { getMapDisplayLatLng, isValidLatLng } from "@/lib/map-country";
+import { useCountryFeedStore } from "@/store/use-country-feed-store";
 import {
   filterMapCountriesByChip,
   type MapFilterChip,
   type MapMode,
 } from "@/store/use-map-store";
-import { useCountryFeedStore } from "@/store/use-country-feed-store";
 import type { FeaturedShortcut } from "@/store/use-map-ui-store";
-import { useRecentlyViewedStore } from "@/store/use-recently-viewed-store";
 import { useSavedCountriesStore } from "@/store/use-saved-countries-store";
-import { getMapDisplayLatLng, isValidLatLng } from "@/lib/map-country";
 import type { MapCountry } from "@/types/country";
 
 type BuildMapRandomPoolOptions = {
@@ -33,12 +32,7 @@ export async function buildMapRandomPool({
 
   if (useWorldPool) {
     if (featuredShortcut === "all") {
-      useRecentlyViewedStore.getState().seedIfEmpty();
-      const names = useRecentlyViewedStore
-        .getState()
-        .entries.slice(0, 3)
-        .map((e) => e.country.name);
-      pool = countries.filter((c) => names.includes(c.name));
+      pool = countries;
     } else if (featuredShortcut === "terrain") {
       const feed = useCountryFeedStore.getState();
       if (feed.countries.length === 0 && feed.status === "idle") {
@@ -65,8 +59,8 @@ export async function buildMapRandomPool({
 
   // Only keep countries we can actually frame on the map. Picking one with an
   // invalid coordinate would feed NaN to the native MapView and crash the app.
-  const filtered = filterMapCountriesByChip(pool, activeChip).filter((country) =>
-    isValidLatLng(getMapDisplayLatLng(country)),
+  const filtered = filterMapCountriesByChip(pool, activeChip).filter(
+    (country) => isValidLatLng(getMapDisplayLatLng(country)),
   );
 
   if (filtered.length > 0) return filtered;
@@ -92,9 +86,7 @@ export function resolveMapRandomUseWorldPool({
   contextualOnly?: boolean;
 }): boolean {
   if (contextualOnly || focusedRegion) return false;
-  return (
-    mapMode === "3d" || resolveFlatZoomTier(flatLatitudeDelta) === "world"
-  );
+  return mapMode === "3d" || resolveFlatZoomTier(flatLatitudeDelta) === "world";
 }
 
 /** Picks a random country, optionally avoiding `excludeName` when the pool allows. */

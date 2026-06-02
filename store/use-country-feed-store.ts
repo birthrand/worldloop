@@ -1,11 +1,17 @@
 import { create } from "zustand";
 
+import { CLIENT_CACHE_KEYS, CLIENT_CACHE_TTL } from "@/constants/client-cache";
 import { CONTINENTS } from "@/constants/regions";
+import { fetchFeedCountries } from "@/lib/api";
 import {
   filterCountriesForExploreRegion,
   normalizeCountriesRegions,
 } from "@/lib/app-region";
-import { fetchFeedCountries } from "@/lib/api";
+import {
+  getClientCache,
+  setClientCache,
+  staleWhileRevalidate,
+} from "@/lib/client-cache";
 import { fetchExploreRegionCountries } from "@/lib/explore-region-countries";
 import { prefetchFeedHeroImages } from "@/lib/prefetch-feed-heroes";
 import type { Country } from "@/types/country";
@@ -135,16 +141,41 @@ async function ensureRegionCountries(region: string): Promise<Country[]> {
   const inFlight = regionFetchPromises.get(region);
   if (inFlight) return inFlight;
 
-  const promise = fetchExploreRegionCountries(region)
-    .then((countries) => {
+  const promise = (async () => {
+    const cacheKey = CLIENT_CACHE_KEYS.feedRegion(region);
+    const diskCache = await getClientCache<Country[]>(cacheKey);
+
+    if (diskCache.data) {
       useCountryFeedStore.setState((state) => ({
-        regionCache: { ...state.regionCache, [region]: countries },
+        regionCache: { ...state.regionCache, [region]: diskCache.data! },
       }));
-      return countries;
-    })
-    .finally(() => {
-      regionFetchPromises.delete(region);
-    });
+      const filtered = filterCountriesForExploreRegion(diskCache.data, region);
+      if (filtered.length > 0) {
+        void staleWhileRevalidate({
+          key: cacheKey,
+          ttlSeconds: CLIENT_CACHE_TTL.feedRegion,
+          fetcher: () => fetchExploreRegionCountries(region),
+          onFetched: (countries) => {
+            useCountryFeedStore.setState((state) => ({
+              regionCache: { ...state.regionCache, [region]: countries },
+            }));
+          },
+        }).catch(() => {
+          // Background revalidate — keep showing cached region list.
+        });
+        return filtered;
+      }
+    }
+
+    const countries = await fetchExploreRegionCountries(region);
+    await setClientCache(cacheKey, countries, CLIENT_CACHE_TTL.feedRegion);
+    useCountryFeedStore.setState((state) => ({
+      regionCache: { ...state.regionCache, [region]: countries },
+    }));
+    return countries;
+  })().finally(() => {
+    regionFetchPromises.delete(region);
+  });
 
   regionFetchPromises.set(region, promise);
   return promise;
@@ -189,6 +220,35 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
     if (!options?.force && get().countries.length > 0) return;
     if (!options?.force && isLoading(get().status)) return;
 
+    const cacheKey = CLIENT_CACHE_KEYS.feedFirstPage;
+    let hydratedFromDisk = false;
+
+    if (!options?.force && get().countries.length === 0) {
+      const diskCache = await getClientCache<{
+        countries: Country[];
+        nextCursor: string | null;
+      }>(cacheKey);
+
+      if (diskCache.data) {
+        hydratedFromDisk = true;
+        const normalized = normalizeCountriesRegions(diskCache.data.countries);
+        const { sortField, sortOrder } = get();
+        const feedTail = sortCountries(normalized, sortField, sortOrder);
+        set({
+          countries: feedTail,
+          nextCursor: diskCache.data.nextCursor,
+          currentIndex: 0,
+          selectedRegion: null,
+          forYouSnapshot: {
+            countries: feedTail,
+            nextCursor: diskCache.data.nextCursor,
+          },
+          status: "idle",
+          error: null,
+        });
+      }
+    }
+
     const showBlockingLoad = get().countries.length === 0;
     if (showBlockingLoad) {
       set({ status: "loading", error: null });
@@ -196,11 +256,42 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
 
     try {
       const prior = get();
-      const { data, nextCursor } = await fetchFeedCountries(undefined, limit);
-      const normalized = normalizeCountriesRegions(data);
-      await prefetchFeedHeroImages(normalized);
+      const payload = await staleWhileRevalidate({
+        key: cacheKey,
+        ttlSeconds: CLIENT_CACHE_TTL.feedFirstPage,
+        force: options?.force,
+        fetcher: async () => {
+          const { data, nextCursor } = await fetchFeedCountries(
+            undefined,
+            limit,
+          );
+          return {
+            countries: normalizeCountriesRegions(data),
+            nextCursor,
+          };
+        },
+        onCached: (data) => {
+          if (hydratedFromDisk || get().countries.length > 0) return;
+          const { sortField, sortOrder } = get();
+          const feedTail = sortCountries(data.countries, sortField, sortOrder);
+          set({
+            countries: feedTail,
+            nextCursor: data.nextCursor,
+            currentIndex: 0,
+            selectedRegion: null,
+            forYouSnapshot: {
+              countries: feedTail,
+              nextCursor: data.nextCursor,
+            },
+            status: "idle",
+            error: null,
+          });
+        },
+      });
+
+      await prefetchFeedHeroImages(payload.countries);
       const { sortField, sortOrder } = get();
-      const feedTail = sortCountries(normalized, sortField, sortOrder);
+      const feedTail = sortCountries(payload.countries, sortField, sortOrder);
       const { countries, currentIndex } = mergeFetchedWithFocusedCountry(
         feedTail,
         prior.countries,
@@ -210,21 +301,23 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
       );
       set({
         countries,
-        nextCursor,
+        nextCursor: payload.nextCursor,
         currentIndex,
         selectedRegion: null,
-        forYouSnapshot: { countries: feedTail, nextCursor },
+        forYouSnapshot: { countries: feedTail, nextCursor: payload.nextCursor },
         status: "idle",
         error: null,
       });
       void prefetchFeedHeroImages(countries.slice(1, 3));
       prefetchRegionsSequentially(null);
     } catch (err) {
-      set({
-        status: "error",
-        error:
-          err instanceof Error ? err.message : "Failed to load country feed",
-      });
+      if (get().countries.length === 0) {
+        set({
+          status: "error",
+          error:
+            err instanceof Error ? err.message : "Failed to load country feed",
+        });
+      }
     }
   },
 
@@ -361,11 +454,7 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
         const nextCountries =
           (state.sortOrder ?? DEFAULT_FEED_SORT_ORDER) === "random"
             ? appended
-            : sortCountries(
-                appended,
-                state.sortField,
-                state.sortOrder,
-              );
+            : sortCountries(appended, state.sortField, state.sortOrder);
         const snapshotTail = state.forYouSnapshot
           ? sortCountries(
               [...state.forYouSnapshot.countries, ...uniqueNew],
@@ -399,25 +488,55 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
   },
 
   setSort: (field, order) => {
-    set((state) => ({
-      sortField: field,
-      sortOrder: order,
-      countries: sortCountries(state.countries, field, order),
-      currentIndex: 0,
-    }));
+    set((state) => {
+      const sortedCountries = sortCountries(state.countries, field, order);
+      return {
+        sortField: field,
+        sortOrder: order,
+        countries: sortedCountries,
+        currentIndex: 0,
+        ...(state.forYouSnapshot
+          ? {
+              forYouSnapshot: {
+                ...state.forYouSnapshot,
+                countries: sortCountries(
+                  state.forYouSnapshot.countries,
+                  field,
+                  order,
+                ),
+              },
+            }
+          : {}),
+      };
+    });
   },
 
   clearSort: () => {
-    set((state) => ({
-      sortField: DEFAULT_FEED_SORT_FIELD,
-      sortOrder: DEFAULT_FEED_SORT_ORDER,
-      countries: sortCountries(
+    set((state) => {
+      const sortedCountries = sortCountries(
         state.countries,
         DEFAULT_FEED_SORT_FIELD,
         DEFAULT_FEED_SORT_ORDER,
-      ),
-      currentIndex: 0,
-    }));
+      );
+      return {
+        sortField: DEFAULT_FEED_SORT_FIELD,
+        sortOrder: DEFAULT_FEED_SORT_ORDER,
+        countries: sortedCountries,
+        currentIndex: 0,
+        ...(state.forYouSnapshot
+          ? {
+              forYouSnapshot: {
+                ...state.forYouSnapshot,
+                countries: sortCountries(
+                  state.forYouSnapshot.countries,
+                  DEFAULT_FEED_SORT_FIELD,
+                  DEFAULT_FEED_SORT_ORDER,
+                ),
+              },
+            }
+          : {}),
+      };
+    });
   },
 
   setCurrentIndex: (index: number) => {
@@ -445,7 +564,9 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
       return;
     }
 
-    const tail = forYouSnapshot.countries.filter((c) => c.name !== country.name);
+    const tail = forYouSnapshot.countries.filter(
+      (c) => c.name !== country.name,
+    );
 
     set({
       countries: [country, ...tail],

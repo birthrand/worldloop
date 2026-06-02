@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { Region } from "react-native-maps";
 
-import { logMapDebug, summarizeRegion } from "@/lib/map-debug";
-
 export type FlightPhase = {
   region: Region;
   duration: number;
@@ -15,6 +13,11 @@ type UseMapFlightParams = {
   onActiveChange?: (active: boolean) => void;
 };
 
+export type FlightCancelOptions = {
+  /** When true, stale timers/runId are cleared without firing active=false. */
+  keepActive?: boolean;
+};
+
 export type MapFlightController = {
   /**
    * Run an ordered phase sequence (e.g. world -> continent -> country).
@@ -22,7 +25,7 @@ export type MapFlightController = {
    */
   flyTo: (phases: FlightPhase[], onComplete?: () => void) => void;
   /** Cancel pending phases and mark the current flight stale. */
-  cancel: () => void;
+  cancel: (options?: FlightCancelOptions) => void;
   isActive: () => boolean;
 };
 
@@ -60,18 +63,19 @@ export function useMapFlight({
     [onActiveChange],
   );
 
-  const cancel = useCallback(() => {
-    const cancelledRunId = runIdRef.current;
-    const wasActive = activeRef.current;
-    clearTimers();
-    runIdRef.current += 1;
-    setActive(false);
-    logMapDebug("flight", "cancel", {
-      cancelledRunId,
-      nextRunId: runIdRef.current,
-      wasActive,
-    });
-  }, [clearTimers, setActive]);
+  const cancel = useCallback(
+    (options?: FlightCancelOptions) => {
+      const cancelledRunId = runIdRef.current;
+      const wasActive = activeRef.current;
+      const keepActive = options?.keepActive === true;
+      clearTimers();
+      runIdRef.current += 1;
+      if (!keepActive) {
+        setActive(false);
+      }
+    },
+    [clearTimers, setActive],
+  );
 
   const flyTo = useCallback(
     (phases: FlightPhase[], onComplete?: () => void) => {
@@ -85,34 +89,12 @@ export function useMapFlight({
       const runId = ++runIdRef.current;
       setActive(true);
 
-      logMapDebug("flight", "flyTo start", {
-        runId,
-        wasActive,
-        phaseCount: phases.length,
-        phases: phases.map((p, i) => ({
-          index: i,
-          duration: p.duration,
-          region: summarizeRegion(p.region),
-        })),
-      });
-
       let elapsed = 0;
       phases.forEach((phase, index) => {
         const issue = () => {
           if (runIdRef.current !== runId) {
-            logMapDebug("flight", "phase skipped (stale run)", {
-              runId,
-              currentRunId: runIdRef.current,
-              phaseIndex: index,
-            });
             return;
           }
-          logMapDebug("flight", "phase issue animateToRegion", {
-            runId,
-            phaseIndex: index,
-            duration: phase.duration,
-            region: summarizeRegion(phase.region),
-          });
           animateToRegion(phase.region, phase.duration);
         };
 
@@ -131,16 +113,14 @@ export function useMapFlight({
         elapsed += phase.duration + PHASE_GAP_MS;
       });
 
-      const totalDuration = Math.max(0, elapsed - PHASE_GAP_MS + SETTLE_BUFFER_MS);
+      const totalDuration = Math.max(
+        0,
+        elapsed - PHASE_GAP_MS + SETTLE_BUFFER_MS,
+      );
       const completeId = setTimeout(() => {
         if (runIdRef.current !== runId) {
-          logMapDebug("flight", "complete skipped (stale run)", {
-            runId,
-            currentRunId: runIdRef.current,
-          });
           return;
         }
-        logMapDebug("flight", "flyTo settled", { runId, totalDuration });
         setActive(false);
         onComplete?.();
       }, totalDuration);

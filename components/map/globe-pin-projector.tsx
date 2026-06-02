@@ -1,8 +1,9 @@
 import { useFrame, useThree } from "@react-three/fiber/native";
-import { useRef } from "react";
+import { useRef, type RefObject } from "react";
+import * as THREE from "three";
 
-import { getMapDisplayLatLng, isValidLatLng } from "@/lib/map-country";
 import { projectLatLngToScreen } from "@/lib/globe-screen-project";
+import { getMapDisplayLatLng, isValidLatLng } from "@/lib/map-country";
 import type { MapCountry } from "@/types/country";
 
 export type GlobePinScreenPosition = {
@@ -15,6 +16,7 @@ export type GlobePinScreenPosition = {
 type GlobePinProjectorProps = {
   countries: MapCountry[];
   onPositions: (positions: GlobePinScreenPosition[]) => void;
+  globeQuaternionRef: RefObject<THREE.Quaternion>;
 };
 
 export function globePinPositionsChanged(
@@ -43,6 +45,7 @@ export function globePinPositionsChanged(
 export function GlobePinProjector({
   countries,
   onPositions,
+  globeQuaternionRef,
 }: GlobePinProjectorProps) {
   const { camera } = useThree();
   const onPositionsRef = useRef(onPositions);
@@ -70,6 +73,8 @@ export function GlobePinProjector({
         lng,
         camera,
         state.size,
+        undefined,
+        globeQuaternionRef.current ?? undefined,
       );
 
       next.push({

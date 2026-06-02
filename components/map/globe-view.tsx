@@ -1,8 +1,8 @@
 import {
   Canvas,
-  type ThreeEvent,
   useFrame,
   useThree,
+  type ThreeEvent,
 } from "@react-three/fiber/native";
 import {
   forwardRef,
@@ -12,11 +12,15 @@ import {
   useMemo,
   useRef,
   useState,
+  type RefObject,
 } from "react";
 import { StyleSheet, View } from "react-native";
 import * as THREE from "three";
 
+import { GlobeBoundaryHitTargets } from "@/components/map/globe-boundary-hit-targets";
 import { GlobeBoundaryLines } from "@/components/map/globe-boundary-lines";
+import { GlobeContinentFocusLayers } from "@/components/map/globe-continent-focus-layers";
+import { GlobeCountryFocusLayers } from "@/components/map/globe-country-focus-layers";
 import { GlobeCountryPin } from "@/components/map/globe-country-pin";
 import { GlobeLabelOverlay } from "@/components/map/globe-label-overlay";
 import { GlobeLabelProjector } from "@/components/map/globe-label-projector";
@@ -25,24 +29,34 @@ import {
   type GlobePinScreenPosition,
 } from "@/components/map/globe-pin-projector";
 import {
-  createGlobeOrbitControls,
-  type GlobeOrbitControls,
-} from "@/lib/globe-orbit-controls";
-import {
   buildGlobeVisibleLabels,
   globeLabelPositionsChanged,
   type GlobeLabelScreenPosition,
 } from "@/lib/globe-labels";
 import {
+  createGlobeOrbitControls,
+  type GlobeOrbitControls,
+} from "@/lib/globe-orbit-controls";
+import {
+  GLOBE_CAMERA_VIEW_DIRECTION,
+  globeQuaternionDeltaForCameraOrbit,
+  latLngFromWorldNormal,
+  quaternionForLatLngFacingCamera,
+  viewCenterLatLngFromGlobeQuaternion,
+} from "@/lib/globe-rotation";
+import {
   projectLatLngToScreen,
   type GlobeScreenPosition,
 } from "@/lib/globe-screen-project";
-import { latLngToVector3, vector3ToLatLng } from "@/lib/latlng-to-sphere";
+import { logGlobeTap } from "@/lib/globe-tap-debug";
+import { latLngToVector3 } from "@/lib/latlng-to-sphere";
 import { useGlobeTexture } from "@/lib/load-globe-texture";
 import type { MapCluster } from "@/lib/map-clusters";
 import { getMapDisplayLatLng, isValidLatLng } from "@/lib/map-country";
+import { shouldFillCountryHighlightGaps } from "@/lib/map-country-focus-polygons";
 import type { MapPressCoordinate } from "@/lib/map-map-tap-hit";
 import {
+  GLOBE_WORLD_CAMERA_DISTANCE,
   resolveGlobeZoomTier,
   type GlobeZoomTier,
 } from "@/lib/map-region-markers";
@@ -69,9 +83,9 @@ globalWithThree.THREE = globalWithThree.THREE ?? THREE;
 const GLOBE_RADIUS = 1;
 const PIN_RADIUS = GLOBE_RADIUS * 1.02;
 const MIN_CAMERA_DISTANCE = 1.4;
-const MAX_CAMERA_DISTANCE = 4;
-/** World view — slightly closer than before so the globe fills more of the stage. */
-const DEFAULT_CAMERA_DISTANCE = 3.88;
+const MAX_CAMERA_DISTANCE = 5;
+/** World view — matches `GLOBE_WORLD_CAMERA_DISTANCE` / map controller framing. */
+const DEFAULT_CAMERA_DISTANCE = GLOBE_WORLD_CAMERA_DISTANCE;
 /** Pull target below equator so the sphere sits in the map “stage” between chrome. */
 const GLOBE_VIEW_TARGET_Y = -0.09;
 
@@ -82,9 +96,9 @@ const INITIAL_CAMERA_POSITION = latLngToVector3(
   DEFAULT_CAMERA_DISTANCE,
 );
 
-type CameraFlight = {
-  fromDir: THREE.Vector3;
-  toDir: THREE.Vector3;
+type GlobeRotationFlight = {
+  fromQuat: THREE.Quaternion;
+  toQuat: THREE.Quaternion;
   fromDistance: number;
   toDistance: number;
   elapsed: number;
@@ -96,23 +110,10 @@ function easeInOutCubic(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
-const SLERP_REFERENCE = new THREE.Vector3(0, 0, 1);
-const slerpScratchDir = new THREE.Vector3();
-const slerpScratchQuatA = new THREE.Quaternion();
-const slerpScratchQuatB = new THREE.Quaternion();
-const slerpScratchQuat = new THREE.Quaternion();
-
-function slerpUnitVectors(
-  from: THREE.Vector3,
-  to: THREE.Vector3,
-  alpha: number,
-  target: THREE.Vector3,
-): THREE.Vector3 {
-  slerpScratchQuatA.setFromUnitVectors(SLERP_REFERENCE, from);
-  slerpScratchQuatB.setFromUnitVectors(SLERP_REFERENCE, to);
-  slerpScratchQuat.slerpQuaternions(slerpScratchQuatA, slerpScratchQuatB, alpha);
-  return target.copy(SLERP_REFERENCE).applyQuaternion(slerpScratchQuat);
-}
+const flightScratchQuat = new THREE.Quaternion();
+const orbitPrevDir = new THREE.Vector3();
+const orbitNextDir = new THREE.Vector3();
+const orbitDeltaQuat = new THREE.Quaternion();
 
 /** Fires once after the GL canvas renders its first frame. */
 function GlobePaintNotifier({ onPainted }: { onPainted: () => void }) {
@@ -135,15 +136,26 @@ type LatLngProjector = (
 function GlobeCoordinateProjector({
   layoutSize,
   onReady,
+  globeQuaternionRef,
 }: {
   layoutSize: { width: number; height: number };
   onReady: (project: LatLngProjector) => void;
+  globeQuaternionRef: RefObject<THREE.Quaternion>;
 }) {
   const { camera } = useThree();
 
   useEffect(() => {
-    onReady((lat, lng) => projectLatLngToScreen(lat, lng, camera, layoutSize));
-  }, [camera, layoutSize, onReady]);
+    onReady((lat, lng) =>
+      projectLatLngToScreen(
+        lat,
+        lng,
+        camera,
+        layoutSize,
+        undefined,
+        globeQuaternionRef.current ?? undefined,
+      ),
+    );
+  }, [camera, globeQuaternionRef, layoutSize, onReady]);
 
   return null;
 }
@@ -155,8 +167,13 @@ type GlobeSceneProps = {
   selectedName: string | null;
   focusTransitionName: string | null;
   focusedRegion: string | null;
+  /** Effective region for boundary outlines + tap targets (may infer from view center). */
+  boundaryFocusRegion?: string | null;
+  zoomTier: GlobeZoomTier;
+  previewRegion?: string | null;
   showGlobePins: boolean;
   onCountryPress: (country: MapCountry) => void;
+  onBoundaryCountryPress: (country: MapCountry) => void;
   controls: GlobeOrbitControls;
   onReady: (handle: GlobeCameraHandle) => void;
   onCanvasPainted?: () => void;
@@ -166,6 +183,8 @@ type GlobeSceneProps = {
   layoutSize: { width: number; height: number };
   onProjectorReady: (project: LatLngProjector) => void;
   lockUserGestures: boolean;
+  /** Seeds globe distance from the map controller (2D latitudeDelta sync). */
+  initialCameraDistance?: number;
 };
 
 function GlobeScene({
@@ -175,8 +194,12 @@ function GlobeScene({
   selectedName,
   focusTransitionName,
   focusedRegion,
+  boundaryFocusRegion = focusedRegion,
+  zoomTier,
+  previewRegion = null,
   showGlobePins,
   onCountryPress,
+  onBoundaryCountryPress,
   controls,
   onReady,
   onCanvasPainted,
@@ -186,11 +209,17 @@ function GlobeScene({
   layoutSize,
   onProjectorReady,
   lockUserGestures,
+  initialCameraDistance = DEFAULT_CAMERA_DISTANCE,
 }: GlobeSceneProps) {
   const texture = useGlobeTexture();
   const { camera } = useThree();
+  const globeGroupRef = useRef<THREE.Group>(null);
+  const globeQuaternionRef = useRef(new THREE.Quaternion());
   const continentSinglePinActive =
     !!focusedRegion && (!!selectedName || !!focusTransitionName);
+  const fillCountryHighlightGaps =
+    !selectedName &&
+    shouldFillCountryHighlightGaps(focusedRegion, previewRegion);
 
   const handlePinPress = useCallback(
     (country: MapCountry) => {
@@ -199,37 +228,73 @@ function GlobeScene({
     [onCountryPress],
   );
 
+  const handleGlobeSurfacePointerDown = useCallback(() => {
+    controls.functions.beginPointerTap();
+  }, [controls.functions]);
+
   const handleGlobeSurfacePress = useCallback(
     (event: ThreeEvent<MouseEvent>) => {
       if (controls.functions.consumeTapThresholdExceeded()) {
+        logGlobeTap({
+          source: "surface",
+          stage: "skip",
+          outcome: "ignored-drag-threshold",
+        });
         return;
       }
       event.stopPropagation();
-      const normal = event.point.clone().normalize();
-      const latitude = THREE.MathUtils.radToDeg(Math.asin(normal.y));
-      const thetaDeg = THREE.MathUtils.radToDeg(Math.atan2(normal.z, -normal.x));
-      const longitude = THREE.MathUtils.euclideanModulo(
-        thetaDeg,
-        360,
-      ) - 180;
+      const globe = globeGroupRef.current;
+      if (!globe) return;
+      const [latitude, longitude] = latLngFromWorldNormal(
+        event.point,
+        globe.quaternion,
+      );
+      logGlobeTap({
+        source: "surface",
+        stage: "input",
+        outcome: "surface-tap",
+        coordinate: { latitude, longitude },
+      });
       onGlobeSurfacePress({ latitude, longitude });
     },
     [controls.functions, onGlobeSurfacePress],
   );
 
-  const flightRef = useRef<CameraFlight | null>(null);
-  const cameraDistanceRef = useRef(DEFAULT_CAMERA_DISTANCE);
+  const flightRef = useRef<GlobeRotationFlight | null>(null);
+  const cameraDistanceRef = useRef(initialCameraDistance);
   const onCameraViewChangeRef = useRef(onCameraViewChange);
   onCameraViewChangeRef.current = onCameraViewChange;
   const lastCameraViewKeyRef = useRef("");
 
-  const emitCameraView = useCallback(() => {
-    const distance = camera.position.length();
-    const [centerLat, centerLng] = vector3ToLatLng(
-      camera.position.x,
-      camera.position.y,
-      camera.position.z,
+  const snapOrbitFromFixedCamera = useCallback(() => {
+    controls.functions.snapCameraToFixedView(
+      GLOBE_CAMERA_VIEW_DIRECTION,
+      controls.scope.target,
+      cameraDistanceRef.current,
     );
+  }, [controls.functions, controls.scope.target]);
+
+  const resetOrbitFromFixedCamera = useCallback(() => {
+    controls.functions.resetOrbitToFixedView(
+      GLOBE_CAMERA_VIEW_DIRECTION,
+      controls.scope.target,
+      cameraDistanceRef.current,
+    );
+  }, [controls.functions, controls.scope.target]);
+
+  const syncGlobeQuaternionRef = useCallback(() => {
+    const globe = globeGroupRef.current;
+    if (globe) {
+      globeQuaternionRef.current.copy(globe.quaternion);
+    }
+  }, []);
+
+  const emitCameraView = useCallback(() => {
+    const distance = cameraDistanceRef.current;
+    const globe = globeGroupRef.current;
+    const [centerLat, centerLng] = globe
+      ? viewCenterLatLngFromGlobeQuaternion(globe.quaternion)
+      : ([0, 0] as [number, number]);
     const zoomTier = resolveGlobeZoomTier(distance);
     const key = `${zoomTier}:${distance.toFixed(2)}:${centerLat.toFixed(1)}:${centerLng.toFixed(1)}`;
     if (key === lastCameraViewKeyRef.current) return;
@@ -240,7 +305,7 @@ function GlobeScene({
       centerLng,
       zoomTier,
     });
-  }, [camera]);
+  }, []);
 
   const [visibleCirclePinNames, setVisibleCirclePinNames] = useState<
     Set<string>
@@ -273,24 +338,22 @@ function GlobeScene({
   const focusLatLng = useCallback(
     (lat: number, lng: number, duration = 650, targetDistance?: number) => {
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+      const globe = globeGroupRef.current;
+      if (!globe) return;
 
-      const toDir = new THREE.Vector3(
-        ...latLngToVector3(lat, lng, 1),
-      ).normalize();
-      const fromDir = camera.position.clone().normalize();
       const fromDistance = cameraDistanceRef.current;
       const toDistance = targetDistance ?? fromDistance;
 
       flightRef.current = {
-        fromDir,
-        toDir,
+        fromQuat: globe.quaternion.clone(),
+        toQuat: quaternionForLatLngFacingCamera(lat, lng),
         fromDistance,
         toDistance,
         elapsed: 0,
         duration: duration / 1000,
       };
     },
-    [camera],
+    [],
   );
 
   const focusCountry = useCallback(
@@ -303,37 +366,52 @@ function GlobeScene({
   );
 
   const resetCamera = useCallback(() => {
-    const toDir = new THREE.Vector3(...INITIAL_CAMERA_POSITION).normalize();
+    const globe = globeGroupRef.current;
+    if (!globe) return;
+
+    const fromDistance = cameraDistanceRef.current;
+
     flightRef.current = {
-      fromDir: camera.position.clone().normalize(),
-      toDir,
-      fromDistance: cameraDistanceRef.current,
+      fromQuat: globe.quaternion.clone(),
+      toQuat: new THREE.Quaternion(),
+      fromDistance,
       toDistance: DEFAULT_CAMERA_DISTANCE,
       elapsed: 0,
       duration: 0.55,
     };
     cameraDistanceRef.current = DEFAULT_CAMERA_DISTANCE;
     controls.scope.target.set(0, GLOBE_VIEW_TARGET_Y, 0);
-    camera.lookAt(controls.scope.target);
-  }, [camera, controls.scope.target]);
+    resetOrbitFromFixedCamera();
+  }, [controls.scope.target, resetOrbitFromFixedCamera]);
 
   const zoomBy = useCallback(
     (direction: "in" | "out") => {
       flightRef.current = null;
 
       const scale = direction === "in" ? 0.82 : 1.22;
+      const fromDistance = cameraDistanceRef.current;
       const nextDistance = THREE.MathUtils.clamp(
-        cameraDistanceRef.current * scale,
+        fromDistance * scale,
         MIN_CAMERA_DISTANCE,
         MAX_CAMERA_DISTANCE,
       );
       cameraDistanceRef.current = nextDistance;
-
-      const directionVector = camera.position.clone().normalize();
-      camera.position.copy(directionVector.multiplyScalar(nextDistance));
+      resetOrbitFromFixedCamera();
+      syncGlobeQuaternionRef();
+      emitCameraView();
     },
-    [camera],
+    [
+      controls.functions,
+      emitCameraView,
+      resetOrbitFromFixedCamera,
+      syncGlobeQuaternionRef,
+    ],
   );
+
+  useEffect(() => {
+    cameraDistanceRef.current = initialCameraDistance;
+    resetOrbitFromFixedCamera();
+  }, [initialCameraDistance, resetOrbitFromFixedCamera]);
 
   useEffect(() => {
     if (!flightRef.current) {
@@ -344,7 +422,7 @@ function GlobeScene({
   useEffect(() => {
     controls.scope.camera = camera as THREE.PerspectiveCamera;
     controls.scope.target.set(0, GLOBE_VIEW_TARGET_Y, 0);
-    camera.lookAt(controls.scope.target);
+    resetOrbitFromFixedCamera();
     controls.scope.enablePan = false;
     controls.scope.dampingFactor = 0.05;
     controls.scope.rotateSpeed = 0.9;
@@ -352,14 +430,29 @@ function GlobeScene({
     controls.scope.minZoom = MIN_CAMERA_DISTANCE;
     controls.scope.maxZoom = MAX_CAMERA_DISTANCE;
     controls.scope.onChange = () => {
-      const distance = camera.position.length();
-      cameraDistanceRef.current = distance;
+      if (!controls.functions.isZoomInteraction()) return;
+
+      const fromDistance = cameraDistanceRef.current;
+      const nextDistance = THREE.MathUtils.clamp(
+        camera.position.distanceTo(controls.scope.target),
+        MIN_CAMERA_DISTANCE,
+        MAX_CAMERA_DISTANCE,
+      );
+      if (Math.abs(nextDistance - fromDistance) < 0.01) return;
+
+      cameraDistanceRef.current = nextDistance;
       emitCameraView();
     };
     controls.scope.onStart = () => {
       flightRef.current = null;
     };
-  }, [camera, controls.scope, emitCameraView]);
+  }, [
+    camera,
+    controls.functions,
+    controls.scope,
+    emitCameraView,
+    resetOrbitFromFixedCamera,
+  ]);
 
   useEffect(() => {
     const handle: GlobeCameraHandle = {
@@ -374,43 +467,71 @@ function GlobeScene({
   }, [focusCountry, focusLatLng, onReady, resetCamera, zoomBy]);
 
   useFrame((_, delta) => {
+    const globe = globeGroupRef.current;
     const flight = flightRef.current;
 
-    if (flight) {
+    if (flight && globe) {
       controls.scope.enabled = false;
       flight.elapsed += delta;
       const progress = Math.min(flight.elapsed / flight.duration, 1);
       const eased = easeInOutCubic(progress);
 
-      // Slerp direction at fixed radius — linear lerp dips toward the globe center
-      // and reads as zoom-in/out while panning.
-      slerpUnitVectors(flight.fromDir, flight.toDir, eased, slerpScratchDir);
-      const distance = THREE.MathUtils.lerp(
+      flightScratchQuat.slerpQuaternions(flight.fromQuat, flight.toQuat, eased);
+      globe.quaternion.copy(flightScratchQuat);
+
+      cameraDistanceRef.current = THREE.MathUtils.lerp(
         flight.fromDistance,
         flight.toDistance,
         eased,
       );
-      cameraDistanceRef.current = distance;
-      camera.position.copy(slerpScratchDir.multiplyScalar(distance));
-      camera.lookAt(controls.scope.target);
+      snapOrbitFromFixedCamera();
+      syncGlobeQuaternionRef();
 
       if (progress >= 1) {
         flightRef.current = null;
         cameraDistanceRef.current = flight.toDistance;
+        resetOrbitFromFixedCamera();
         controls.scope.enabled = !lockUserGestures;
-        controls.functions.update();
         emitCameraView();
       }
       return;
     }
 
     controls.scope.enabled = !lockUserGestures;
-    controls.functions.update();
 
-    const distance = camera.position.length();
-    if (Math.abs(distance - cameraDistanceRef.current) > 0.01) {
-      cameraDistanceRef.current = distance;
-      emitCameraView();
+    if (globe) {
+      if (controls.functions.hasActiveMomentum()) {
+        orbitPrevDir
+          .copy(camera.position)
+          .sub(controls.scope.target)
+          .normalize();
+        controls.functions.update();
+        orbitNextDir
+          .copy(camera.position)
+          .sub(controls.scope.target)
+          .normalize();
+
+        if (orbitPrevDir.angleTo(orbitNextDir) > 0.0001) {
+          globe.quaternion.premultiply(
+            globeQuaternionDeltaForCameraOrbit(orbitPrevDir, orbitNextDir),
+          );
+        }
+
+        if (controls.functions.isZoomInteraction()) {
+          const distance = THREE.MathUtils.clamp(
+            camera.position.distanceTo(controls.scope.target),
+            MIN_CAMERA_DISTANCE,
+            MAX_CAMERA_DISTANCE,
+          );
+          if (Math.abs(distance - cameraDistanceRef.current) > 0.01) {
+            cameraDistanceRef.current = distance;
+            emitCameraView();
+          }
+        }
+      }
+
+      snapOrbitFromFixedCamera();
+      syncGlobeQuaternionRef();
     }
   });
 
@@ -424,83 +545,127 @@ function GlobeScene({
       <ambientLight intensity={3} />
       <directionalLight position={[5, 3, 5]} intensity={2} />
 
-      <mesh>
-        <sphereGeometry args={[GLOBE_RADIUS, 64, 64]} />
-        <meshStandardMaterial
-          map={texture ?? undefined}
-          color={texture ? "#ffffff" : "#1a1a2e"}
-          emissive={texture ? "#000000" : "#3d3520"}
-          emissiveIntensity={texture ? 0 : 0.12}
-          roughness={0.85}
-          metalness={0.05}
-        />
-      </mesh>
-      <mesh
-        onClick={handleGlobeSurfacePress}
-        onPointerDown={handleGlobeSurfacePress}
-      >
-        <sphereGeometry args={[GLOBE_RADIUS * 1.01, 64, 64]} />
-        <meshBasicMaterial
-          transparent
-          opacity={0}
-          depthWrite={false}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
+      <group ref={globeGroupRef}>
+        <mesh>
+          <sphereGeometry args={[GLOBE_RADIUS, 64, 64]} />
+          <meshStandardMaterial
+            map={texture ?? undefined}
+            color={texture ? "#ffffff" : "#1a1a2e"}
+            emissive={texture ? "#000000" : "#3d3520"}
+            emissiveIntensity={texture ? 0 : 0.12}
+            roughness={0.85}
+            metalness={0.05}
+          />
+        </mesh>
+        <mesh
+          onPointerDown={handleGlobeSurfacePointerDown}
+          onPointerUp={handleGlobeSurfacePress}
+        >
+          <sphereGeometry args={[GLOBE_RADIUS * 1.01, 64, 64]} />
+          <meshBasicMaterial
+            transparent
+            opacity={0}
+            depthWrite={false}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
 
-      <GlobeBoundaryLines
-        boundaryCountries={boundaryCountries}
-        selectedName={selectedName}
-        focusedRegion={focusedRegion}
-      />
+        <GlobeContinentFocusLayers
+          focusedRegion={focusedRegion}
+          previewRegion={previewRegion}
+          selectedCountryName={selectedName}
+          boundaryCountries={boundaryCountries}
+        />
+
+        <GlobeBoundaryLines
+          boundaryCountries={boundaryCountries}
+          selectedName={selectedName}
+          focusTransitionName={focusTransitionName}
+          focusedRegion={focusedRegion}
+          boundaryFocusRegion={boundaryFocusRegion}
+          zoomTier={zoomTier}
+        />
+
+        <GlobeBoundaryHitTargets
+          boundaryCountries={boundaryCountries}
+          selectedName={selectedName}
+          focusedRegion={focusedRegion}
+          boundaryFocusRegion={boundaryFocusRegion}
+          zoomTier={zoomTier}
+          onBoundaryCountryPress={onBoundaryCountryPress}
+          consumeTapThresholdExceeded={
+            controls.functions.consumeTapThresholdExceeded
+          }
+          beginPointerTap={controls.functions.beginPointerTap}
+        />
+
+        <GlobeCountryFocusLayers
+          selectedCountryName={selectedName}
+          focusTransitionName={focusTransitionName}
+          fillGapsWhenContinentOverlay={fillCountryHighlightGaps}
+        />
+
+        {showGlobePins
+          ? countries.map((country) => {
+              if (!isValidLatLng(country.latlng)) return null;
+              const focusCountryName =
+                selectedName ?? focusTransitionName ?? null;
+              const isSelected = focusCountryName === country.name;
+              const isFocusTransitioning =
+                !!focusTransitionName &&
+                focusTransitionName === country.name &&
+                selectedName !== country.name;
+              const keepVisible = continentSinglePinActive
+                ? isSelected || isFocusTransitioning
+                : isSelected ||
+                  isFocusTransitioning ||
+                  visibleCirclePinNames.has(country.name);
+              if (!keepVisible) {
+                return null;
+              }
+              const [lat, lng] = getMapDisplayLatLng(country);
+              return (
+                <GlobeCountryPin
+                  key={country.name}
+                  country={country}
+                  position={latLngToVector3(lat, lng, PIN_RADIUS)}
+                  isSelected={isSelected}
+                  isFocusTransitioning={isFocusTransitioning}
+                  isDeemphasized={
+                    continentSinglePinActive &&
+                    !isSelected &&
+                    !isFocusTransitioning
+                  }
+                  onPress={handlePinPress}
+                  consumeTapThresholdExceeded={
+                    controls.functions.consumeTapThresholdExceeded
+                  }
+                  beginPointerTap={controls.functions.beginPointerTap}
+                />
+              );
+            })
+          : null}
+      </group>
 
       <GlobeCoordinateProjector
         layoutSize={layoutSize}
         onReady={onProjectorReady}
+        globeQuaternionRef={globeQuaternionRef}
       />
 
       <GlobeLabelProjector
         labels={visibleLabels}
         onPositions={onLabelPositions}
+        globeQuaternionRef={globeQuaternionRef}
       />
 
       {showGlobePins ? (
         <GlobePinProjector
           countries={countries}
           onPositions={handlePinPositions}
+          globeQuaternionRef={globeQuaternionRef}
         />
       ) : null}
-
-      {showGlobePins
-        ? countries.map((country) => {
-            if (!isValidLatLng(country.latlng)) return null;
-            const isSelected = selectedName === country.name;
-            const isFocusTransitioning = focusTransitionName === country.name;
-            const keepVisible =
-              isSelected ||
-              isFocusTransitioning ||
-              visibleCirclePinNames.has(country.name);
-            if (!keepVisible) {
-              return null;
-            }
-            const [lat, lng] = getMapDisplayLatLng(country);
-            return (
-              <GlobeCountryPin
-                key={country.name}
-                country={country}
-                position={latLngToVector3(lat, lng, PIN_RADIUS)}
-                isSelected={isSelected}
-                isFocusTransitioning={isFocusTransitioning}
-                isDeemphasized={
-                  continentSinglePinActive &&
-                  !isSelected &&
-                  !isFocusTransitioning
-                }
-                onPress={handlePinPress}
-              />
-            );
-          })
-        : null}
     </>
   );
 }
@@ -521,13 +686,20 @@ type GlobeViewProps = {
   selectedName: string | null;
   focusTransitionName?: string | null;
   focusedRegion: string | null;
+  boundaryFocusRegion?: string | null;
+  /** Live globe camera tier from the map controller (stroke scaling). */
+  zoomTier?: GlobeZoomTier;
+  previewRegion?: string | null;
   countryMarkerMode?: CountryMarkerDisplayMode;
   onClusterPress: (cluster: MapCluster) => void;
   onCountryPress: (country: MapCountry) => void;
+  onBoundaryCountryPress: (country: MapCountry) => void;
   onBackgroundPress: (coordinate?: MapPressCoordinate) => void;
   onCanvasPainted?: () => void;
   onCameraViewChange?: (state: GlobeCameraViewState) => void;
   lockUserGestures?: boolean;
+  /** Seeds globe distance from the map controller when entering 3D. */
+  initialCameraDistance?: number;
 };
 
 export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
@@ -540,13 +712,18 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
       selectedName,
       focusTransitionName = null,
       focusedRegion,
+      boundaryFocusRegion = focusedRegion,
+      zoomTier = "world",
+      previewRegion = null,
       countryMarkerMode = "flag",
       onClusterPress,
       onCountryPress,
+      onBoundaryCountryPress,
       onBackgroundPress,
       onCanvasPainted,
       onCameraViewChange,
       lockUserGestures = false,
+      initialCameraDistance,
     },
     ref,
   ) {
@@ -559,8 +736,10 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
     >([]);
     const showGlobePins =
       !!focusedRegion &&
-      isGlobeYellowPinsVisible(countryMarkerMode) &&
-      countries.length > 0;
+      countries.length > 0 &&
+      (isGlobeYellowPinsVisible(countryMarkerMode) ||
+        !!selectedName ||
+        !!focusTransitionName);
 
     const selectedCountry = useMemo(
       () =>
@@ -679,8 +858,12 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
             selectedName={selectedName}
             focusTransitionName={focusTransitionName}
             focusedRegion={focusedRegion}
+            boundaryFocusRegion={boundaryFocusRegion}
+            zoomTier={zoomTier}
+            previewRegion={previewRegion}
             showGlobePins={showGlobePins}
             onCountryPress={onCountryPress}
+            onBoundaryCountryPress={onBoundaryCountryPress}
             controls={controls}
             onReady={handleReady}
             onCanvasPainted={onCanvasPainted}
@@ -690,6 +873,7 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
             layoutSize={layoutSize}
             onProjectorReady={handleProjectorReady}
             lockUserGestures={lockUserGestures}
+            initialCameraDistance={initialCameraDistance}
           />
         </Canvas>
 

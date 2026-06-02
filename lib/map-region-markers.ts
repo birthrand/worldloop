@@ -1,4 +1,5 @@
 import { getMapDisplayLatLng } from "@/lib/map-country";
+import type { SelectionSource } from "@/store/use-identity-store";
 import type { MapCountry } from "@/types/country";
 
 /** Flag pins shown at continent/region zoom — zoom in to reveal the rest. */
@@ -17,6 +18,32 @@ export const GLOBE_REGION_CAMERA_DISTANCE = 2.75;
 
 /** Above this distance the globe is in world view (no continent selected). */
 export const GLOBE_WORLD_ZOOM_DISTANCE = 3.45;
+
+/** Default globe camera distance — world view framing (see globe-view). */
+export const GLOBE_WORLD_CAMERA_DISTANCE = 3.88;
+
+export type GlobeCountryFlightMode = "focus" | "preview";
+
+/**
+ * Target camera distance for a country flight on the 3D globe.
+ * Returns `undefined` when the flight should keep the current distance (pinch zoom).
+ */
+export function resolveGlobeCountryTargetDistance(
+  mode: GlobeCountryFlightMode,
+  source: Exclude<SelectionSource, null>,
+  currentDistance: number,
+): number | undefined {
+  if (mode === "preview") {
+    return GLOBE_DETAIL_CAMERA_DISTANCE;
+  }
+  if (source === "explore" || source === "fab") {
+    return GLOBE_WORLD_CAMERA_DISTANCE;
+  }
+  if (source === "mapTap" && currentDistance < GLOBE_REGION_CAMERA_DISTANCE) {
+    return undefined;
+  }
+  return GLOBE_REGION_CAMERA_DISTANCE;
+}
 
 /** Opacity for sibling flags when one country stays softly highlighted at continent zoom. */
 export const MARKER_DEEMPHASIZED_OPACITY = 0.34;

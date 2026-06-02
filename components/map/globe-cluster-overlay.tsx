@@ -44,7 +44,7 @@ function PulsingClusterBubble({
       -1,
       false,
     );
-  }, [pulse]);
+  }, []);
 
   const bubbleStyle = useAnimatedStyle(() => {
     const scale = selected ? 1.12 : pulse.value;

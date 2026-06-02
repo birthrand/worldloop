@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 
 import { images } from "@/constants/images";
+import { clearAllClientCache } from "@/lib/client-cache";
 import { useCountryFeedStore, useSavedCountriesStore } from "@/store";
 
 function DevButton({
@@ -21,7 +22,9 @@ function DevButton({
       className="rounded-lg bg-ocean-blue px-3 py-2"
       style={{ opacity: disabled ? 0.5 : 1 }}
     >
-      <Text className="text-center text-sm font-medium text-white">{label}</Text>
+      <Text className="text-center text-sm font-medium text-white">
+        {label}
+      </Text>
     </TouchableOpacity>
   );
 }
@@ -107,6 +110,10 @@ export default function DevScreen() {
           />
           <DevButton label="Toggle saved" onPress={handleToggleSaved} />
           <DevButton label="Clear saved" onPress={clearSaved} />
+          <DevButton
+            label="Clear local cache"
+            onPress={() => void clearAllClientCache()}
+          />
         </View>
       </View>
     </ScrollView>

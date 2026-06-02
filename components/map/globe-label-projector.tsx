@@ -1,5 +1,6 @@
 import { useFrame, useThree } from "@react-three/fiber/native";
-import { useRef } from "react";
+import { useRef, type RefObject } from "react";
+import * as THREE from "three";
 
 import type { GlobeLabel, GlobeLabelScreenPosition } from "@/lib/globe-labels";
 import { projectLatLngToScreen } from "@/lib/globe-screen-project";
@@ -7,6 +8,7 @@ import { projectLatLngToScreen } from "@/lib/globe-screen-project";
 type GlobeLabelProjectorProps = {
   labels: GlobeLabel[];
   onPositions: (positions: GlobeLabelScreenPosition[]) => void;
+  globeQuaternionRef: RefObject<THREE.Quaternion>;
 };
 
 /**
@@ -16,6 +18,7 @@ type GlobeLabelProjectorProps = {
 export function GlobeLabelProjector({
   labels,
   onPositions,
+  globeQuaternionRef,
 }: GlobeLabelProjectorProps) {
   const { camera } = useThree();
   const onPositionsRef = useRef(onPositions);
@@ -37,6 +40,8 @@ export function GlobeLabelProjector({
         label.lng,
         camera,
         state.size,
+        undefined,
+        globeQuaternionRef.current ?? undefined,
       );
 
       return {

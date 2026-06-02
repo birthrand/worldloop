@@ -70,7 +70,9 @@ function pointInRing(point: MapPressCoordinate, ring: LatLng[]): boolean {
 }
 
 /** Prefer nearest land when tap is just outside a country bbox (coasts). */
-const COAST_BIAS_DEGREES = 1;
+export const MAP_TAP_COAST_BIAS_DEGREES = 1;
+/** Looser bias for 3D globe surface taps (raycast lat/lng vs GeoJSON). */
+export const GLOBE_SURFACE_TAP_COAST_BIAS_DEGREES = 3;
 
 function distanceToBBox(point: MapPressCoordinate, bbox: RingBBox): number {
   const latDist =
@@ -118,8 +120,9 @@ export function findMapCountryByBoundaryName(
 ): MapCountry | null {
   if (!geoAdminName) return null;
   return (
-    countries.find((country) => countryNamesMatch(country.name, geoAdminName)) ??
-    null
+    countries.find((country) =>
+      countryNamesMatch(country.name, geoAdminName),
+    ) ?? null
   );
 }
 
@@ -140,11 +143,7 @@ export function findMapCountryAtCoordinate(
     const bbox = ringBBox(polygon.coordinates);
     if (!pointInBBox(coordinate, bbox)) continue;
     if (
-      !pointInPolygonWithHoles(
-        coordinate,
-        polygon.coordinates,
-        polygon.holes,
-      )
+      !pointInPolygonWithHoles(coordinate, polygon.coordinates, polygon.holes)
     ) {
       continue;
     }
@@ -168,6 +167,7 @@ function findCountryNearCoast(
   polygons: CountryBoundaryPolygon[],
   countries: MapCountry[],
   coordinate: MapPressCoordinate,
+  coastBiasDegrees = MAP_TAP_COAST_BIAS_DEGREES,
 ): MapCountry | null {
   let best: { country: MapCountry; distance: number } | null = null;
 
@@ -176,7 +176,7 @@ function findCountryNearCoast(
 
     const bbox = ringBBox(polygon.coordinates);
     const distance = distanceToBBox(coordinate, bbox);
-    if (distance > COAST_BIAS_DEGREES) continue;
+    if (distance > coastBiasDegrees) continue;
 
     const country = findMapCountryByBoundaryName(
       countries,
@@ -190,6 +190,31 @@ function findCountryNearCoast(
   }
 
   return best?.country ?? null;
+}
+
+/** Resolves a map tap to a country (polygon hit, then coast bias). */
+export function resolveMapCountryAtCoordinate(
+  polygons: CountryBoundaryPolygon[],
+  countries: MapCountry[],
+  coordinate: MapPressCoordinate,
+  options?: { coastBiasDegrees?: number },
+): MapCountry | null {
+  const coastBias = options?.coastBiasDegrees ?? MAP_TAP_COAST_BIAS_DEGREES;
+  return (
+    findMapCountryAtCoordinate(polygons, countries, coordinate) ??
+    findCountryNearCoast(polygons, countries, coordinate, coastBias)
+  );
+}
+
+/** 3D surface taps — polygon hit with expanded coast bias for raycast error. */
+export function resolveGlobeSurfaceTapCountry(
+  polygons: CountryBoundaryPolygon[],
+  countries: MapCountry[],
+  coordinate: MapPressCoordinate,
+): MapCountry | null {
+  return resolveMapCountryAtCoordinate(polygons, countries, coordinate, {
+    coastBiasDegrees: GLOBE_SURFACE_TAP_COAST_BIAS_DEGREES,
+  });
 }
 
 /** World-view tap: land hit → app's continent cluster for that country's region. */

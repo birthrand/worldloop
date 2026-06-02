@@ -7,8 +7,8 @@ import {
   useState,
 } from "react";
 import { StyleSheet, View } from "react-native";
+import type { Region } from "react-native-maps";
 import Animated, {
-  Easing,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
@@ -16,7 +16,6 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
-import type { Region } from "react-native-maps";
 
 import {
   GlobeView,
@@ -29,20 +28,18 @@ import {
   type MapZoomTier,
   type WorldMapViewHandle,
 } from "@/components/map/world-map-view";
+import { MAP_FOCUS_SCRIM_RGB } from "@/constants/map-continent-focus";
 import type { MapCluster } from "@/lib/map-clusters";
 import type { MapPressCoordinate } from "@/lib/map-map-tap-hit";
-import {
-  MAP_CONTINENT_FOCUS_FADE_MS,
-  MAP_SCRIM_MAX_OPACITY,
-} from "@/constants/map-continent-focus";
+import type { MapMarkerPresentation } from "@/lib/map-region-markers";
 import {
   GLOBE_CROSSFADE_MS,
   MAP_DIM_HOLD_MS,
-  type MapViewTransition,
   shouldShowFlatMapMarkers,
+  shouldShowFlatMapOverlays,
   shouldShowGlobeLayer,
+  type MapViewTransition,
 } from "@/lib/map-view-transition";
-import type { MapMarkerPresentation } from "@/lib/map-region-markers";
 import { useMapStore } from "@/store/use-map-store";
 import type { CountryMarkerDisplayMode } from "@/store/use-map-ui-store";
 import type { MapCountry } from "@/types/country";
@@ -61,6 +58,9 @@ type MapCanvasProps = {
   selectedName: string | null;
   focusTransitionName?: string | null;
   focusedRegion: string | null;
+  boundaryFocusRegion?: string | null;
+  /** Continent focus fill/scrim — may lag focusedRegion after cross-region flights. */
+  continentOverlayRegion?: string | null;
   previewRegion?: string | null;
   tapRippleAt?: MapPressCoordinate | null;
   tapRippleToken?: number;
@@ -72,7 +72,10 @@ type MapCanvasProps = {
   onGlobeTransitionComplete: () => void;
   onFlatTransitionComplete: () => void;
   onGlobeCameraViewChange?: (state: GlobeCameraViewState) => void;
+  /** Seeds globe camera distance when entering 3D (from 2D latitudeDelta). */
+  initialGlobeCameraDistance?: number;
   onCountryPress: (country: MapCountry) => void;
+  onBoundaryCountryPress: (country: MapCountry) => void;
   onClusterPress: (cluster: MapCluster) => void;
   onMapPress: (coordinate?: MapPressCoordinate) => void;
   onFlatMapReady?: () => void;
@@ -93,6 +96,8 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
       selectedName,
       focusTransitionName = null,
       focusedRegion,
+      boundaryFocusRegion = focusedRegion,
+      continentOverlayRegion = focusedRegion,
       previewRegion = null,
       tapRippleAt = null,
       tapRippleToken = 0,
@@ -104,7 +109,9 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
       onGlobeTransitionComplete,
       onFlatTransitionComplete,
       onGlobeCameraViewChange,
+      initialGlobeCameraDistance,
       onCountryPress,
+      onBoundaryCountryPress,
       onClusterPress,
       onMapPress,
       onFlatMapReady,
@@ -124,9 +131,10 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
       y: number;
     } | null>(null);
 
-    const globeOpacity = useSharedValue(shouldShowGlobeLayer(mapMode, mapViewTransition) ? 1 : 0);
+    const globeOpacity = useSharedValue(
+      shouldShowGlobeLayer(mapMode, mapViewTransition) ? 1 : 0,
+    );
     const flatDimOpacity = useSharedValue(0);
-    const continentFocusBlend = useSharedValue(focusedRegion ? 1 : 0);
 
     const globePaintedRef = useRef(false);
     const enteringGlobeStartedRef = useRef(false);
@@ -136,6 +144,7 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
     const isGlobeInteractive =
       mapMode === "3d" && mapViewTransition === "ready";
     const showFlatMarkers = shouldShowFlatMapMarkers(mapMode);
+    const showFlatOverlays = shouldShowFlatMapOverlays(mapMode);
 
     useImperativeHandle(
       ref,
@@ -183,7 +192,7 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
           }
         }),
       );
-    }, [finishGlobeEnter, flatDimOpacity, globeOpacity]);
+    }, [finishGlobeEnter]);
 
     const handleGlobePainted = useCallback(() => {
       if (mapViewTransition !== "enteringGlobe" || globePaintedRef.current) {
@@ -212,7 +221,7 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
       }, 2500);
 
       return () => clearTimeout(fallback);
-    }, [flatDimOpacity, globeOpacity, mapViewTransition, startGlobeFadeIn]);
+    }, [mapViewTransition, startGlobeFadeIn]);
 
     const startFlatFadeIn = useCallback(() => {
       flatDimOpacity.value = withSequence(
@@ -227,7 +236,7 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
           }
         }),
       );
-    }, [finishFlatEnter, flatDimOpacity, globeOpacity]);
+    }, [finishFlatEnter]);
 
     useEffect(() => {
       if (mapViewTransition !== "enteringFlat") {
@@ -240,7 +249,7 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
       globeOpacity.value = 1;
       flatDimOpacity.value = 0;
       startFlatFadeIn();
-    }, [flatDimOpacity, globeOpacity, mapViewTransition, startFlatFadeIn]);
+    }, [mapViewTransition, startFlatFadeIn]);
 
     useEffect(() => {
       if (mapViewTransition === "ready" && mapMode === "3d") {
@@ -251,7 +260,7 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
         globeOpacity.value = 0;
         flatDimOpacity.value = 0;
       }
-    }, [flatDimOpacity, globeOpacity, mapMode, mapViewTransition]);
+    }, [mapMode, mapViewTransition]);
 
     const globeLayerStyle = useAnimatedStyle(() => ({
       opacity: globeOpacity.value,
@@ -259,17 +268,6 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
 
     const flatDimStyle = useAnimatedStyle(() => ({
       opacity: flatDimOpacity.value,
-    }));
-
-    useEffect(() => {
-      continentFocusBlend.value = withTiming(focusedRegion ? 1 : 0, {
-        duration: MAP_CONTINENT_FOCUS_FADE_MS,
-        easing: Easing.inOut(Easing.ease),
-      });
-    }, [continentFocusBlend, focusedRegion]);
-
-    const continentFocusScrimStyle = useAnimatedStyle(() => ({
-      opacity: continentFocusBlend.value * MAP_SCRIM_MAX_OPACITY,
     }));
 
     useEffect(() => {
@@ -313,12 +311,15 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
       selectedName,
       focusTransitionName,
       focusedRegion,
+      boundaryFocusRegion,
+      continentOverlayRegion,
       previewRegion,
       zoomTier,
       countryMarkerMode: showFlatMarkers ? countryMarkerMode : "hidden",
       markerPresentation,
       markerRevealGeneration,
       onCountryPress,
+      onBoundaryCountryPress,
       onMapPress,
       onMapReady: onFlatMapReady,
       onRegionChange: onFlatRegionChange,
@@ -338,6 +339,7 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
             ref={mapRef}
             {...mapProps}
             countries={showFlatMarkers ? countries : []}
+            showFocusLayers={showFlatOverlays}
           />
           <Animated.View
             pointerEvents="none"
@@ -359,17 +361,18 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
               selectedName={selectedName}
               focusTransitionName={focusTransitionName}
               focusedRegion={focusedRegion}
+              boundaryFocusRegion={boundaryFocusRegion}
+              zoomTier={zoomTier}
+              previewRegion={previewRegion}
               countryMarkerMode={countryMarkerMode}
               onClusterPress={onClusterPress}
               onCountryPress={onCountryPress}
+              onBoundaryCountryPress={onBoundaryCountryPress}
               onBackgroundPress={onMapPress}
               onCanvasPainted={handleGlobePainted}
               onCameraViewChange={onGlobeCameraViewChange}
+              initialCameraDistance={initialGlobeCameraDistance}
               lockUserGestures={lockUserGestures || !isGlobeInteractive}
-            />
-            <Animated.View
-              pointerEvents="none"
-              style={[styles.continentFocusScrim, continentFocusScrimStyle]}
             />
           </Animated.View>
         ) : null}
@@ -389,17 +392,13 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
 const styles = StyleSheet.create({
   root: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#0b132b",
+    backgroundColor: MAP_FOCUS_SCRIM_RGB,
   },
   layer: {
     ...StyleSheet.absoluteFillObject,
   },
   flatDim: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#0b132b",
-  },
-  continentFocusScrim: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#0b132b",
+    backgroundColor: MAP_FOCUS_SCRIM_RGB,
   },
 });

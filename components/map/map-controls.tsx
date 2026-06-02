@@ -7,6 +7,7 @@ import { MapBoundaryControlsModal } from "@/components/map/map-boundary-controls
 import { MapCircularFab } from "@/components/map/map-circular-fab";
 import { applyBoundaryStyleDraft } from "@/constants/map-boundary-style";
 import { MAP_CONTROL_STACK } from "@/constants/map-chrome-styles";
+import type { CameraZoomTier } from "@/lib/map-camera-zoom";
 import type { MapViewTransition } from "@/lib/map-view-transition";
 import type { MapMode } from "@/store/use-map-store";
 import {
@@ -14,6 +15,9 @@ import {
   toggleGlobeYellowPins,
   useMapUiStore,
 } from "@/store/use-map-ui-store";
+
+/** Re-enable when reset / zoom rail UX is finalized. */
+const MAP_ZOOM_RESET_CONTROLS_ENABLED = false;
 
 type MapControlsProps = {
   mapMode: MapMode;
@@ -36,6 +40,8 @@ type MapControlsProps = {
   randomDeemphasized?: boolean;
   /** Blocks the random FAB while a camera flight is sequencing (prevents overlapping animateToRegion). */
   randomDisabled?: boolean;
+  /** Live camera tier — boundary style preview in the modal (not selection intent). */
+  boundaryPreviewZoomTier?: CameraZoomTier;
 };
 
 export function MapControls({
@@ -53,6 +59,7 @@ export function MapControls({
   onRandomCountryPress,
   randomDeemphasized = false,
   randomDisabled = false,
+  boundaryPreviewZoomTier = "world",
 }: MapControlsProps) {
   const [isActionRailExpanded, setIsActionRailExpanded] =
     useState(defaultExpanded);
@@ -69,8 +76,6 @@ export function MapControls({
   const setShowBoundaryLines = useMapUiStore((s) => s.setShowBoundaryLines);
   const boundaryStyle = useMapUiStore((s) => s.boundaryStyle);
   const setBoundaryStyle = useMapUiStore((s) => s.setBoundaryStyle);
-  const focusedRegion = useMapUiStore((s) => s.focusedRegion);
-  const boundaryPreviewZoomTier = focusedRegion ? "region" : "world";
 
   const is3d = mapMode === "3d";
   const isTransitioning =
@@ -228,70 +233,70 @@ export function MapControls({
               </Pressable>
             </View>
 
-            <View style={styles.stack}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Reset to world view"
-                onPress={onReset}
-                style={({ pressed }) => [
-                  styles.control,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <Ionicons name="refresh-outline" size={20} color="#ffffff" />
-              </Pressable>
-              <View style={styles.divider} />
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Zoom in"
-                onPress={onZoomIn}
-                style={({ pressed }) => [
-                  styles.control,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <Ionicons name="add" size={20} color="#ffffff" />
-              </Pressable>
-              <View style={styles.divider} />
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Zoom out"
-                onPress={onZoomOut}
-                style={({ pressed }) => [
-                  styles.control,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <Ionicons name="remove" size={20} color="#ffffff" />
-              </Pressable>
-            </View>
+            {MAP_ZOOM_RESET_CONTROLS_ENABLED ? (
+              <View style={styles.stack}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Reset to world view"
+                  onPress={onReset}
+                  style={({ pressed }) => [
+                    styles.control,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Ionicons name="refresh-outline" size={20} color="#ffffff" />
+                </Pressable>
+                <View style={styles.divider} />
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Zoom in"
+                  onPress={onZoomIn}
+                  style={({ pressed }) => [
+                    styles.control,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Ionicons name="add" size={20} color="#ffffff" />
+                </Pressable>
+                <View style={styles.divider} />
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Zoom out"
+                  onPress={onZoomOut}
+                  style={({ pressed }) => [
+                    styles.control,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Ionicons name="remove" size={20} color="#ffffff" />
+                </Pressable>
+              </View>
+            ) : null}
 
             {showDisplayStack ? (
               <View style={styles.stack}>
                 {showFlagToggle ? (
-                  <>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={countryMarkerModeLabel(
-                        countryMarkerMode,
-                      )}
-                      onPress={handleCycleCountryMarkerMode}
-                      style={({ pressed }) => [
-                        styles.control,
-                        pressed && styles.pressed,
-                      ]}
-                    >
-                      <Ionicons
-                        name={markerModeIcon}
-                        size={18}
-                        color={markerModeColor}
-                      />
-                    </Pressable>
-                    <View style={styles.divider} />
-                  </>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={countryMarkerModeLabel(
+                      countryMarkerMode,
+                    )}
+                    onPress={handleCycleCountryMarkerMode}
+                    style={({ pressed }) => [
+                      styles.control,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Ionicons
+                      name={markerModeIcon}
+                      size={18}
+                      color={markerModeColor}
+                    />
+                  </Pressable>
                 ) : null}
                 {showBoundaryControls ? (
                   <>
+                    {showFlagToggle ? <View style={styles.divider} /> : null}
                     <Pressable
                       accessibilityRole="togglebutton"
                       accessibilityState={{ checked: showBoundaryLines }}

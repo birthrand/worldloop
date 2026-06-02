@@ -1,12 +1,9 @@
-import type { Country, CountryBasic } from "../types/country.js";
+import { countryMatchesExploreRegion } from "../lib/app-region.js";
 import { HttpError } from "../lib/http.js";
+import type { Country, CountryBasic } from "../types/country.js";
 import { enrichCountryWithAi } from "./ai.service.js";
+import { CACHE_TTL, cacheKeys, getOrSet } from "./cache.service.js";
 import { getFeedCountries } from "./country.service.js";
-import {
-  CACHE_TTL,
-  cacheKeys,
-  getOrSet,
-} from "./cache.service.js";
 import { enrichCountryWithImages } from "./image.service.js";
 
 export type SearchResponse = {
@@ -31,17 +28,12 @@ function filterCountries(
   let matches = countries;
 
   if (region) {
-    const regionLower = region.toLowerCase();
-    matches = matches.filter(
-      (c) => c.region.toLowerCase() === regionLower,
-    );
+    matches = matches.filter((c) => countryMatchesExploreRegion(c, region));
   }
 
   if (query) {
     const queryLower = query.toLowerCase();
-    matches = matches.filter((c) =>
-      c.name.toLowerCase().includes(queryLower),
-    );
+    matches = matches.filter((c) => c.name.toLowerCase().includes(queryLower));
   }
 
   return matches.sort((a, b) => a.name.localeCompare(b.name));

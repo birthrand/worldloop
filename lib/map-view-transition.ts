@@ -8,6 +8,24 @@ export type MapViewTransition =
 export const GLOBE_CROSSFADE_MS = 300;
 export const MAP_DIM_HOLD_MS = 200;
 
+/** Initial/restored transition — no crossfade when rehydrating a persisted mode. */
+export function resolveStableMapViewTransition(
+  mapMode: "2d" | "3d",
+): MapViewTransition {
+  return mapMode === "3d" ? "ready" : "idle";
+}
+
+/** Align transition with persisted map mode without interrupting an active crossfade. */
+export function syncMapViewTransitionForMode(
+  mapMode: "2d" | "3d",
+  current: MapViewTransition,
+): MapViewTransition {
+  if (current === "enteringGlobe" || current === "enteringFlat") {
+    return current;
+  }
+  return resolveStableMapViewTransition(mapMode);
+}
+
 export function shouldShowFlatMapLayer(
   mapMode: "2d" | "3d",
   transition: MapViewTransition,
@@ -48,5 +66,10 @@ export function isFlatMapUi(
 
 /** Flat map pins/clusters — only while 2D is the active mode (hidden during any 3D phase). */
 export function shouldShowFlatMapMarkers(mapMode: "2d" | "3d"): boolean {
+  return mapMode === "2d";
+}
+
+/** Continent/country highlight fills — flat map only; globe renders its own GL layers. */
+export function shouldShowFlatMapOverlays(mapMode: "2d" | "3d"): boolean {
   return mapMode === "2d";
 }

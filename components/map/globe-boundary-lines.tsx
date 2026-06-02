@@ -12,7 +12,7 @@ import {
 } from "@/lib/globe-boundary-lines";
 import {
   filterBoundaryPolygonsByMapContext,
-  parseCountryBoundaryPolygons,
+  getCountryBoundaryPolygons,
 } from "@/lib/map-country-boundaries";
 import { useMapUiStore } from "@/store/use-map-ui-store";
 import type { MapCountry } from "@/types/country";
@@ -22,17 +22,14 @@ const countriesGeoJson = require("@/assets/geo/ne_50m_admin_0_countries/ne_50m_a
 type GlobeBoundaryLinesProps = {
   boundaryCountries: MapCountry[];
   selectedName: string | null;
+  focusTransitionName?: string | null;
+  /** Intent — which polygons to load (continent filter). */
   focusedRegion: string | null;
+  /** Effective region for boundary strokes (may infer from view center). */
+  boundaryFocusRegion?: string | null;
+  /** Live globe camera tier — stroke width/color scaling. */
+  zoomTier: MapZoomTier;
 };
-
-function resolveGlobeZoomTier(
-  selectedName: string | null,
-  focusedRegion: string | null,
-): MapZoomTier {
-  if (selectedName) return "country";
-  if (focusedRegion) return "region";
-  return "world";
-}
 
 function BoundaryLineSegment({
   geometry,
@@ -63,25 +60,40 @@ function BoundaryLineSegment({
 export function GlobeBoundaryLines({
   boundaryCountries,
   selectedName,
+  focusTransitionName = null,
   focusedRegion,
+  boundaryFocusRegion = focusedRegion,
+  zoomTier,
 }: GlobeBoundaryLinesProps) {
   const showBoundaryLines = useMapUiStore((s) => s.showBoundaryLines);
   const boundaryStyle = useMapUiStore((s) => s.boundaryStyle);
 
-  const zoomTier = resolveGlobeZoomTier(selectedName, focusedRegion);
+  const highlightCountryName = selectedName;
+  const showCountryHighlight =
+    !!highlightCountryName && boundaryStyle.countryHighlightEnabled;
+  const showBoundaryStrokes =
+    boundaryStyle.strokeColorEnabled && showBoundaryLines;
 
   const showWorldBoundaries =
-    showBoundaryLines && !focusedRegion && !selectedName;
+    showBoundaryLines && !boundaryFocusRegion && !highlightCountryName;
 
   const countryBoundaries = useMemo(() => {
-    const all = parseCountryBoundaryPolygons(countriesGeoJson);
+    if (!showBoundaryStrokes || showCountryHighlight) return [];
+    const all = getCountryBoundaryPolygons(countriesGeoJson);
     return filterBoundaryPolygonsByMapContext(all, {
-      selectedCountryName: selectedName,
-      focusedRegion,
+      selectedCountryName: null,
+      focusedRegion: boundaryFocusRegion,
       countries: boundaryCountries,
       showWorldBoundaries,
     });
-  }, [boundaryCountries, focusedRegion, selectedName, showWorldBoundaries]);
+  }, [
+    boundaryCountries,
+    boundaryFocusRegion,
+    highlightCountryName,
+    showBoundaryStrokes,
+    showCountryHighlight,
+    showWorldBoundaries,
+  ]);
 
   const strokeColor = resolveBoundaryStrokeColor(boundaryStyle, zoomTier);
   const styleKey = boundaryStyleRenderKey(boundaryStyle, zoomTier);
@@ -96,7 +108,11 @@ export function GlobeBoundaryLines({
     [strokeColor],
   );
 
-  if (!showBoundaryLines || lineSegments.length === 0) {
+  if (
+    !showBoundaryStrokes ||
+    showCountryHighlight ||
+    lineSegments.length === 0
+  ) {
     return null;
   }
 

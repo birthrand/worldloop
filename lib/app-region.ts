@@ -2,6 +2,10 @@
 export const NORTH_AMERICA = "North America" as const;
 export const SOUTH_AMERICA = "South America" as const;
 
+export function isSplitAmericasRegion(region: string): boolean {
+  return region === NORTH_AMERICA || region === SOUTH_AMERICA;
+}
+
 /** Fallback when cached payloads still use REST Countries `Americas` without subregion. */
 const SOUTH_AMERICA_COUNTRY_NAMES = new Set([
   "Argentina",
@@ -68,7 +72,9 @@ export function countryMatchesExploreRegion(
   country: { name: string; region: string },
   targetRegion: string,
 ): boolean {
-  return normalizeAppRegion(country.region, undefined, country.name) === targetRegion;
+  return (
+    normalizeAppRegion(country.region, undefined, country.name) === targetRegion
+  );
 }
 
 export function filterCountriesForExploreRegion<

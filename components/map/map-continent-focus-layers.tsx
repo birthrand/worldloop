@@ -7,24 +7,25 @@ import {
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
+
+import { resolveContinentFocusFillRgba } from "@/constants/map-boundary-style";
 import {
   MAP_CONTINENT_FOCUS_FADE_MS,
-  MAP_CONTINENT_FOCUS_FILL_OPACITY,
-  MAP_CONTINENT_FOCUS_FILL_OPACITY_WITH_COUNTRY,
   MAP_CONTINENT_FOCUS_POLYGON_Z,
   MAP_CONTINENT_FOCUS_SCRIM_Z,
-  MAP_CONTINENT_PREVIEW_FILL_OPACITY,
   MAP_CONTINENT_PREVIEW_SCRIM_OPACITY,
   MAP_SCRIM_MAX_OPACITY,
   MAP_SCRIM_MAX_OPACITY_WITH_COUNTRY,
   MAP_WORLD_SCRIM_RING,
-  mapFocusAccentRgba,
+  continentFocusFillOpacityFactor,
+  continentPreviewFillOpacityFactor,
   mapFocusScrimRgba,
 } from "@/constants/map-continent-focus";
 import {
   filterBoundaryPolygonsByMapContext,
   type CountryBoundaryPolygon,
 } from "@/lib/map-country-boundaries";
+import { useMapUiStore } from "@/store/use-map-ui-store";
 import type { MapCountry } from "@/types/country";
 
 /** Limit polygon color updates during fades — per-frame setState can crash MapView. */
@@ -58,6 +59,7 @@ export function MapContinentFocusLayers({
   allPolygons,
   boundaryCountries,
 }: MapContinentFocusLayersProps) {
+  const boundaryStyle = useMapUiStore((s) => s.boundaryStyle);
   const blend = useSharedValue(0);
   const previewBlend = useSharedValue(0);
   const lastBlendStep = useSharedValue(-1);
@@ -126,7 +128,8 @@ export function MapContinentFocusLayers({
   useAnimatedReaction(
     () => blend.value,
     (value) => {
-      const step = Math.round(value * BLEND_REACTION_STEPS) / BLEND_REACTION_STEPS;
+      const step =
+        Math.round(value * BLEND_REACTION_STEPS) / BLEND_REACTION_STEPS;
       if (step === lastBlendStep.value) return;
       lastBlendStep.value = step;
       runOnJS(setRenderBlend)(step);
@@ -170,17 +173,16 @@ export function MapContinentFocusLayers({
         ? MAP_SCRIM_MAX_OPACITY_WITH_COUNTRY
         : MAP_SCRIM_MAX_OPACITY),
   );
-  const fillColor = mapFocusAccentRgba(
-    renderBlend *
-      (selectedCountryName
-        ? MAP_CONTINENT_FOCUS_FILL_OPACITY_WITH_COUNTRY
-        : MAP_CONTINENT_FOCUS_FILL_OPACITY),
+  const fillColor = resolveContinentFocusFillRgba(
+    boundaryStyle,
+    renderBlend * continentFocusFillOpacityFactor(!!selectedCountryName),
   );
   const previewScrimFill = mapFocusScrimRgba(
     renderPreviewBlend * MAP_CONTINENT_PREVIEW_SCRIM_OPACITY,
   );
-  const previewFillColor = mapFocusAccentRgba(
-    renderPreviewBlend * MAP_CONTINENT_PREVIEW_FILL_OPACITY,
+  const previewFillColor = resolveContinentFocusFillRgba(
+    boundaryStyle,
+    renderPreviewBlend * continentPreviewFillOpacityFactor(),
   );
 
   const showCommitted = displayRegion && renderBlend > 0.001;

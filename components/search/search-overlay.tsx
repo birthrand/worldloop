@@ -18,10 +18,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FlagBadge } from "@/components/explore/flag-badge";
 import { FeedErrorBanner } from "@/components/home/feed-error-banner";
 import { CONTINENTS, continentDisplayLabel } from "@/constants/regions";
-import { fetchSearchCountries } from "@/lib/api";
 import { getAiFact, getCountryImages } from "@/lib/format-country";
 import { openCountryInExplore } from "@/lib/open-country-in-explore";
 import { openCountryOnMap } from "@/lib/open-country-on-map";
+import {
+  getCachedSearchResults,
+  searchCountriesWithCache,
+} from "@/lib/search-countries";
 import { useSearchUiStore } from "@/store/use-search-ui-store";
 import type { Country } from "@/types/country";
 
@@ -48,6 +51,7 @@ export function SearchOverlay() {
   const inputRef = useRef<TextInput>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastRequestRef = useRef({ query: "", region: "" });
+  const searchRequestIdRef = useRef(0);
 
   const loadRecentSearches = useCallback(async () => {
     try {
@@ -89,23 +93,47 @@ export function SearchOverlay() {
       }
 
       lastRequestRef.current = { query: q, region: r };
-      setStatus("loading");
+      const requestId = ++searchRequestIdRef.current;
       setError(null);
 
-      try {
-        const { data } = await fetchSearchCountries(
-          q || undefined,
-          r || undefined,
-        );
-        setResults(data);
+      const cached = await getCachedSearchResults(q, r);
+      if (requestId !== searchRequestIdRef.current) return;
+
+      let showedCached = false;
+      if (cached) {
+        showedCached = true;
+        setResults(cached);
         setStatus("success");
+      } else {
+        setStatus("loading");
+      }
+
+      try {
+        await searchCountriesWithCache(q, r, {
+          onCached: (data) => {
+            if (requestId !== searchRequestIdRef.current) return;
+            showedCached = true;
+            setResults(data);
+            setStatus("success");
+          },
+          onFetched: (data) => {
+            if (requestId !== searchRequestIdRef.current) return;
+            setResults(data);
+            setStatus("success");
+          },
+        });
+
+        if (requestId !== searchRequestIdRef.current) return;
         if (q) void saveRecentSearch(q);
       } catch (err) {
-        setResults([]);
-        setStatus("error");
-        setError(
-          err instanceof Error ? err.message : "Search failed. Try again.",
-        );
+        if (requestId !== searchRequestIdRef.current) return;
+        if (!showedCached) {
+          setResults([]);
+          setStatus("error");
+          setError(
+            err instanceof Error ? err.message : "Search failed. Try again.",
+          );
+        }
       }
     },
     [saveRecentSearch],

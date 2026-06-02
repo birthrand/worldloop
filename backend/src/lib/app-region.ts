@@ -43,3 +43,13 @@ export function normalizeAppRegion(
 
   return NORTH_AMERICA;
 }
+
+/** Whether a country belongs to an app continent tab (handles legacy `Americas`). */
+export function countryMatchesExploreRegion(
+  country: { name: string; region: string },
+  targetRegion: string,
+): boolean {
+  return (
+    normalizeAppRegion(country.region, undefined, country.name) === targetRegion
+  );
+}

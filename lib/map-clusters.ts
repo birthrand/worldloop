@@ -1,5 +1,5 @@
-import { CONTINENTS } from "@/constants/regions";
 import { getClusterActivity } from "@/constants/map-activity";
+import { CONTINENTS } from "@/constants/regions";
 import { isValidLatLng } from "@/lib/map-country";
 import type { MapCountry } from "@/types/country";
 
@@ -19,7 +19,8 @@ function weightedCenter(countries: MapCountry[]): [number, number] {
   for (const c of countries) {
     if (!isValidLatLng(c.latlng)) continue;
     const [lat, lng] = c.latlng;
-    const w = Number.isFinite(c.population) && c.population > 0 ? c.population : 1;
+    const w =
+      Number.isFinite(c.population) && c.population > 0 ? c.population : 1;
     totalWeight += w;
     sumLat += lat * w;
     sumLng += lng * w;
@@ -47,7 +48,7 @@ export function buildMapClusters(countries: MapCountry[]): MapCluster[] {
   return orderedRegions.map((region) => {
     const clusterCountries = byRegion.get(region) ?? [];
     const center = weightedCenter(clusterCountries);
-    const activity = getClusterActivity(clusterCountries);
+    const activity = getClusterActivity(clusterCountries, countries);
 
     return {
       id: `cluster:${region}`,
@@ -58,4 +59,3 @@ export function buildMapClusters(countries: MapCountry[]): MapCluster[] {
     };
   });
 }
-

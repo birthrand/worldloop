@@ -32,7 +32,7 @@ export function MapTapRipple({ x, y, triggerKey }: MapTapRippleProps) {
       duration: RIPPLE_DURATION_MS,
       easing: Easing.out(Easing.cubic),
     });
-  }, [opacity, scale, triggerKey]);
+  }, [triggerKey]);
 
   const rippleStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
