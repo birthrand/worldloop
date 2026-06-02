@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -17,6 +17,7 @@ import { MapCanvas, type MapCanvasHandle } from "@/components/map/map-canvas";
 import { MapControls } from "@/components/map/map-controls";
 import { MapCountryFocusPill } from "@/components/map/map-country-focus-pill";
 import { MapCountryPreviewCard } from "@/components/map/map-country-preview-card";
+import { MapDiscoveryChrome } from "@/components/map/map-discovery-chrome";
 import { MapFeaturedChips } from "@/components/map/map-featured-chips";
 import { MapFilterChips } from "@/components/map/map-filter-chips";
 import { MapOnboardingSheet } from "@/components/map/map-onboarding-sheet";
@@ -27,6 +28,8 @@ import { MapTopChromeScrim } from "@/components/map/map-top-chrome-scrim";
 import { continentDisplayLabel } from "@/constants/regions";
 import { useMapLogic } from "@/hooks/use-map-logic";
 import { resolveGlobeAutoRotateEnabled } from "@/lib/globe-rotation";
+import { openExploreHere } from "@/lib/open-explore-here";
+import { useSpatialContextStore } from "@/store/use-spatial-context-store";
 
 /** Preview card "back to continent" action — off until UX is finalized. */
 const PREVIEW_CONTINENT_BACK_ENABLED = false;
@@ -40,7 +43,15 @@ export default function MapScreen() {
   const mapRef = useRef<MapCanvasHandle>(null);
 
   const map = useMapLogic(mapRef);
+  const viewportCountryCount = useSpatialContextStore(
+    (s) => s.viewportCountryCount,
+  );
+  const discoveryTier = useSpatialContextStore((s) => s.discoveryScope.tier);
   const [previewExitHold, setPreviewExitHold] = useState(false);
+  const [discoveryChromeFromFocus, setDiscoveryChromeFromFocus] =
+    useState(false);
+  const [discoveryChromeFromRegion, setDiscoveryChromeFromRegion] =
+    useState(false);
   const wasPreviewOpenRef = useRef(false);
   const previewOverlayActive = map.isPreviewOpen || previewExitHold;
   const globeAutoRotateEnabled = resolveGlobeAutoRotateEnabled({
@@ -63,6 +74,18 @@ export default function MapScreen() {
     return () => clearTimeout(timer);
   }, [map.isPreviewOpen]);
 
+  useEffect(() => {
+    if (!map.showCountryFocusPill) {
+      setDiscoveryChromeFromFocus(false);
+    }
+  }, [map.showCountryFocusPill]);
+
+  useEffect(() => {
+    if (!map.showRegionChrome) {
+      setDiscoveryChromeFromRegion(false);
+    }
+  }, [map.showRegionChrome]);
+
   const regionChromeBottom = Math.max(insets.bottom, 16);
   const countryFocusPillBottom = 34;
   const countryChromeHeight = 44;
@@ -72,6 +95,43 @@ export default function MapScreen() {
     ? countryFocusPillBottom + countryChromeHeight + countryChromeGap
     : regionChromeBottom + mapFabClearance;
   const randomHintBottom = mapFabBottom + 72;
+  const regionCountryCount = useMemo(() => {
+    if (!map.focusedRegion) return 0;
+    const fromCountries = map.countries.filter(
+      (country) => country.region === map.focusedRegion,
+    ).length;
+    if (fromCountries > 0) return fromCountries;
+
+    const cluster =
+      map.clusters.find((entry) => entry.region === map.focusedRegion) ?? null;
+    return cluster?.countryCount ?? 0;
+  }, [map.clusters, map.countries, map.focusedRegion]);
+  const discoveryChromeFromRegionActive =
+    discoveryChromeFromRegion &&
+    map.showRegionChrome &&
+    !map.showCountryFocusPill;
+  const discoveryChromeLabelMode = discoveryChromeFromRegionActive
+    ? "region"
+    : "viewport";
+  const discoveryChromeCount = discoveryChromeFromRegionActive
+    ? regionCountryCount
+    : viewportCountryCount;
+  const discoveryChromeBottom = map.showRegionChrome
+    ? regionChromeBottom + countryChromeHeight + 12
+    : map.showCountryFocusPill
+      ? countryFocusPillBottom + countryChromeHeight + 12
+      : mapFabBottom + 12;
+  const showDiscoveryChromeEligible =
+    !previewOverlayActive &&
+    discoveryChromeCount > 0 &&
+    (discoveryChromeFromRegionActive ||
+      discoveryChromeFromFocus ||
+      (discoveryTier !== "world" &&
+        (map.cameraTier !== "world" || !!map.focusedRegion)));
+  const showDiscoveryChrome =
+    showDiscoveryChromeEligible &&
+    (!map.showRegionChrome || discoveryChromeFromRegion) &&
+    (!map.showCountryFocusPill || discoveryChromeFromFocus);
   const onboardingBottom = Math.max(insets.bottom, 16) + 88;
 
   return (
@@ -208,6 +268,10 @@ export default function MapScreen() {
             focusedRegion={map.focusedRegion}
             bottom={regionChromeBottom}
             onContinentPress={map.handleBackToContinent}
+            onShowDiscovery={() =>
+              setDiscoveryChromeFromRegion((visible) => !visible)
+            }
+            discoveryChromeVisible={discoveryChromeFromRegion}
             onWorldPress={map.handleBackToWorld}
           />
         ) : null}
@@ -219,6 +283,10 @@ export default function MapScreen() {
             country={map.activeCountry}
             bottom={countryFocusPillBottom}
             onOpenDetails={map.openCountryPreview}
+            onShowDiscovery={() =>
+              setDiscoveryChromeFromFocus((visible) => !visible)
+            }
+            discoveryChromeVisible={discoveryChromeFromFocus}
             onDismiss={map.clearCountryFocus}
           />
         ) : null}
@@ -247,6 +315,20 @@ export default function MapScreen() {
             onRandomCountryPress={() => void map.handleRandomCountry()}
             randomDeemphasized={map.showCountryFocusPill}
             randomDisabled={map.isMapAnimating}
+          />
+        ) : null}
+
+        {showDiscoveryChrome ? (
+          <MapDiscoveryChrome
+            count={discoveryChromeCount}
+            labelMode={discoveryChromeLabelMode}
+            regionLabel={
+              map.focusedRegion
+                ? continentDisplayLabel(map.focusedRegion)
+                : undefined
+            }
+            bottom={discoveryChromeBottom}
+            onExplorePress={() => void openExploreHere()}
           />
         ) : null}
       </View>

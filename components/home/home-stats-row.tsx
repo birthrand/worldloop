@@ -7,9 +7,7 @@ const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"] as const;
 
 export function HomeStatsRow() {
   const streakDays = useDiscoveryProgressStore((s) => s.streakDays);
-  const weekProgress = useDiscoveryProgressStore(
-    (s) => s.weekProgress ?? [true, true, true, true, true, true, false],
-  );
+  const weekProgress = useDiscoveryProgressStore((s) => s.weekProgress);
   const worldProgressPercent = useDiscoveryProgressStore(
     (s) => s.worldProgressPercent,
   );
@@ -25,7 +23,9 @@ export function HomeStatsRow() {
           🔥 Your Learning Streak
         </Text>
         <View className="gap-1">
-          <Text className="font-bold text-2xl text-white">{streakDays} days</Text>
+          <Text className="font-bold text-2xl text-white">
+            {streakDays} days
+          </Text>
           <Text className="body-sm text-white/50">Keep it going!</Text>
         </View>
         <View className="flex-row justify-between gap-1">
@@ -70,11 +70,13 @@ export function HomeStatsRow() {
           value={String(countriesExplored)}
           label="Countries Explored"
         />
-        <MiniStatCard
-          icon="help-circle-outline"
-          value={String(quizzesCompleted)}
-          label="Quizzes Completed"
-        />
+        {quizzesCompleted > 0 ? (
+          <MiniStatCard
+            icon="help-circle-outline"
+            value={String(quizzesCompleted)}
+            label="Quizzes Completed"
+          />
+        ) : null}
       </View>
     </View>
   );

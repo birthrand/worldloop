@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 import { buildFlagCdnUrl } from "@/lib/flag-url";
+import { useDiscoveryProgressStore } from "@/store/use-discovery-progress-store";
 import type { Country } from "@/types/country";
 
 const MAX_RECENT = 8;
@@ -28,7 +29,9 @@ function normalizeRecordedCountry(country: Country): Country | null {
   return normalized;
 }
 
-function sanitizeEntries(entries: RecentlyViewedEntry[]): RecentlyViewedEntry[] {
+function sanitizeEntries(
+  entries: RecentlyViewedEntry[],
+): RecentlyViewedEntry[] {
   const seen = new Set<string>();
   const cleaned: RecentlyViewedEntry[] = [];
 
@@ -76,9 +79,7 @@ function buildSeedEntries(): RecentlyViewedEntry[] {
         "South America",
         33_715_471,
         [-9.19, -75.0152],
-        [
-          "https://images.unsplash.com/photo-1526392060635-9d59825da76e?w=800",
-        ],
+        ["https://images.unsplash.com/photo-1526392060635-9d59825da76e?w=800"],
       ),
       viewedAt: now,
     },
@@ -90,9 +91,7 @@ function buildSeedEntries(): RecentlyViewedEntry[] {
         "Europe",
         58_853_482,
         [41.8719, 12.5674],
-        [
-          "https://images.unsplash.com/photo-1515542622106-78bda8ba0e5b?w=800",
-        ],
+        ["https://images.unsplash.com/photo-1515542622106-78bda8ba0e5b?w=800"],
       ),
       viewedAt: now - 2 * 60 * 60 * 1000,
     },
@@ -104,9 +103,7 @@ function buildSeedEntries(): RecentlyViewedEntry[] {
         "Asia",
         125_584_838,
         [36.2048, 138.2529],
-        [
-          "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800",
-        ],
+        ["https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800"],
       ),
       viewedAt: now - 24 * 60 * 60 * 1000,
     },
@@ -131,6 +128,7 @@ export const useRecentlyViewedStore = create<RecentlyViewedState>()(
           ...without,
         ].slice(0, MAX_RECENT);
         set({ entries: next });
+        useDiscoveryProgressStore.getState().recordCountryVisit(normalized);
       },
 
       seedIfEmpty: () => {

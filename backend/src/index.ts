@@ -3,6 +3,7 @@ import express from "express";
 
 import { aiRouter } from "./api/ai.routes.js";
 import { countryRouter } from "./api/country.routes.js";
+import { discoverRouter } from "./api/discover.routes.js";
 import { feedRouter } from "./api/feed.routes.js";
 import { healthRouter } from "./api/health.routes.js";
 import { mapRouter } from "./api/map.routes.js";
@@ -29,6 +30,7 @@ app.use("/country", countryRouter);
 app.use("/feed", feedRouter);
 app.use("/search", searchRouter);
 app.use("/map", mapRouter);
+app.use("/discover", discoverRouter);
 app.use("/ai", aiRouter);
 
 app.use(notFoundHandler);

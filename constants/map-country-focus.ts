@@ -50,6 +50,11 @@ export const MAP_COUNTRY_FOCUS_POLYGON_Z = MAP_CONTINENT_FOCUS_POLYGON_Z + 2;
 /** Boundary strokes render above the country fill. */
 export const MAP_COUNTRY_FOCUS_STROKE_Z = MAP_COUNTRY_FOCUS_POLYGON_Z + 1;
 
+/** Passport layer — subtle teal ring on visited countries (distinct from gold focus). */
+export const MAP_COUNTRY_VISITED_RING_COLOR = "#14b8a6";
+export const MAP_COUNTRY_VISITED_RING_OPACITY = 0.72;
+export const MAP_COUNTRY_VISITED_FILL_OPACITY = 0.08;
+
 function resolveCountryStrokeRgb(settings: MapBoundaryStyleSettings): RgbColor {
   return (
     (settings.countryStrokeColorHex &&

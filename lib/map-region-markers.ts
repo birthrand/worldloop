@@ -1,4 +1,5 @@
 import { getMapDisplayLatLng } from "@/lib/map-country";
+import { capMapCountriesByCardinalBorderNeighbors } from "@/lib/map-country-neighbors";
 import type { SelectionSource } from "@/store/use-identity-store";
 import type { MapCountry } from "@/types/country";
 
@@ -10,6 +11,9 @@ export const REGION_ZOOM_MARKER_CAP = 16;
  * Interior countries: up to 7 neighbors (8 total including focal).
  */
 export const SELECTED_COUNTRY_MARKER_CAP = 8;
+
+/** 3D globe when a country is selected — focal flag + 4 nearby pins. */
+export const GLOBE_SELECTED_COUNTRY_MARKER_CAP = 5;
 
 /** Same-continent suggestions at a continental edge (excludes focal). */
 export const BRIDGE_SAME_REGION_CAP = 4;
@@ -63,6 +67,49 @@ export function resolveGlobeCountryTargetDistance(
 
 /** Opacity for sibling flags when one country stays softly highlighted at continent zoom. */
 export const MARKER_DEEMPHASIZED_OPACITY = 0.34;
+
+/** Push factor for non-focal 2D pins away from the selected country (1 = no push). */
+export const NEARBY_MARKER_2D_SPREAD_FACTOR = 1.34;
+/** Minimum lat/lng gap (degrees) before applying spread on the flat map. */
+export const NEARBY_MARKER_2D_MIN_SEPARATION_DEG = 0.42;
+
+/**
+ * Offset a nearby country pin away from the focal pin on 2D maps so flags do not overlap.
+ * The focal country keeps its true display coordinate.
+ */
+export function spreadNearbyMarkerCoordinate(
+  focal: Pick<MapCountry, "name" | "latlng">,
+  country: Pick<MapCountry, "name" | "latlng">,
+  factor = NEARBY_MARKER_2D_SPREAD_FACTOR,
+  minSeparationDeg = NEARBY_MARKER_2D_MIN_SEPARATION_DEG,
+): { latitude: number; longitude: number } {
+  const [fLat, fLng] = getMapDisplayLatLng(focal);
+  const [cLat, cLng] = getMapDisplayLatLng(country);
+
+  if (country.name === focal.name) {
+    return { latitude: fLat, longitude: fLng };
+  }
+
+  let dLat = cLat - fLat;
+  let dLng = cLng - fLng;
+  const dist = Math.hypot(dLat, dLng);
+
+  if (dist < minSeparationDeg) {
+    if (dist < 1e-6) {
+      dLat = minSeparationDeg;
+      dLng = 0;
+    } else {
+      const scale = minSeparationDeg / dist;
+      dLat *= scale;
+      dLng *= scale;
+    }
+  }
+
+  return {
+    latitude: fLat + dLat * factor,
+    longitude: fLng + dLng * factor,
+  };
+}
 
 /** One-shot pin scale peak while the camera flies to a country (2D + 3D). */
 export const MAP_FOCUS_TRANSITION_SCALE_PEAK = 1.12;
@@ -193,6 +240,8 @@ export function resolveNearbySelectedCountryMarkers(
   sameRegionCountries: MapCountry[],
   focalCountryName: string,
   context: SelectedCountryMarkerContext,
+  cap = SELECTED_COUNTRY_MARKER_CAP,
+  spreadSelectedNearby = false,
 ): MapCountry[] {
   const focal =
     sameRegionCountries.find((country) => country.name === focalCountryName) ??
@@ -207,22 +256,39 @@ export function resolveNearbySelectedCountryMarkers(
       country.name !== focalCountryName,
   );
 
+  if (spreadSelectedNearby) {
+    const pool = shouldBridgeToNearbyContinent(
+      focal,
+      sameRegionCountries,
+      foreignCountries,
+    )
+      ? uniqueCountriesByName([...sameRegionCountries, ...foreignCountries])
+      : sameRegionCountries;
+
+    return capMapCountriesByCardinalBorderNeighbors(
+      pool,
+      focalCountryName,
+      cap,
+    );
+  }
+
   if (
     !shouldBridgeToNearbyContinent(focal, sameRegionCountries, foreignCountries)
   ) {
     return capMapCountriesByProximity(
       sameRegionCountries,
       focalCountryName,
-      SELECTED_COUNTRY_MARKER_CAP,
+      cap,
     );
   }
 
   const [focalLat, focalLng] = getMapDisplayLatLng(focal);
+  const neighborBudget = cap - 1;
   const sameRegionNeighbors = sortCountriesByDistanceFrom(
     sameRegionCountries.filter((country) => country.name !== focal.name),
     focalLat,
     focalLng,
-  ).slice(0, BRIDGE_SAME_REGION_CAP);
+  ).slice(0, Math.min(BRIDGE_SAME_REGION_CAP, neighborBudget));
 
   const foreignSorted = sortCountriesByDistanceFrom(
     foreignCountries,
@@ -230,17 +296,21 @@ export function resolveNearbySelectedCountryMarkers(
     focalLng,
   );
   const closestForeignRegion = foreignSorted[0]?.region;
+  const crossRegionBudget = Math.max(
+    0,
+    neighborBudget - sameRegionNeighbors.length,
+  );
   const crossRegionNeighbors = closestForeignRegion
     ? foreignSorted
         .filter((country) => country.region === closestForeignRegion)
-        .slice(0, BRIDGE_CROSS_REGION_CAP)
+        .slice(0, Math.min(BRIDGE_CROSS_REGION_CAP, crossRegionBudget))
     : [];
 
   return uniqueCountriesByName([
     focal,
     ...sameRegionNeighbors,
     ...crossRegionNeighbors,
-  ]).slice(0, BRIDGE_SAME_REGION_CAP + BRIDGE_CROSS_REGION_CAP + 1);
+  ]).slice(0, cap);
 }
 
 /** Ensures a focal country stays in the marker list (e.g. random FAB at continent zoom). */
@@ -266,6 +336,8 @@ export function resolveRegionMarkerCountries(
   isDetailZoom: boolean,
   focalCountryName?: string | null,
   selectedContext?: SelectedCountryMarkerContext | null,
+  selectedMarkerCap = SELECTED_COUNTRY_MARKER_CAP,
+  spreadSelectedNearby = false,
 ): MapCountry[] {
   const resolved = focalCountryName
     ? selectedContext
@@ -273,12 +345,20 @@ export function resolveRegionMarkerCountries(
           countries,
           focalCountryName,
           selectedContext,
+          selectedMarkerCap,
+          spreadSelectedNearby,
         )
-      : capMapCountriesByProximity(
-          countries,
-          focalCountryName,
-          SELECTED_COUNTRY_MARKER_CAP,
-        )
+      : spreadSelectedNearby
+        ? capMapCountriesByCardinalBorderNeighbors(
+            countries,
+            focalCountryName,
+            selectedMarkerCap,
+          )
+        : capMapCountriesByProximity(
+            countries,
+            focalCountryName,
+            selectedMarkerCap,
+          )
     : isDetailZoom
       ? countries
       : capMapCountriesByPopulation(countries);

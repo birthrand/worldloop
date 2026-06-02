@@ -18,6 +18,7 @@ import { getClientCache, staleWhileRevalidate } from "@/lib/client-cache";
 import { formatPopulation } from "@/lib/format-country";
 import { mapCountryToCountry } from "@/lib/map-country";
 import { openCountryInExplore } from "@/lib/open-country-in-explore";
+import { useSpatialContextStore } from "@/store/use-spatial-context-store";
 import type { Country, MapCountry } from "@/types/country";
 
 type MapCountryPreviewCardProps = {
@@ -57,6 +58,10 @@ export function MapCountryPreviewCard({
   backToRegionLabel,
   bottomInset = 0,
 }: MapCountryPreviewCardProps) {
+  const discoveryScopeMode = useSpatialContextStore(
+    (s) => s.discoveryScope.mode,
+  );
+  const queueLength = useSpatialContextStore((s) => s.queue.length);
   const [detail, setDetail] = useState<Country | null>(null);
   const [detailStatus, setDetailStatus] = useState<
     "idle" | "loading" | "error"
@@ -281,7 +286,13 @@ export function MapCountryPreviewCard({
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`Open ${country.name} in Explore`}
-          onPress={() => openCountryInExplore(countryForActions)}
+          onPress={() =>
+            openCountryInExplore(countryForActions, {
+              mode: discoveryScopeMode === "here" ? "here" : undefined,
+              preserveHereMode: discoveryScopeMode === "here",
+              preserveQueue: discoveryScopeMode === "here" && queueLength > 0,
+            })
+          }
           style={({ pressed }) => [
             styles.actionSegment,
             styles.exploreSegment,

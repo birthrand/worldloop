@@ -11,6 +11,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
+import { MAP_COUNTRY_VISITED_RING_COLOR } from "@/constants/map-country-focus";
 import { resolveFlagCdnUrl } from "@/lib/flag-url";
 import { cca2FromFlagUrl, getMapDisplayLatLng } from "@/lib/map-country";
 import {
@@ -19,6 +20,7 @@ import {
   MAP_FOCUS_TRANSITION_SCALE_PEAK,
   MARKER_DEEMPHASIZED_OPACITY,
 } from "@/lib/map-region-markers";
+import { useDiscoveryProgressStore } from "@/store/use-discovery-progress-store";
 import type { CountryMarkerDisplayMode } from "@/store/use-map-ui-store";
 import type { MapCountry } from "@/types/country";
 
@@ -28,6 +30,9 @@ const SNAPSHOT_SETTLE_MS = 500;
 const MARKER_ANCHOR_SIZE = 48;
 const PIN_SIZE = 36;
 const SELECTED_PIN_SIZE = 30;
+const CIRCLE_DOT_SIZE = 10;
+const CIRCLE_DOT_SELECTED_SIZE = 14;
+const CIRCLE_DOT_ENTERING_SIZE = 8;
 
 /** Survives marker re-snapshots so flags do not flash on every map action. */
 const loadedFlagUris = new Set<string>();
@@ -64,6 +69,7 @@ const FlagImage = memo(function FlagImage({
 
 type FlagPinBodyProps = {
   selected: boolean;
+  visited: boolean;
   focusTransitioning: boolean;
   presentation: MapMarkerPresentation;
   flagUri: string | null;
@@ -74,6 +80,7 @@ type FlagPinBodyProps = {
 
 function FlagPinBody({
   selected,
+  visited,
   focusTransitioning,
   presentation,
   flagUri,
@@ -91,9 +98,11 @@ function FlagPinBody({
   const wrapperStyle = isEntering ? styles.wrapperEntering : styles.wrapper;
   const pinShellStyle = selected
     ? [styles.pin, styles.pinSelected]
-    : isEntering
-      ? styles.pinEntering
-      : styles.pin;
+    : visited
+      ? [styles.pin, styles.pinVisited]
+      : isEntering
+        ? styles.pinEntering
+        : styles.pin;
 
   const pulse = useSharedValue(1);
 
@@ -143,8 +152,71 @@ function FlagPinBody({
   );
 }
 
+type CirclePinBodyProps = {
+  selected: boolean;
+  visited: boolean;
+  focusTransitioning: boolean;
+  presentation: MapMarkerPresentation;
+  onLayout: () => void;
+};
+
+function CirclePinBody({
+  selected,
+  visited,
+  focusTransitioning,
+  presentation,
+  onLayout,
+}: CirclePinBodyProps) {
+  const isEntering =
+    presentation === "entering" && !selected && !focusTransitioning;
+  const pulse = useSharedValue(1);
+
+  useEffect(() => {
+    if (!focusTransitioning) {
+      cancelAnimation(pulse);
+      pulse.value = 1;
+      return;
+    }
+
+    pulse.value = withSequence(
+      withTiming(MAP_FOCUS_TRANSITION_SCALE_PEAK, {
+        duration: FOCUS_HALF_MS,
+        easing: Easing.out(Easing.quad),
+      }),
+      withTiming(1, {
+        duration: FOCUS_HALF_MS,
+        easing: Easing.in(Easing.quad),
+      }),
+    );
+    return () => cancelAnimation(pulse);
+  }, [focusTransitioning, pulse]);
+
+  const pinAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: focusTransitioning ? pulse.value : 1 }],
+  }));
+
+  const dotStyle = selected
+    ? styles.circleDotSelected
+    : visited
+      ? styles.circleDotVisited
+      : isEntering
+        ? styles.circleDotEntering
+        : styles.circleDot;
+
+  return (
+    <View style={styles.wrapper} pointerEvents="box-none" onLayout={onLayout}>
+      {visited && !selected && !focusTransitioning ? (
+        <View style={styles.circleVisitedRing} pointerEvents="none" />
+      ) : null}
+      <Animated.View style={[dotStyle, pinAnimatedStyle]} />
+    </View>
+  );
+}
+
 type MapCountryMarkerProps = {
   country: MapCountry;
+  /** When set, overrides the default map display coordinate (e.g. 2D nearby spread). */
+  coordinate?: { latitude: number; longitude: number };
   selected: boolean;
   focusTransitioning?: boolean;
   deemphasized?: boolean;
@@ -162,6 +234,7 @@ type MapCountryMarkerProps = {
 
 export const MapCountryMarker = memo(function MapCountryMarker({
   country,
+  coordinate: coordinateOverride,
   selected,
   focusTransitioning = false,
   deemphasized = false,
@@ -217,11 +290,19 @@ export const MapCountryMarker = memo(function MapCountryMarker({
     transform: [{ scale: fadeScale.value }],
   }));
   const showFlag = displayMode === "flag";
-  const [latitude, longitude] = getMapDisplayLatLng(country);
+  const showCircle = displayMode === "circle";
+  const showMarker = showFlag || showCircle;
+  const [displayLat, displayLng] = getMapDisplayLatLng(country);
+  const latitude = coordinateOverride?.latitude ?? displayLat;
+  const longitude = coordinateOverride?.longitude ?? displayLng;
   const flagUri = resolveFlagCdnUrl(
     country.flag,
     cca2FromFlagUrl(country.flag),
   );
+  const isVisited = useDiscoveryProgressStore((s) =>
+    s.isCountryVisited({ name: country.name, cca2: "", flag: country.flag }),
+  );
+  const showVisitedBadge = isVisited && !selected && !focusTransitioning;
 
   const [tracksViewChanges, setTracksViewChanges] = useState(true);
   const [flagLoaded, setFlagLoaded] = useState(() => isFlagUriCached(flagUri));
@@ -277,14 +358,14 @@ export const MapCountryMarker = memo(function MapCountryMarker({
   ]);
 
   useEffect(() => {
-    if (!showFlag) return;
+    if (!showMarker) return;
 
     const mustStayLive =
       keepLive ||
       suspendSnapshot ||
       selected ||
       focusTransitioning ||
-      (!!flagUri && !flagLoaded);
+      (showFlag && !!flagUri && !flagLoaded);
 
     if (mustStayLive) {
       clearFreezeTimer();
@@ -310,6 +391,7 @@ export const MapCountryMarker = memo(function MapCountryMarker({
     focusTransitioning,
     selected,
     showFlag,
+    showMarker,
     suspendSnapshot,
   ]);
 
@@ -326,7 +408,7 @@ export const MapCountryMarker = memo(function MapCountryMarker({
 
   useEffect(() => () => clearFreezeTimer(), [clearFreezeTimer]);
 
-  if (!showFlag) return null;
+  if (!showMarker) return null;
 
   const tracksChanges =
     keepLive ||
@@ -349,15 +431,26 @@ export const MapCountryMarker = memo(function MapCountryMarker({
         pointerEvents="box-none"
         style={[styles.markerAnchor, fadeStyle]}
       >
-        <FlagPinBody
-          selected={selected}
-          focusTransitioning={focusTransitioning}
-          presentation={presentation}
-          flagUri={flagUri}
-          flagLoaded={flagLoaded}
-          onFlagLoad={handleFlagLoad}
-          onLayout={handlePinLayout}
-        />
+        {showFlag ? (
+          <FlagPinBody
+            selected={selected}
+            visited={showVisitedBadge}
+            focusTransitioning={focusTransitioning}
+            presentation={presentation}
+            flagUri={flagUri}
+            flagLoaded={flagLoaded}
+            onFlagLoad={handleFlagLoad}
+            onLayout={handlePinLayout}
+          />
+        ) : (
+          <CirclePinBody
+            selected={selected}
+            visited={showVisitedBadge}
+            focusTransitioning={focusTransitioning}
+            presentation={presentation}
+            onLayout={handlePinLayout}
+          />
+        )}
         {selected && !isEntering ? (
           <View style={styles.labelRow} pointerEvents="none">
             <View style={styles.labelPill}>
@@ -426,6 +519,15 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 6,
   },
+  pinVisited: {
+    borderWidth: 2,
+    borderColor: MAP_COUNTRY_VISITED_RING_COLOR,
+    shadowColor: MAP_COUNTRY_VISITED_RING_COLOR,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 4,
+    elevation: 4,
+  },
   flag: {
     width: PIN_SIZE,
     height: PIN_SIZE,
@@ -446,6 +548,48 @@ const styles = StyleSheet.create({
   },
   flagEmoji: {
     fontSize: 20,
+  },
+  circleDot: {
+    width: CIRCLE_DOT_SIZE,
+    height: CIRCLE_DOT_SIZE,
+    borderRadius: CIRCLE_DOT_SIZE / 2,
+    backgroundColor: "#fbbf24",
+  },
+  circleDotEntering: {
+    width: CIRCLE_DOT_ENTERING_SIZE,
+    height: CIRCLE_DOT_ENTERING_SIZE,
+    borderRadius: CIRCLE_DOT_ENTERING_SIZE / 2,
+    backgroundColor: "#fbbf24",
+  },
+  circleDotSelected: {
+    width: CIRCLE_DOT_SELECTED_SIZE,
+    height: CIRCLE_DOT_SELECTED_SIZE,
+    borderRadius: CIRCLE_DOT_SELECTED_SIZE / 2,
+    backgroundColor: "#fbbf24",
+    borderWidth: 2,
+    borderColor: "#fbbf24",
+    shadowColor: "#fbbf24",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.65,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  circleDotVisited: {
+    width: CIRCLE_DOT_SIZE,
+    height: CIRCLE_DOT_SIZE,
+    borderRadius: CIRCLE_DOT_SIZE / 2,
+    backgroundColor: "#fbbf24",
+    borderWidth: 2,
+    borderColor: MAP_COUNTRY_VISITED_RING_COLOR,
+  },
+  circleVisitedRing: {
+    position: "absolute",
+    width: CIRCLE_DOT_SIZE + 8,
+    height: CIRCLE_DOT_SIZE + 8,
+    borderRadius: (CIRCLE_DOT_SIZE + 8) / 2,
+    borderWidth: 2,
+    borderColor: MAP_COUNTRY_VISITED_RING_COLOR,
+    opacity: 0.55,
   },
   labelRow: {
     position: "absolute",

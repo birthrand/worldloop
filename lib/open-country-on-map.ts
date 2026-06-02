@@ -8,7 +8,9 @@ import { useMapStore } from "@/store/use-map-store";
 import { useMapUiStore } from "@/store/use-map-ui-store";
 import { useRecentlyViewedStore } from "@/store/use-recently-viewed-store";
 import { useSearchUiStore } from "@/store/use-search-ui-store";
+import { useSpatialContextStore } from "@/store/use-spatial-context-store";
 import type { Country } from "@/types/country";
+import type { DiscoveryScope } from "@/types/geo";
 
 function prefetchCountryFlag(country: Country): void {
   const flagUri = resolveFlagCdnUrl(
@@ -28,19 +30,29 @@ function prefetchCountryFlag(country: Country): void {
 function prepareMapForCountry(
   country: Country,
   source: Exclude<SelectionSource, null> = "search",
+  scopeSnapshot?: DiscoveryScope,
 ): void {
   const mapUi = useMapUiStore.getState();
+  const scope =
+    scopeSnapshot ?? useSpatialContextStore.getState().discoveryScope;
 
   prefetchCountryFlag(country);
 
   mapUi.setCountryMarkerMode("flag");
-  // Explore discovery starts at world zoom — region sync happens after the camera flight.
+
   if (source === "explore") {
-    mapUi.setFocusedRegion(null);
-    mapUi.setDisplayMode("globalPulse");
+    if (scope.focusedRegion) {
+      mapUi.setFocusedRegion(scope.focusedRegion);
+      mapUi.setDisplayMode("explore");
+      syncMapRegionFocusForCountry(country, { explicitFocus: true });
+    } else {
+      mapUi.setFocusedRegion(null);
+      mapUi.setDisplayMode("globalPulse");
+    }
   } else {
     syncMapRegionFocusForCountry(country, { explicitFocus: true });
   }
+
   useRecentlyViewedStore.getState().recordView(country);
 }
 
@@ -53,9 +65,10 @@ export function focusCountryOnMap(
   country: Country,
   source: Exclude<SelectionSource, null> = "search",
 ): void {
-  prepareMapForCountry(country, source);
+  const scopeSnapshot = useSpatialContextStore.getState().discoveryScope;
+  prepareMapForCountry(country, source, scopeSnapshot);
   const map = useMapStore.getState();
-  map.focusCountryFromExternal(country.name, country, source);
+  map.focusCountryFromExternal(country.name, country, source, scopeSnapshot);
 }
 
 /** @deprecated Use focusCountryOnMap — spotlight no longer opens preview. */

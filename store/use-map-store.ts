@@ -10,7 +10,9 @@ import {
   useIdentityStore,
   type SelectionSource,
 } from "@/store/use-identity-store";
+import { useSpatialContextStore } from "@/store/use-spatial-context-store";
 import type { Country, MapCountry } from "@/types/country";
+import type { DiscoveryScope } from "@/types/geo";
 import type { MapPresentationIntent } from "@/types/map-presentation";
 
 export type MapFilterChip =
@@ -52,6 +54,7 @@ type MapState = {
     name: string,
     fallback?: Country,
     source?: Exclude<SelectionSource, null>,
+    scopeSnapshot?: DiscoveryScope,
   ) => void;
   clearPendingMapIntent: () => void;
   selectRandomCountry: () => MapCountry | null;
@@ -158,11 +161,14 @@ export const useMapStore = create<MapState>()((set, get) => ({
             }
           },
           onFetched: (data) => {
+            const countries = withValidCoordinates(data);
             set({
-              countries: withValidCoordinates(data),
+              countries,
               status: "idle",
               error: null,
-              mapCountriesFullyLoaded: true,
+              ...(countries.length > 0
+                ? { mapCountriesFullyLoaded: true }
+                : {}),
             });
           },
         });
@@ -185,7 +191,12 @@ export const useMapStore = create<MapState>()((set, get) => ({
     return mapCountriesLoadPromise;
   },
 
-  focusCountryFromExternal: (name, fallback, source = "search") => {
+  focusCountryFromExternal: (
+    name,
+    fallback,
+    source = "search",
+    scopeSnapshot,
+  ) => {
     const trimmed = name.trim();
     if (!trimmed) return;
 
@@ -200,12 +211,17 @@ export const useMapStore = create<MapState>()((set, get) => ({
       }
     }
 
+    const discoveryScope =
+      scopeSnapshot ?? useSpatialContextStore.getState().discoveryScope;
+
     set({
       countries,
       pendingMapIntent: {
         countryName: trimmed,
         mode: "focus",
         source,
+        discoveryScope,
+        scopeMode: discoveryScope.mode,
       },
     });
   },

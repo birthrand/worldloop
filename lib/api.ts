@@ -75,6 +75,68 @@ export async function fetchMapCountries(): Promise<MapCountriesResponse> {
   return response.json() as Promise<MapCountriesResponse>;
 }
 
+export type DiscoverCountriesResponse = {
+  data: MapCountry[];
+  meta: {
+    count: number;
+    bbox: {
+      west: number;
+      south: number;
+      east: number;
+      north: number;
+    };
+    region: string | null;
+    nextCursor: string | null;
+  };
+};
+
+export type DiscoverCountriesParams = {
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+  centerLat?: number;
+  centerLng?: number;
+  region?: string;
+  limit?: number;
+  cursor?: string;
+};
+
+export async function fetchDiscoverCountries(
+  params: DiscoverCountriesParams,
+): Promise<DiscoverCountriesResponse> {
+  const url = new URL(`${API_BASE_URL}/discover`);
+
+  url.searchParams.set("west", String(params.west));
+  url.searchParams.set("south", String(params.south));
+  url.searchParams.set("east", String(params.east));
+  url.searchParams.set("north", String(params.north));
+
+  if (params.centerLat !== undefined) {
+    url.searchParams.set("centerLat", String(params.centerLat));
+  }
+  if (params.centerLng !== undefined) {
+    url.searchParams.set("centerLng", String(params.centerLng));
+  }
+  if (params.region) {
+    url.searchParams.set("region", params.region);
+  }
+  if (params.limit !== undefined) {
+    url.searchParams.set("limit", String(params.limit));
+  }
+  if (params.cursor) {
+    url.searchParams.set("cursor", params.cursor);
+  }
+
+  const response = await fetch(url.toString());
+
+  if (!response.ok) {
+    throw new Error(`Discover request failed (${response.status})`);
+  }
+
+  return response.json() as Promise<DiscoverCountriesResponse>;
+}
+
 type CountryDetailResponse = {
   data: Country;
 };

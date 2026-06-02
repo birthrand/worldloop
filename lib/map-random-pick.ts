@@ -10,6 +10,12 @@ import type { FeaturedShortcut } from "@/store/use-map-ui-store";
 import { useSavedCountriesStore } from "@/store/use-saved-countries-store";
 import type { MapCountry } from "@/types/country";
 
+export {
+  buildSpatialDiscoveryPool,
+  buildSpatialMapRandomPool,
+  shouldUseSpatialDiscoveryPool,
+} from "@/lib/spatial-discovery-pool";
+
 type BuildMapRandomPoolOptions = {
   countries: MapCountry[];
   activeChip: MapFilterChip;

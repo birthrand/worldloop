@@ -318,10 +318,17 @@ function GlobeScene({
 
       onPinPositions(positions);
 
-      if (nearbyFlagPinMode) return;
-
+      const focusCountryName = selectedName ?? focusTransitionName ?? null;
       const visible = new Set(
-        positions.filter((p) => p.visible).map((p) => p.name),
+        positions
+          .filter((position) => {
+            if (!position.visible) return false;
+            if (nearbyFlagPinMode && focusCountryName === position.name) {
+              return false;
+            }
+            return true;
+          })
+          .map((position) => position.name),
       );
       setVisibleCirclePinNames((prev) => {
         if (prev.size === visible.size) {
@@ -337,7 +344,13 @@ function GlobeScene({
         return visible;
       });
     },
-    [nearbyFlagPinMode, onPinPositions, showGlobePins],
+    [
+      focusTransitionName,
+      nearbyFlagPinMode,
+      onPinPositions,
+      selectedName,
+      showGlobePins,
+    ],
   );
 
   const focusLatLng = useCallback(
@@ -427,8 +440,9 @@ function GlobeScene({
   }, [initialCameraDistance, resetOrbitFromFixedCamera]);
 
   useEffect(() => {
-    if (autoRotateEnabled) {
-      userExploringRef.current = false;
+    if (!autoRotateEnabled) return;
+    if (userExploringRef.current) {
+      lastInteractionEndedAtRef.current = Date.now();
     }
   }, [autoRotateEnabled]);
 
@@ -646,7 +660,7 @@ function GlobeScene({
           fillGapsWhenContinentOverlay={fillCountryHighlightGaps}
         />
 
-        {showGlobePins && !nearbyFlagPinMode
+        {showGlobePins
           ? countries.map((country) => {
               if (!isValidLatLng(country.latlng)) return null;
               const focusCountryName =
@@ -656,6 +670,12 @@ function GlobeScene({
                 !!focusTransitionName &&
                 focusTransitionName === country.name &&
                 selectedName !== country.name;
+
+              // Focal country uses the screen-space flag overlay when selected.
+              if (nearbyFlagPinMode && (isSelected || isFocusTransitioning)) {
+                return null;
+              }
+
               const keepVisible =
                 isSelected ||
                 isFocusTransitioning ||
@@ -663,16 +683,22 @@ function GlobeScene({
               if (!keepVisible) {
                 return null;
               }
+
+              const pinIsSelected = !nearbyFlagPinMode && isSelected;
+              const pinIsFocusTransitioning =
+                !nearbyFlagPinMode && isFocusTransitioning;
               const [lat, lng] = getMapDisplayLatLng(country);
               return (
                 <GlobeCountryPin
                   key={country.name}
                   country={country}
                   position={latLngToVector3(lat, lng, PIN_RADIUS)}
-                  isSelected={isSelected}
-                  isFocusTransitioning={isFocusTransitioning}
+                  isSelected={pinIsSelected}
+                  isFocusTransitioning={pinIsFocusTransitioning}
                   isDeemphasized={
-                    !!focusCountryName && !isSelected && !isFocusTransitioning
+                    !!focusCountryName &&
+                    !pinIsSelected &&
+                    !pinIsFocusTransitioning
                   }
                   onPress={handlePinPress}
                   consumeTapThresholdExceeded={
@@ -783,8 +809,19 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
       !!focusedRegion &&
       countries.length > 0 &&
       isGlobeYellowPinsVisible(countryMarkerMode);
-    const showNearbyFlagPins =
+    const showSelectedCountryFlag =
       nearbyFlagPinMode && countryMarkerMode === "flag";
+
+    const flagOverlayCountries = useMemo(() => {
+      if (!showSelectedCountryFlag) return [];
+
+      const names = new Set<string>();
+      if (selectedName) names.add(selectedName);
+      if (focusTransitionName) names.add(focusTransitionName);
+      if (names.size === 0) return [];
+
+      return countries.filter((country) => names.has(country.name));
+    }, [countries, focusTransitionName, selectedName, showSelectedCountryFlag]);
 
     const selectedCountry = useMemo(
       () =>
@@ -945,9 +982,9 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
           onContinentPress={handleContinentLabelPress}
         />
 
-        {showNearbyFlagPins ? (
+        {showSelectedCountryFlag && flagOverlayCountries.length > 0 ? (
           <GlobeFlagOverlay
-            countries={countries}
+            countries={flagOverlayCountries}
             positions={flagPinPositions}
             selectedName={selectedName}
             focusTransitionName={focusTransitionName}

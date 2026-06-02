@@ -342,6 +342,7 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
             {...mapProps}
             countries={showFlatMarkers ? countries : []}
             showFocusLayers={showFlatOverlays}
+            spreadNearbyMarkers={mapMode === "2d"}
           />
           <Animated.View
             pointerEvents="none"

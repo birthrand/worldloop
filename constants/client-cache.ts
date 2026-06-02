@@ -9,6 +9,7 @@ export const CLIENT_CACHE_KEYS = {
     `cache:feed:region:${region.trim().toLowerCase()}`,
   search: (query: string, region: string) =>
     `cache:search:${query.trim().toLowerCase()}:${region.trim().toLowerCase()}`,
+  discover: (bboxKey: string) => `cache:discover:${bboxKey}`,
 } as const;
 
 /** Align with prompts-worldloop TTLs where it matters. */
@@ -18,4 +19,5 @@ export const CLIENT_CACHE_TTL = {
   feedFirstPage: 24 * 60 * 60, // 1d — feed order is shuffled server-side
   feedRegion: 7 * 24 * 60 * 60,
   search: 7 * 24 * 60 * 60, // 7d — match backend search TTL
+  discover: 24 * 60 * 60, // 24h — match backend discover TTL
 } as const;

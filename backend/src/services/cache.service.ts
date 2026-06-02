@@ -9,6 +9,7 @@ export const CACHE_TTL = {
   feed: 7 * 24 * 60 * 60,
   search: 7 * 24 * 60 * 60,
   map: 30 * 24 * 60 * 60,
+  discover: 24 * 60 * 60,
   ai: 7 * 24 * 60 * 60,
   images: 30 * 24 * 60 * 60,
 } as const;
@@ -19,6 +20,24 @@ export const cacheKeys = {
   search: (query: string, region: string) =>
     `search:${query.toLowerCase()}:${region.toLowerCase()}`,
   mapCountries: () => "map:countries",
+  discover: (params: {
+    west: number;
+    south: number;
+    east: number;
+    north: number;
+    region: string | null;
+    limit: number;
+    cursor: number;
+  }) => {
+    const regionPart = params.region?.trim().toLowerCase() ?? "all";
+    const bboxPart = [
+      params.west.toFixed(4),
+      params.south.toFixed(4),
+      params.east.toFixed(4),
+      params.north.toFixed(4),
+    ].join(":");
+    return `discover:${bboxPart}:${regionPart}:${params.limit}:${params.cursor}`;
+  },
   images: (name: string) => `images:${name.trim().toLowerCase()}`,
   ai: (name: string) => `ai:${name.toLowerCase()}`,
 } as const;

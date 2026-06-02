@@ -103,9 +103,14 @@ function GlobeCountryFocusStrokeLine({
   useEffect(() => {
     return () => {
       geometry.dispose();
+    };
+  }, [geometry]);
+
+  useEffect(() => {
+    return () => {
       lineObject.material.dispose();
     };
-  }, [geometry, lineObject]);
+  }, [lineObject]);
 
   if (opacity <= 0.001) return null;
 

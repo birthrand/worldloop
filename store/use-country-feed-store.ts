@@ -13,11 +13,15 @@ import {
   staleWhileRevalidate,
 } from "@/lib/client-cache";
 import { fetchExploreRegionCountries } from "@/lib/explore-region-countries";
+import { loadCountriesForDiscovery } from "@/lib/load-countries-for-discovery";
 import { prefetchFeedHeroImages } from "@/lib/prefetch-feed-heroes";
+import { useSpatialContextStore } from "@/store/use-spatial-context-store";
 import type { Country } from "@/types/country";
+import type { DiscoveryScopeMode, GeoEntity } from "@/types/geo";
 
 let regionFilterGeneration = 0;
 let regionPrefetchGeneration = 0;
+let hereFeedGeneration = 0;
 const regionFetchPromises = new Map<string, Promise<Country[]>>();
 
 const DEFAULT_LIMIT = 20;
@@ -40,6 +44,7 @@ type CountryFeedState = {
   currentIndex: number;
   /** Bumped when opening a country from search/home so Explore remounts at index 0. */
   focusEpoch: number;
+  discoveryMode: DiscoveryScopeMode;
   selectedRegion: string | null;
   sortField: FeedSortField | null;
   sortOrder: FeedSortOrder | null;
@@ -57,6 +62,14 @@ type CountryFeedState = {
   clearSort: () => void;
   setCurrentIndex: (index: number) => void;
   focusCountryInFeed: (country: Country) => void;
+  /** Focus by queue position without reordering the Here feed. */
+  focusCountryInDiscoveryQueue: (countryName: string) => boolean;
+  loadHereFeed: (
+    entities: GeoEntity[],
+    options?: { focusCountryName?: string },
+  ) => Promise<void>;
+  setDiscoveryMode: (mode: DiscoveryScopeMode) => void;
+  restoreForYouFeed: () => Promise<void>;
   getCurrentCountry: () => Country | undefined;
   resetFeed: () => void;
 };
@@ -129,6 +142,19 @@ function mergeFetchedWithFocusedCountry(
 
 function cancelRegionPrefetch(): void {
   regionPrefetchGeneration += 1;
+}
+
+function snapshotForYouIfNeeded(): void {
+  const { forYouSnapshot, nextCursor, discoveryMode, countries } =
+    useCountryFeedStore.getState();
+
+  if (discoveryMode !== "forYou") return;
+  if (forYouSnapshot) return;
+  if (countries.length === 0) return;
+
+  useCountryFeedStore.setState({
+    forYouSnapshot: { countries, nextCursor },
+  });
 }
 
 async function ensureRegionCountries(region: string): Promise<Country[]> {
@@ -208,6 +234,7 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
   nextCursor: null,
   currentIndex: 0,
   focusEpoch: 0,
+  discoveryMode: "forYou",
   selectedRegion: null,
   sortField: DEFAULT_FEED_SORT_FIELD,
   sortOrder: DEFAULT_FEED_SORT_ORDER,
@@ -238,6 +265,7 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
           countries: feedTail,
           nextCursor: diskCache.data.nextCursor,
           currentIndex: 0,
+          discoveryMode: "forYou",
           selectedRegion: null,
           forYouSnapshot: {
             countries: feedTail,
@@ -278,6 +306,7 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
             countries: feedTail,
             nextCursor: data.nextCursor,
             currentIndex: 0,
+            discoveryMode: "forYou",
             selectedRegion: null,
             forYouSnapshot: {
               countries: feedTail,
@@ -303,6 +332,7 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
         countries,
         nextCursor: payload.nextCursor,
         currentIndex,
+        discoveryMode: "forYou",
         selectedRegion: null,
         forYouSnapshot: { countries: feedTail, nextCursor: payload.nextCursor },
         status: "idle",
@@ -323,43 +353,16 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
 
   setRegionFilter: async (region) => {
     const requestId = ++regionFilterGeneration;
+    hereFeedGeneration += 1;
 
     if (region === null) {
-      const snapshot = get().forYouSnapshot;
-      if (snapshot && snapshot.countries.length > 0) {
-        await prefetchFeedHeroImages(snapshot.countries);
-        if (requestId !== regionFilterGeneration) return;
-        const { sortField, sortOrder } = get();
-
-        set({
-          countries: sortCountries(snapshot.countries, sortField, sortOrder),
-          nextCursor: snapshot.nextCursor,
-          currentIndex: 0,
-          selectedRegion: null,
-          status: "idle",
-          error: null,
-        });
-        prefetchRegionsSequentially(null);
-        return;
-      }
-
-      set({ selectedRegion: null, error: null });
-      await get().loadInitialFeed(undefined, { force: true });
+      await get().restoreForYouFeed();
       return;
     }
 
     if (get().selectedRegion === region && get().status !== "error") return;
 
-    if (get().selectedRegion === null) {
-      const { forYouSnapshot, nextCursor } = get();
-      if (forYouSnapshot) {
-        set({ forYouSnapshot: { ...forYouSnapshot, nextCursor } });
-      } else if (get().countries.length > 0) {
-        set({
-          forYouSnapshot: { countries: get().countries, nextCursor },
-        });
-      }
-    }
+    snapshotForYouIfNeeded();
 
     const cached = get().regionCache[region];
     if (cached) {
@@ -378,6 +381,7 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
         countries,
         nextCursor: null,
         currentIndex,
+        discoveryMode: "region",
         selectedRegion: region,
         status: "idle",
         error: null,
@@ -387,6 +391,7 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
     }
 
     set({
+      discoveryMode: "region",
       selectedRegion: region,
       countries: [],
       currentIndex: 0,
@@ -413,6 +418,7 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
         countries,
         nextCursor: null,
         currentIndex,
+        discoveryMode: "region",
         selectedRegion: region,
         status: "idle",
         error: null,
@@ -433,8 +439,13 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
   },
 
   loadMoreFeed: async (limit = DEFAULT_LIMIT) => {
-    const { nextCursor, status, selectedRegion } = get();
-    if (selectedRegion !== null || nextCursor === null || isLoading(status)) {
+    const { nextCursor, status, selectedRegion, discoveryMode } = get();
+    if (
+      selectedRegion !== null ||
+      discoveryMode !== "forYou" ||
+      nextCursor === null ||
+      isLoading(status)
+    ) {
       return;
     }
 
@@ -549,6 +560,144 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
     set({ currentIndex: clamped });
   },
 
+  loadHereFeed: async (entities, options) => {
+    const requestId = ++hereFeedGeneration;
+    const { queue } = useSpatialContextStore.getState();
+    const orderedEntities =
+      queue.length > 0
+        ? entities.slice().sort((a, b) => {
+            const aIndex = queue.indexOf(a.name);
+            const bIndex = queue.indexOf(b.name);
+            const aRank = aIndex < 0 ? Number.MAX_SAFE_INTEGER : aIndex;
+            const bRank = bIndex < 0 ? Number.MAX_SAFE_INTEGER : bIndex;
+            return aRank - bRank;
+          })
+        : entities;
+
+    snapshotForYouIfNeeded();
+
+    set({
+      discoveryMode: "here",
+      selectedRegion: null,
+      currentIndex: 0,
+      nextCursor: null,
+      status: "loading",
+      error: null,
+    });
+
+    if (orderedEntities.length === 0) {
+      set({
+        countries: [],
+        status: "error",
+        error: "No countries in this map area",
+      });
+      return;
+    }
+
+    const resolveFocusIndex = (countries: Country[]) => {
+      const focusName = options?.focusCountryName?.trim();
+      if (!focusName) return 0;
+      const index = countries.findIndex(
+        (country) => country.name === focusName,
+      );
+      return index >= 0 ? index : 0;
+    };
+
+    try {
+      const countries = await loadCountriesForDiscovery(orderedEntities, {
+        onPartial: (partial) => {
+          if (requestId !== hereFeedGeneration) return;
+          if (partial.length === 0) return;
+
+          set({
+            countries: partial,
+            currentIndex: resolveFocusIndex(partial),
+            status: "idle",
+            error: null,
+          });
+          void prefetchFeedHeroImages(partial.slice(0, 2));
+        },
+      });
+
+      if (requestId !== hereFeedGeneration) return;
+
+      if (countries.length === 0) {
+        set({
+          countries: [],
+          status: "error",
+          error: "Could not load countries for this map area",
+        });
+        return;
+      }
+
+      await prefetchFeedHeroImages(countries);
+      if (requestId !== hereFeedGeneration) return;
+
+      set({
+        countries,
+        currentIndex: resolveFocusIndex(countries),
+        discoveryMode: "here",
+        selectedRegion: null,
+        nextCursor: null,
+        status: "idle",
+        error: null,
+      });
+      void prefetchFeedHeroImages(countries.slice(1, 3));
+    } catch (err) {
+      if (requestId !== hereFeedGeneration) return;
+
+      if (get().countries.length === 0) {
+        set({
+          status: "error",
+          error:
+            err instanceof Error
+              ? err.message
+              : "Failed to load countries for this map area",
+        });
+      } else {
+        set({ status: "idle", error: null });
+      }
+    }
+  },
+
+  setDiscoveryMode: (mode) => {
+    set({ discoveryMode: mode });
+  },
+
+  restoreForYouFeed: async () => {
+    regionFilterGeneration += 1;
+    hereFeedGeneration += 1;
+
+    useSpatialContextStore.setState((state) => ({
+      discoveryScope: { ...state.discoveryScope, mode: "forYou" },
+    }));
+
+    const snapshot = get().forYouSnapshot;
+    if (snapshot && snapshot.countries.length > 0) {
+      await prefetchFeedHeroImages(snapshot.countries);
+      const { sortField, sortOrder } = get();
+
+      set({
+        countries: sortCountries(snapshot.countries, sortField, sortOrder),
+        nextCursor: snapshot.nextCursor,
+        currentIndex: 0,
+        discoveryMode: "forYou",
+        selectedRegion: null,
+        status: "idle",
+        error: null,
+      });
+      prefetchRegionsSequentially(null);
+      return;
+    }
+
+    set({
+      discoveryMode: "forYou",
+      selectedRegion: null,
+      error: null,
+    });
+    await get().loadInitialFeed(undefined, { force: true });
+  },
+
   focusCountryInFeed: (country: Country) => {
     const { forYouSnapshot, nextCursor, status, focusEpoch } = get();
     const nextStatus = status === "loading" ? "idle" : status;
@@ -577,6 +726,26 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
     });
   },
 
+  focusCountryInDiscoveryQueue: (countryName) => {
+    const { countries, discoveryMode, focusEpoch } = get();
+    if (discoveryMode !== "here" || countries.length === 0) {
+      return false;
+    }
+
+    const feedIndex = countries.findIndex(
+      (country) => country.name === countryName,
+    );
+    if (feedIndex < 0) {
+      return false;
+    }
+
+    set({
+      currentIndex: feedIndex,
+      focusEpoch: focusEpoch + 1,
+    });
+    return true;
+  },
+
   getCurrentCountry: () => {
     const { countries, currentIndex } = get();
     return countries[currentIndex];
@@ -584,6 +753,7 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
 
   resetFeed: () => {
     regionFilterGeneration += 1;
+    hereFeedGeneration += 1;
     cancelRegionPrefetch();
     regionFetchPromises.clear();
     set({
@@ -591,6 +761,7 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
       nextCursor: null,
       currentIndex: 0,
       focusEpoch: 0,
+      discoveryMode: "forYou",
       selectedRegion: null,
       sortField: DEFAULT_FEED_SORT_FIELD,
       sortOrder: DEFAULT_FEED_SORT_ORDER,

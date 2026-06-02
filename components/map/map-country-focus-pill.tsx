@@ -10,6 +10,8 @@ type MapCountryFocusPillProps = {
   country: MapCountry;
   bottom: number;
   onOpenDetails: () => void;
+  onShowDiscovery: () => void;
+  discoveryChromeVisible?: boolean;
   onDismiss: () => void;
 };
 
@@ -19,11 +21,18 @@ export function MapCountryFocusPill({
   country,
   bottom,
   onOpenDetails,
+  onShowDiscovery,
+  discoveryChromeVisible = false,
   onDismiss,
 }: MapCountryFocusPillProps) {
   const handleOpenDetails = () => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onOpenDetails();
+  };
+
+  const handleShowDiscovery = () => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onShowDiscovery();
   };
 
   const handleDismiss = () => {
@@ -45,12 +54,40 @@ export function MapCountryFocusPill({
             pressed && styles.pressed,
           ]}
         >
-          <FlagBadge flag={country.flag} width={22} height={15} />
-          <Text style={styles.countryLabel} numberOfLines={1}>
-            {countryCode}
-          </Text>
-          <Text style={styles.detailsLabel}>Details</Text>
-          <Ionicons name="arrow-forward" size={14} color="#fbbf24" />
+          <View style={styles.detailsIdentity}>
+            <FlagBadge flag={country.flag} width={22} height={15} />
+            <Text style={styles.countryLabel} numberOfLines={1}>
+              {countryCode}
+            </Text>
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.detailsAction}>
+            <Text style={styles.detailsLabel}>Details</Text>
+          </View>
+        </Pressable>
+
+        <View style={styles.divider} />
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={
+            discoveryChromeVisible
+              ? "Hide explore this area"
+              : "Show explore this area"
+          }
+          onPress={handleShowDiscovery}
+          hitSlop={6}
+          style={({ pressed }) => [
+            styles.iconSegment,
+            discoveryChromeVisible && styles.iconSegmentActive,
+            pressed && styles.pressed,
+          ]}
+        >
+          <Ionicons
+            name="information-circle-outline"
+            size={18}
+            color={discoveryChromeVisible ? "#fbbf24" : "#94a3b8"}
+          />
         </Pressable>
 
         <View style={styles.divider} />
@@ -94,15 +131,35 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     height: PILL_HEIGHT,
+  },
+  detailsIdentity: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     paddingLeft: 14,
     paddingRight: 12,
+  },
+  detailsAction: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    height: PILL_HEIGHT,
+    paddingHorizontal: 12,
   },
   dismissSegment: {
     width: PILL_HEIGHT,
     height: PILL_HEIGHT,
     alignItems: "center",
     justifyContent: "center",
+  },
+  iconSegment: {
+    width: PILL_HEIGHT,
+    height: PILL_HEIGHT,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconSegmentActive: {
+    backgroundColor: "rgba(251, 191, 36, 0.1)",
   },
   divider: {
     width: 1,
@@ -122,6 +179,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontFamily: "Poppins-Medium",
     color: "#fbbf24",
+    textAlign: "center",
   },
   pressed: {
     opacity: 0.95,
