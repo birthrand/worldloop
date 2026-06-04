@@ -12,6 +12,7 @@ import {
 
 import { CountryFeedPage } from "@/components/explore/country-feed-page";
 import { ExploreTopBar } from "@/components/explore/explore-top-bar";
+import { prefetchCountryProfiles } from "@/lib/prefetch-country-profiles";
 import { useCountryFeedStore } from "@/store/use-country-feed-store";
 import { useDiscoveryProgressStore } from "@/store/use-discovery-progress-store";
 import { useSpatialContextStore } from "@/store/use-spatial-context-store";
@@ -76,12 +77,13 @@ export function ExploreFeed() {
       skipProgrammaticScrollRef.current = true;
       setCurrentIndex(index);
 
-      const country = useCountryFeedStore.getState().countries[index];
+      const state = useCountryFeedStore.getState();
+      const country = state.countries[index];
       if (country) {
         useDiscoveryProgressStore.getState().recordCountryVisit(country);
+        void prefetchCountryProfiles(state.countries, { aroundIndex: index });
       }
 
-      const state = useCountryFeedStore.getState();
       if (
         state.discoveryMode === "forYou" &&
         state.nextCursor !== null &&

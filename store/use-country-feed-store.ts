@@ -14,6 +14,7 @@ import {
 } from "@/lib/client-cache";
 import { fetchExploreRegionCountries } from "@/lib/explore-region-countries";
 import { loadCountriesForDiscovery } from "@/lib/load-countries-for-discovery";
+import { prefetchCountryProfiles } from "@/lib/prefetch-country-profiles";
 import { prefetchFeedHeroImages } from "@/lib/prefetch-feed-heroes";
 import { useSpatialContextStore } from "@/store/use-spatial-context-store";
 import type { Country } from "@/types/country";
@@ -339,6 +340,9 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
         error: null,
       });
       void prefetchFeedHeroImages(countries.slice(1, 3));
+      void prefetchCountryProfiles(countries, {
+        aroundIndex: get().currentIndex,
+      });
       prefetchRegionsSequentially(null);
     } catch (err) {
       if (get().countries.length === 0) {
@@ -386,6 +390,7 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
         status: "idle",
         error: null,
       });
+      void prefetchCountryProfiles(countries, { aroundIndex: currentIndex });
       prefetchRegionsSequentially(region);
       return;
     }
@@ -424,6 +429,7 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
         error: null,
       });
       void prefetchFeedHeroImages(countries.slice(0, 4));
+      void prefetchCountryProfiles(countries, { aroundIndex: 0 });
       prefetchRegionsSequentially(region);
     } catch (err) {
       if (requestId !== regionFilterGeneration) return;
@@ -643,6 +649,9 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
         error: null,
       });
       void prefetchFeedHeroImages(countries.slice(1, 3));
+      void prefetchCountryProfiles(countries, {
+        aroundIndex: get().currentIndex,
+      });
     } catch (err) {
       if (requestId !== hereFeedGeneration) return;
 

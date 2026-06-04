@@ -36,6 +36,7 @@ export default function RootLayout() {
       >
         <Stack.Screen name="index" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="country" options={{ headerShown: false }} />
         <Stack.Screen name="dev" />
       </Stack>
     </View>

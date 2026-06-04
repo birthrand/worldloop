@@ -152,3 +152,80 @@ export async function fetchCountryByName(name: string): Promise<Country> {
   const payload = (await response.json()) as CountryDetailResponse;
   return payload.data;
 }
+
+export type CountryExplorerNews = {
+  eventsSummary: string;
+  trending: Array<{
+    id: string;
+    title: string;
+    topic:
+      | "tech"
+      | "sports"
+      | "food"
+      | "tourism"
+      | "culture"
+      | "economy"
+      | "general";
+  }>;
+  sources?: Array<{ title: string; url: string; publishedAt: string }>;
+  updatedAt: string;
+};
+
+export type CountryWikipediaSummary = {
+  title: string;
+  extract: string;
+  description: string | null;
+  pageUrl: string;
+  thumbnailUrl: string | null;
+};
+
+export type CountryExplorerResponse = {
+  data: {
+    country: Country;
+    explorer: CountryExplorerNews;
+    wikipedia: CountryWikipediaSummary | null;
+  };
+};
+
+export async function fetchCountryExplorer(
+  name: string,
+): Promise<CountryExplorerResponse["data"]> {
+  const encoded = encodeURIComponent(name.trim());
+  const response = await fetch(`${API_BASE_URL}/country/${encoded}/explorer`);
+
+  if (!response.ok) {
+    throw new Error(`Country explorer request failed (${response.status})`);
+  }
+
+  const payload = (await response.json()) as CountryExplorerResponse;
+  return payload.data;
+}
+
+export type CountryLandmark = {
+  id: string;
+  name: string;
+  description: string;
+  imageUrl: string | null;
+};
+
+export type CountryProfileResponse = {
+  data: {
+    country: Country;
+    wikipedia: CountryWikipediaSummary | null;
+    landmarks: CountryLandmark[];
+  };
+};
+
+export async function fetchCountryProfile(
+  name: string,
+): Promise<CountryProfileResponse["data"]> {
+  const encoded = encodeURIComponent(name.trim());
+  const response = await fetch(`${API_BASE_URL}/country/${encoded}/profile`);
+
+  if (!response.ok) {
+    throw new Error(`Country profile request failed (${response.status})`);
+  }
+
+  const payload = (await response.json()) as CountryProfileResponse;
+  return payload.data;
+}

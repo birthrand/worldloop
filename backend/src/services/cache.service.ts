@@ -12,6 +12,9 @@ export const CACHE_TTL = {
   discover: 24 * 60 * 60,
   ai: 7 * 24 * 60 * 60,
   images: 30 * 24 * 60 * 60,
+  news: 4 * 60 * 60,
+  wikipedia: 30 * 24 * 60 * 60,
+  landmarks: 30 * 24 * 60 * 60,
 } as const;
 
 export const cacheKeys = {
@@ -40,6 +43,9 @@ export const cacheKeys = {
   },
   images: (name: string) => `images:${name.trim().toLowerCase()}`,
   ai: (name: string) => `ai:${name.toLowerCase()}`,
+  news: (name: string) => `news:${name.trim().toLowerCase()}`,
+  wikipedia: (name: string) => `wikipedia:${name.trim().toLowerCase()}`,
+  landmarks: (name: string) => `landmarks:v4:${name.trim().toLowerCase()}`,
 } as const;
 
 let client: RedisClientType | null = null;

@@ -2,10 +2,12 @@ import type { NextFunction, Request, Response } from "express";
 
 import { validateBBox } from "../lib/geo-bbox.js";
 import { HttpError } from "../lib/http.js";
+import {
+  parseCursor,
+  parseLimit,
+  parseOptionalRegion,
+} from "../lib/validation.js";
 import { discoverCountries } from "../services/discover.service.js";
-
-const DEFAULT_LIMIT = 30;
-const MAX_LIMIT = 50;
 
 function parseRequiredFloat(value: unknown, field: string): number {
   if (typeof value !== "string" || value.trim() === "") {
@@ -44,51 +46,9 @@ function parseOptionalFloat(value: unknown, field: string): number | undefined {
   return parsed;
 }
 
-function parseOptionalString(value: unknown): string | null {
-  if (value === undefined) return null;
-  if (typeof value !== "string" || value.trim() === "") return null;
-  return value.trim();
-}
-
-function parseLimit(value: unknown): number {
-  if (value === undefined) return DEFAULT_LIMIT;
-
-  if (typeof value !== "string" || value.trim() === "") {
-    throw new HttpError("limit must be a number", 400, "INVALID_LIMIT");
-  }
-
-  if (!/^\d+$/.test(value)) {
-    throw new HttpError("limit must be a number", 400, "INVALID_LIMIT");
-  }
-
-  const parsed = Number.parseInt(value, 10);
-  if (parsed > MAX_LIMIT) {
-    throw new HttpError(
-      `limit must be at most ${MAX_LIMIT}`,
-      400,
-      "LIMIT_TOO_LARGE",
-    );
-  }
-
-  if (parsed <= 0) {
-    throw new HttpError("limit must be greater than 0", 400, "INVALID_LIMIT");
-  }
-
-  return parsed;
-}
-
-function parseCursor(value: unknown): number {
-  if (value === undefined) return 0;
-
-  if (typeof value !== "string" || value.trim() === "") {
-    throw new HttpError("cursor must be a number", 400, "INVALID_CURSOR");
-  }
-
-  if (!/^\d+$/.test(value)) {
-    throw new HttpError("cursor must be a number", 400, "INVALID_CURSOR");
-  }
-
-  return Number.parseInt(value, 10);
+function parseOptionalRegionFilter(value: unknown): string | null {
+  const region = parseOptionalRegion(value);
+  return region ?? null;
 }
 
 export async function discoverCountriesHandler(
@@ -109,7 +69,7 @@ export async function discoverCountriesHandler(
 
     const centerLat = parseOptionalFloat(req.query.centerLat, "centerLat");
     const centerLng = parseOptionalFloat(req.query.centerLng, "centerLng");
-    const region = parseOptionalString(req.query.region);
+    const region = parseOptionalRegionFilter(req.query.region);
     const limit = parseLimit(req.query.limit);
     const cursor = parseCursor(req.query.cursor);
 

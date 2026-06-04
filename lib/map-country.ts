@@ -34,6 +34,7 @@ export function mapCountryToCountry(
     cca2: merged?.cca2 ?? cca2FromFlagUrl(map.flag),
     flag: merged?.flag ?? map.flag,
     latlng: merged?.latlng ?? map.latlng,
+    languages: merged?.languages,
     images: merged?.images ?? (map.image ? [map.image] : undefined),
     ai: merged?.ai,
   };

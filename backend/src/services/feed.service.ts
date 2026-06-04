@@ -1,12 +1,9 @@
-import type { Country, CountryBasic } from "../types/country.js";
 import { HttpError } from "../lib/http.js";
+import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../lib/validation.js";
+import type { Country, CountryBasic } from "../types/country.js";
 import { enrichCountryWithAi } from "./ai.service.js";
+import { CACHE_TTL, cacheKeys, getOrSet } from "./cache.service.js";
 import { getFeedCountries } from "./country.service.js";
-import {
-  CACHE_TTL,
-  cacheKeys,
-  getOrSet,
-} from "./cache.service.js";
 import { enrichCountryWithImages } from "./image.service.js";
 
 export type FeedBatchResponse = {
@@ -14,8 +11,8 @@ export type FeedBatchResponse = {
   nextCursor: string | null;
 };
 
-const DEFAULT_LIMIT = 20;
-const MAX_LIMIT = 30;
+const DEFAULT_LIMIT = DEFAULT_PAGE_LIMIT;
+const MAX_LIMIT = MAX_PAGE_LIMIT;
 
 function parseLimit(limit?: number): number {
   if (limit === undefined) return DEFAULT_LIMIT;
@@ -26,7 +23,14 @@ function parseLimit(limit?: number): number {
       "INVALID_LIMIT",
     );
   }
-  return Math.min(limit, MAX_LIMIT);
+  if (limit > MAX_LIMIT) {
+    throw new HttpError(
+      `limit must be at most ${MAX_LIMIT}`,
+      400,
+      "LIMIT_TOO_LARGE",
+    );
+  }
+  return limit;
 }
 
 function parseCursor(cursor?: string): number {

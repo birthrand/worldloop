@@ -20,6 +20,12 @@ export type Country = {
   /** Always https://flagcdn.com/w320/{cca2}.png */
   flag: string;
   latlng: [number, number];
+  subregion?: string;
+  area?: number;
+  landlocked?: boolean;
+  timezones?: string[];
+  /** Official language names (REST Countries). */
+  languages?: string[];
   images?: string[];
   ai?: {
     /** Primary fact (same as `facts[0]`). */
