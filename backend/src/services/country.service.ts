@@ -2,12 +2,12 @@ import { env } from "../config/env.js";
 import { normalizeAppRegion } from "../lib/app-region.js";
 import { flagCdnUrlFromIso2 } from "../lib/flag-url.js";
 import { fetchJson, HttpError } from "../lib/http.js";
-import type { CountryBasic } from "../types/country.js";
 import {
-  CACHE_TTL,
-  cacheKeys,
-  getOrSet,
-} from "./cache.service.js";
+  assertJsonArray,
+  assertNonEmptyArray,
+} from "../lib/upstream-validation.js";
+import type { CountryBasic } from "../types/country.js";
+import { CACHE_TTL, cacheKeys, getOrSet } from "./cache.service.js";
 
 type RestCountry = {
   name?: { common?: string };
@@ -17,6 +17,10 @@ type RestCountry = {
   population?: number;
   cca2?: string;
   latlng?: number[];
+  area?: number;
+  landlocked?: boolean;
+  timezones?: string[];
+  languages?: Record<string, string>;
 };
 
 function normalizeCountry(raw: RestCountry): CountryBasic | null {
@@ -31,6 +35,11 @@ function normalizeCountry(raw: RestCountry): CountryBasic | null {
   if (!cca2 || cca2.length !== 2) return null;
 
   const apiRegion = raw.region ?? "Unknown";
+  const languages = raw.languages
+    ? Object.values(raw.languages)
+        .map((value) => value?.trim())
+        .filter((value): value is string => Boolean(value))
+    : [];
 
   return {
     name,
@@ -40,6 +49,15 @@ function normalizeCountry(raw: RestCountry): CountryBasic | null {
     cca2,
     flag: flagCdnUrlFromIso2(cca2),
     latlng: [lat, lng],
+    subregion: raw.subregion?.trim() || undefined,
+    area:
+      typeof raw.area === "number" && raw.area > 0 ? raw.area : undefined,
+    landlocked:
+      typeof raw.landlocked === "boolean" ? raw.landlocked : undefined,
+    timezones: raw.timezones
+      ?.map((zone) => zone?.trim())
+      .filter((zone): zone is string => Boolean(zone)),
+    languages,
   };
 }
 
@@ -63,7 +81,10 @@ async function fetchCountryFromApi(name: string): Promise<CountryBasic> {
   const encoded = encodeURIComponent(name.trim());
   const url = `${env.restCountriesBaseUrl}/name/${encoded}`;
 
-  const data = await fetchJson<RestCountry[]>(url);
+  const data = assertJsonArray<RestCountry>(
+    await fetchJson<unknown>(url),
+    "REST Countries API",
+  );
   const normalized = normalizeMany(data);
 
   if (normalized.length === 0) {
@@ -76,9 +97,12 @@ async function fetchCountryFromApi(name: string): Promise<CountryBasic> {
 }
 
 async function fetchAllCountriesFromApi(): Promise<CountryBasic[]> {
-  const url = `${env.restCountriesBaseUrl}/all?fields=name,capital,region,subregion,population,cca2,latlng`;
-  const data = await fetchJson<RestCountry[]>(url);
-  return normalizeMany(data);
+  const url = `${env.restCountriesBaseUrl}/all?fields=name,capital,region,subregion,population,cca2,latlng,area,landlocked,timezones,languages`;
+  const data = assertJsonArray<RestCountry>(
+    await fetchJson<unknown>(url),
+    "REST Countries API",
+  );
+  return assertNonEmptyArray(normalizeMany(data), "REST Countries API");
 }
 
 export async function getCountryByName(name: string): Promise<CountryBasic> {

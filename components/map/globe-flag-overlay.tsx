@@ -16,7 +16,7 @@ type GlobeFlagOverlayProps = {
   onCountryPress: (country: MapCountry) => void;
 };
 
-const PIN_SIZE = 36;
+const PIN_SIZE = 30;
 const SELECTED_PIN_SIZE = 30;
 
 type GlobeFlagItemProps = {
@@ -85,7 +85,7 @@ const GlobeFlagItem = memo(function GlobeFlagItem({
   );
 });
 
-/** Screen-space flag pins for nearby countries when a country is selected on the globe. */
+/** Screen-space flag for the selected country on the 3D globe (nearby countries use 3D pins). */
 export function GlobeFlagOverlay({
   countries,
   positions,

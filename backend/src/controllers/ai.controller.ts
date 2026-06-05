@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 
 import { env } from "../config/env.js";
 import { HttpError } from "../lib/http.js";
+import { parseCountryName } from "../lib/validation.js";
 import { getAiForCountry } from "../services/ai.service.js";
 import { getCountryByName } from "../services/country.service.js";
 
@@ -42,6 +43,8 @@ export async function generateAiContent(
         "INVALID_AI_INPUT",
       );
     }
+
+    parseCountryName(countryName);
 
     const country =
       metadataName && metadata

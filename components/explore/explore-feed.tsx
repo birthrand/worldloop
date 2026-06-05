@@ -12,7 +12,10 @@ import {
 
 import { CountryFeedPage } from "@/components/explore/country-feed-page";
 import { ExploreTopBar } from "@/components/explore/explore-top-bar";
+import { prefetchCountryProfiles } from "@/lib/prefetch-country-profiles";
 import { useCountryFeedStore } from "@/store/use-country-feed-store";
+import { useDiscoveryProgressStore } from "@/store/use-discovery-progress-store";
+import { useSpatialContextStore } from "@/store/use-spatial-context-store";
 import type { Country } from "@/types/country";
 
 export function ExploreFeed() {
@@ -25,13 +28,16 @@ export function ExploreFeed() {
   const currentIndex = useCountryFeedStore((s) => s.currentIndex);
   const focusEpoch = useCountryFeedStore((s) => s.focusEpoch);
   const selectedRegion = useCountryFeedStore((s) => s.selectedRegion);
+  const discoveryMode = useCountryFeedStore((s) => s.discoveryMode);
   const status = useCountryFeedStore((s) => s.status);
   const setCurrentIndex = useCountryFeedStore((s) => s.setCurrentIndex);
   const loadMoreFeed = useCountryFeedStore((s) => s.loadMoreFeed);
   const setRegionFilter = useCountryFeedStore((s) => s.setRegionFilter);
+  const loadHereFeed = useCountryFeedStore((s) => s.loadHereFeed);
+  const viewportCountries = useSpatialContextStore((s) => s.viewportCountries);
   const error = useCountryFeedStore((s) => s.error);
 
-  const feedListKey = `${selectedRegion ?? "for-you"}-${focusEpoch}`;
+  const feedListKey = `${discoveryMode}-${selectedRegion ?? "for-you"}-${focusEpoch}`;
 
   const scrollToCurrentIndex = useCallback(
     (animated: boolean) => {
@@ -44,7 +50,7 @@ export function ExploreFeed() {
 
   useEffect(() => {
     hasSyncedInitialScrollRef.current = false;
-  }, [selectedRegion]);
+  }, [selectedRegion, discoveryMode]);
 
   // Only scroll programmatically when restoring a non-zero index (e.g. layout).
   // Search/home focus remounts the list at index 0 — never scroll the feed to a deep index.
@@ -72,7 +78,14 @@ export function ExploreFeed() {
       setCurrentIndex(index);
 
       const state = useCountryFeedStore.getState();
+      const country = state.countries[index];
+      if (country) {
+        useDiscoveryProgressStore.getState().recordCountryVisit(country);
+        void prefetchCountryProfiles(state.countries, { aroundIndex: index });
+      }
+
       if (
+        state.discoveryMode === "forYou" &&
         state.nextCursor !== null &&
         index >= state.countries.length - 2 &&
         state.status !== "loading" &&
@@ -84,7 +97,7 @@ export function ExploreFeed() {
   ).current;
 
   const viewabilityConfig = useRef({
-    itemVisiblePercentThreshold: 60,
+    itemVisiblePercentThreshold: 50,
   }).current;
 
   const onFeedLayout = useCallback((event: LayoutChangeEvent) => {
@@ -155,24 +168,41 @@ export function ExploreFeed() {
         </View>
       )}
 
-      {status === "error" && countries.length === 0 && selectedRegion !== null && (
-        <View style={styles.errorOverlay}>
-          <Text style={styles.errorTitle}>Couldn&apos;t load {selectedRegion}</Text>
-          <Text style={styles.errorMessage}>
-            {error ?? "Check that the backend is running and try again."}
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Retry loading ${selectedRegion}`}
-            onPress={() => {
-              void setRegionFilter(selectedRegion);
-            }}
-            style={({ pressed }) => [styles.retryButton, pressed && styles.retryPressed]}
-          >
-            <Text style={styles.retryText}>Retry</Text>
-          </Pressable>
-        </View>
-      )}
+      {status === "error" &&
+        countries.length === 0 &&
+        (selectedRegion !== null || discoveryMode === "here") && (
+          <View style={styles.errorOverlay}>
+            <Text style={styles.errorTitle}>
+              {discoveryMode === "here"
+                ? "Couldn't load this map area"
+                : `Couldn't load ${selectedRegion}`}
+            </Text>
+            <Text style={styles.errorMessage}>
+              {error ?? "Check that the backend is running and try again."}
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={
+                discoveryMode === "here"
+                  ? "Retry loading map area countries"
+                  : `Retry loading ${selectedRegion}`
+              }
+              onPress={() => {
+                if (discoveryMode === "here") {
+                  void loadHereFeed(viewportCountries);
+                  return;
+                }
+                void setRegionFilter(selectedRegion);
+              }}
+              style={({ pressed }) => [
+                styles.retryButton,
+                pressed && styles.retryPressed,
+              ]}
+            >
+              <Text style={styles.retryText}>Retry</Text>
+            </Pressable>
+          </View>
+        )}
     </View>
   );
 }

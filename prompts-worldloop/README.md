@@ -17,6 +17,7 @@ Incremental backend implementation prompts for the WorldLoop API. Implement in n
 | 10  | [10-pregeneration-system.md](./10-pregeneration-system.md)   | Background AI pre-generation (optional)               |
 | 11  | [11-health-and-monitoring.md](./11-health-and-monitoring.md) | Health check and logging                              |
 | 12  | [12-discover-endpoint.md](./12-discover-endpoint.md)         | Spatial bbox discover (pairs with `prompts/15-*`)     |
+| 13  | [13-news-service.md](./13-news-service.md)                   | GNews + Currents news layer, LLM, Redis 4h TTL        |
 
 ## Dev prerequisites
 
@@ -35,12 +36,13 @@ Incremental backend implementation prompts for the WorldLoop API. Implement in n
 
 `00` → `01` → **`02` (Redis — required)** → `08` (cache layer hardening, if needed) → `05` → `03` → `04` → `09` → `06` → `07` → `11` → `10`
 
-| Phase                | Steps                  | Notes                                             |
-| -------------------- | ---------------------- | ------------------------------------------------- |
-| Foundation           | `00`, `01`             | Backend + country API                             |
-| **Redis (blocking)** | **`02`**               | Must pass before `03`+                            |
-| Cache code           | `08`                   | Refine `cache.service.ts`; Redis must already run |
-| Enrichment           | `03`, `04`, `05`       | Images, AI, feed                                  |
-| Hardening            | `09`, `06`, `07`, `11` | Security, search, map, health                     |
-| Optional             | `10`                   | Pre-generation                                    |
-| Geo discovery        | `12`                   | After client `prompts/15a`–`15d`; bbox query API  |
+| Phase                | Steps                  | Notes                                                         |
+| -------------------- | ---------------------- | ------------------------------------------------------------- |
+| Foundation           | `00`, `01`             | Backend + country API                                         |
+| **Redis (blocking)** | **`02`**               | Must pass before `03`+                                        |
+| Cache code           | `08`                   | Refine `cache.service.ts`; Redis must already run             |
+| Enrichment           | `03`, `04`, `05`       | Images, AI, feed                                              |
+| Hardening            | `09`, `06`, `07`, `11` | Security, search, map, health                                 |
+| Optional             | `10`                   | Pre-generation                                                |
+| Geo discovery        | `12`                   | After client `prompts/15a`–`15d`; bbox query API              |
+| News / explorer      | `13`                   | After `04`; pairs with `prompts/16-ai-content-explorer-ui.md` |

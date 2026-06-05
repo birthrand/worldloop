@@ -1,4 +1,8 @@
 import { env } from "../config/env.js";
+import {
+  parsePexelsResults,
+  parseUnsplashResults,
+} from "../lib/upstream-validation.js";
 import type { CountryBasic } from "../types/country.js";
 import { logger } from "../utils/logger.js";
 import { CACHE_TTL, cacheKeys, getOrSet } from "./cache.service.js";
@@ -7,14 +11,6 @@ const MAX_IMAGES = 5;
 const WIKIPEDIA_API = "https://en.wikipedia.org/w/api.php";
 const WIKIPEDIA_USER_AGENT =
   "WorldLoop/1.0 (country image service; learning project)";
-
-type UnsplashSearchResponse = {
-  results?: { urls?: { regular?: string } }[];
-};
-
-type PexelsSearchResponse = {
-  photos?: { src?: { large?: string } }[];
-};
 
 type WikipediaOpenSearchResponse = [string, string[], string[], string[]];
 
@@ -117,12 +113,8 @@ async function fetchFromUnsplash(query: string): Promise<string[]> {
     return [];
   }
 
-  const data = (await response.json()) as UnsplashSearchResponse;
-  return normalizeImageUrls(
-    (data.results ?? [])
-      .map((item) => item.urls?.regular)
-      .filter((url): url is string => Boolean(url)),
-  ).slice(0, MAX_IMAGES);
+  const data = await response.json();
+  return normalizeImageUrls(parseUnsplashResults(data)).slice(0, MAX_IMAGES);
 }
 
 async function fetchFromPexels(query: string): Promise<string[]> {
@@ -144,12 +136,8 @@ async function fetchFromPexels(query: string): Promise<string[]> {
     return [];
   }
 
-  const data = (await response.json()) as PexelsSearchResponse;
-  return normalizeImageUrls(
-    (data.photos ?? [])
-      .map((photo) => photo.src?.large)
-      .filter((url): url is string => Boolean(url)),
-  ).slice(0, MAX_IMAGES);
+  const data = await response.json();
+  return normalizeImageUrls(parsePexelsResults(data)).slice(0, MAX_IMAGES);
 }
 
 async function resolveWikipediaPageTitle(
@@ -271,25 +259,25 @@ async function fetchFromWikipedia(query: string): Promise<string[]> {
 async function fetchImagesFromApis(countryName: string): Promise<string[]> {
   const query = countryName.trim();
 
+  const unsplashUrls = await fetchFromUnsplash(query);
+  if (unsplashUrls.length > 0) {
+    logger.debug("Images fetched from Unsplash", {
+      country: query,
+      count: unsplashUrls.length,
+    });
+    return unsplashUrls;
+  }
+
+  const pexelsUrls = await fetchFromPexels(query);
+  if (pexelsUrls.length > 0) {
+    logger.debug("Images fetched from Pexels", {
+      country: query,
+      count: pexelsUrls.length,
+    });
+    return pexelsUrls;
+  }
+
   try {
-    const unsplashUrls = await fetchFromUnsplash(query);
-    if (unsplashUrls.length > 0) {
-      logger.debug("Images fetched from Unsplash", {
-        country: query,
-        count: unsplashUrls.length,
-      });
-      return unsplashUrls;
-    }
-
-    const pexelsUrls = await fetchFromPexels(query);
-    if (pexelsUrls.length > 0) {
-      logger.debug("Images fetched from Pexels", {
-        country: query,
-        count: pexelsUrls.length,
-      });
-      return pexelsUrls;
-    }
-
     const wikipediaUrls = await fetchFromWikipedia(query);
     if (wikipediaUrls.length > 0) {
       logger.debug("Images fetched from Wikipedia", {
@@ -299,7 +287,7 @@ async function fetchImagesFromApis(countryName: string): Promise<string[]> {
       return wikipediaUrls;
     }
   } catch (error) {
-    logger.warn("Image fetch failed", {
+    logger.warn("Wikipedia image fetch failed", {
       country: query,
       error: error instanceof Error ? error.message : String(error),
     });

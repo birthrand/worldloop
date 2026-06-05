@@ -9,17 +9,21 @@ import {
   resolveFocusTransitionScale,
   resolveRegionZoomFadeT,
 } from "@/lib/map-region-markers";
+import { useDiscoveryProgressStore } from "@/store/use-discovery-progress-store";
 import type { MapCountry } from "@/types/country";
 
-const PIN_GEOMETRY_RADIUS = 0.018;
-const BASE_SCALE = 1;
-const SELECTED_SCALE = 1.28;
+const PIN_GEOMETRY_RADIUS = 0.02;
+const BASE_SCALE = 1.12;
+const SELECTED_SCALE = 1.43;
+const VISITED_RING_SCALE = 0.95;
 const BASE_EMISSIVE = 0.42;
 const SELECTED_EMISSIVE = 0.95;
 const FOCUS_TRANSITION_EMISSIVE = 0.68;
 const DEEMPHASIZED_EMISSIVE = 0.18;
+const VISITED_RING_EMISSIVE = 0.38;
 const PIN_COLOR = "#fbbf24";
 const SELECTED_PIN_COLOR = "#fbbf24";
+const VISITED_RING_COLOR = "#14b8a6";
 const FOCUS_TRANSITION_DURATION_S = MAP_FOCUS_TRANSITION_3D_MS / 1000;
 
 type GlobeCountryPinProps = {
@@ -47,8 +51,13 @@ export function GlobeCountryPin({
 }: GlobeCountryPinProps) {
   const { camera } = useThree();
   const meshRef = useRef<Mesh>(null);
+  const ringRef = useRef<Mesh>(null);
   const transitionElapsedRef = useRef(0);
   const transitionActiveRef = useRef(false);
+  const isVisited = useDiscoveryProgressStore((s) =>
+    s.isCountryVisited({ name: country.name, cca2: "", flag: country.flag }),
+  );
+  const showVisitedRing = isVisited && !isSelected && !isFocusTransitioning;
 
   useEffect(() => {
     if (!isFocusTransitioning) {
@@ -63,6 +72,10 @@ export function GlobeCountryPin({
 
   useFrame((_, delta) => {
     if (!meshRef.current) return;
+
+    if (ringRef.current) {
+      ringRef.current.visible = showVisitedRing;
+    }
 
     if (transitionActiveRef.current) {
       transitionElapsedRef.current += delta;
@@ -127,6 +140,18 @@ export function GlobeCountryPin({
 
   return (
     <group position={position}>
+      {showVisitedRing ? (
+        <mesh ref={ringRef} scale={VISITED_RING_SCALE}>
+          <sphereGeometry args={[PIN_GEOMETRY_RADIUS, 16, 16]} />
+          <meshStandardMaterial
+            color={VISITED_RING_COLOR}
+            emissive={VISITED_RING_COLOR}
+            emissiveIntensity={VISITED_RING_EMISSIVE}
+            transparent
+            opacity={0.55}
+          />
+        </mesh>
+      ) : null}
       <mesh
         ref={meshRef}
         scale={isSelected ? SELECTED_SCALE : BASE_SCALE}

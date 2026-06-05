@@ -74,11 +74,13 @@ Consumers should mirror the same provider fallback order and country-level cachi
 
 ## Endpoints
 
-| Method | Path              | Description                               |
-| ------ | ----------------- | ----------------------------------------- |
-| GET    | `/health`         | Health check                              |
-| GET    | `/country/:name`  | Single country with `images[]` (1–5 URLs) |
+| Method | Path              | Description                                            |
+| ------ | ----------------- | ------------------------------------------------------ |
+| GET    | `/health`         | Health check                                           |
+| GET    | `/country/:name`  | Single country with `images[]` (1–5 URLs)              |
 | GET    | `/feed/countries` | Paginated feed (`?cursor=&limit=`, default 20, max 30) |
+| GET    | `/map/countries`  | All map countries with coordinates and first image     |
+| GET    | `/discover`       | Spatial bbox discover — ranked countries in viewport   |
 
 ## Examples
 
@@ -87,6 +89,12 @@ curl http://localhost:3001/country/japan
 curl "http://localhost:3001/feed/countries?limit=20"
 curl "http://localhost:3001/feed/countries?cursor=20&limit=20"
 curl http://localhost:3001/country/not-a-real-country
+
+# Europe-ish bbox
+curl "http://localhost:3001/discover?west=-10&south=35&east=40&north=70&limit=20"
+
+# With center for ranking (Japan near top when center is Tokyo)
+curl "http://localhost:3001/discover?west=100&south=-10&east=150&north=25&centerLat=35.68&centerLng=139.69"
 ```
 
 ## Scripts

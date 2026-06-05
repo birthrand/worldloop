@@ -75,6 +75,68 @@ export async function fetchMapCountries(): Promise<MapCountriesResponse> {
   return response.json() as Promise<MapCountriesResponse>;
 }
 
+export type DiscoverCountriesResponse = {
+  data: MapCountry[];
+  meta: {
+    count: number;
+    bbox: {
+      west: number;
+      south: number;
+      east: number;
+      north: number;
+    };
+    region: string | null;
+    nextCursor: string | null;
+  };
+};
+
+export type DiscoverCountriesParams = {
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+  centerLat?: number;
+  centerLng?: number;
+  region?: string;
+  limit?: number;
+  cursor?: string;
+};
+
+export async function fetchDiscoverCountries(
+  params: DiscoverCountriesParams,
+): Promise<DiscoverCountriesResponse> {
+  const url = new URL(`${API_BASE_URL}/discover`);
+
+  url.searchParams.set("west", String(params.west));
+  url.searchParams.set("south", String(params.south));
+  url.searchParams.set("east", String(params.east));
+  url.searchParams.set("north", String(params.north));
+
+  if (params.centerLat !== undefined) {
+    url.searchParams.set("centerLat", String(params.centerLat));
+  }
+  if (params.centerLng !== undefined) {
+    url.searchParams.set("centerLng", String(params.centerLng));
+  }
+  if (params.region) {
+    url.searchParams.set("region", params.region);
+  }
+  if (params.limit !== undefined) {
+    url.searchParams.set("limit", String(params.limit));
+  }
+  if (params.cursor) {
+    url.searchParams.set("cursor", params.cursor);
+  }
+
+  const response = await fetch(url.toString());
+
+  if (!response.ok) {
+    throw new Error(`Discover request failed (${response.status})`);
+  }
+
+  return response.json() as Promise<DiscoverCountriesResponse>;
+}
+
 type CountryDetailResponse = {
   data: Country;
 };
@@ -88,5 +150,82 @@ export async function fetchCountryByName(name: string): Promise<Country> {
   }
 
   const payload = (await response.json()) as CountryDetailResponse;
+  return payload.data;
+}
+
+export type CountryExplorerNews = {
+  eventsSummary: string;
+  trending: Array<{
+    id: string;
+    title: string;
+    topic:
+      | "tech"
+      | "sports"
+      | "food"
+      | "tourism"
+      | "culture"
+      | "economy"
+      | "general";
+  }>;
+  sources?: Array<{ title: string; url: string; publishedAt: string }>;
+  updatedAt: string;
+};
+
+export type CountryWikipediaSummary = {
+  title: string;
+  extract: string;
+  description: string | null;
+  pageUrl: string;
+  thumbnailUrl: string | null;
+};
+
+export type CountryExplorerResponse = {
+  data: {
+    country: Country;
+    explorer: CountryExplorerNews;
+    wikipedia: CountryWikipediaSummary | null;
+  };
+};
+
+export async function fetchCountryExplorer(
+  name: string,
+): Promise<CountryExplorerResponse["data"]> {
+  const encoded = encodeURIComponent(name.trim());
+  const response = await fetch(`${API_BASE_URL}/country/${encoded}/explorer`);
+
+  if (!response.ok) {
+    throw new Error(`Country explorer request failed (${response.status})`);
+  }
+
+  const payload = (await response.json()) as CountryExplorerResponse;
+  return payload.data;
+}
+
+export type CountryLandmark = {
+  id: string;
+  name: string;
+  description: string;
+  imageUrl: string | null;
+};
+
+export type CountryProfileResponse = {
+  data: {
+    country: Country;
+    wikipedia: CountryWikipediaSummary | null;
+    landmarks: CountryLandmark[];
+  };
+};
+
+export async function fetchCountryProfile(
+  name: string,
+): Promise<CountryProfileResponse["data"]> {
+  const encoded = encodeURIComponent(name.trim());
+  const response = await fetch(`${API_BASE_URL}/country/${encoded}/profile`);
+
+  if (!response.ok) {
+    throw new Error(`Country profile request failed (${response.status})`);
+  }
+
+  const payload = (await response.json()) as CountryProfileResponse;
   return payload.data;
 }

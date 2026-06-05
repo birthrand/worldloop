@@ -1,6 +1,6 @@
-import type { Request, Response, NextFunction } from "express";
+import type { NextFunction, Request, Response } from "express";
 
-import { HttpError } from "../lib/http.js";
+import { parseCountryName } from "../lib/validation.js";
 import { enrichCountryWithAi } from "../services/ai.service.js";
 import { getCountryByName } from "../services/country.service.js";
 import { enrichCountryWithImages } from "../services/image.service.js";
@@ -11,13 +11,9 @@ export async function getCountry(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const raw = req.params.name;
-    const name = Array.isArray(raw) ? raw[0] : raw;
-    if (!name?.trim()) {
-      throw new HttpError("Country name is required", 400, "INVALID_NAME");
-    }
+    const name = parseCountryName(req.params.name);
 
-    const country = await getCountryByName(name.trim());
+    const country = await getCountryByName(name);
     const withImages = await enrichCountryWithImages(country);
     const withAi = await enrichCountryWithAi(withImages);
     res.json({ data: withAi });

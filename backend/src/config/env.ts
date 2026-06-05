@@ -14,5 +14,7 @@ export const env = {
   openAiBaseUrl: process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1",
   openAiModel: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
   internalApiKey: process.env.INTERNAL_API_KEY ?? "",
+  gnewsApiKey: process.env.GNEWS_API_KEY ?? "",
+  currentsApiKey: process.env.CURRENTS_API_KEY ?? "",
   nodeEnv: process.env.NODE_ENV ?? "development",
 } as const;

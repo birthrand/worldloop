@@ -16,11 +16,13 @@ import {
   continentDisplayLabel,
   EXPLORE_HEADER_TABS,
   FOR_YOU_TAB,
+  HERE_TAB,
   isContinent,
   type ExploreHeaderTab,
 } from "@/constants/regions";
 import { useCountryFeedStore } from "@/store/use-country-feed-store";
 import { useSearchUiStore } from "@/store/use-search-ui-store";
+import { useSpatialContextStore } from "@/store/use-spatial-context-store";
 
 const UNDERLINE_WIDTH_RATIO = 0.55;
 const UNDERLINE_MAX_WIDTH = 40;
@@ -39,13 +41,30 @@ export function ExploreTopBar() {
   const insets = useSafeAreaInsets();
   const openSearch = useSearchUiStore((s) => s.openSearch);
   const selectedRegion = useCountryFeedStore((s) => s.selectedRegion);
+  const discoveryMode = useCountryFeedStore((s) => s.discoveryMode);
+  const countryCount = useCountryFeedStore((s) => s.countries.length);
+  const restoreForYouFeed = useCountryFeedStore((s) => s.restoreForYouFeed);
   const setRegionFilter = useCountryFeedStore((s) => s.setRegionFilter);
+  const focusedRegion = useSpatialContextStore(
+    (s) => s.discoveryScope.focusedRegion,
+  );
+
+  const headerTabs: ExploreHeaderTab[] =
+    discoveryMode === "here"
+      ? [FOR_YOU_TAB, HERE_TAB, ...EXPLORE_HEADER_TABS.slice(1)]
+      : [...EXPLORE_HEADER_TABS];
 
   const selectedTab: ExploreHeaderTab =
-    selectedRegion === null
-      ? FOR_YOU_TAB
-      : (selectedRegion as ExploreHeaderTab);
-  const hasActiveFilter = selectedRegion !== null;
+    discoveryMode === "here"
+      ? HERE_TAB
+      : selectedRegion === null
+        ? FOR_YOU_TAB
+        : (selectedRegion as ExploreHeaderTab);
+  const hasActiveFilter = discoveryMode === "here" || selectedRegion !== null;
+
+  const hereScopeLabel = focusedRegion
+    ? continentDisplayLabel(focusedRegion)
+    : "Map area";
 
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   const scrollViewWidthRef = useRef(0);
@@ -175,12 +194,12 @@ export function ExploreTopBar() {
 
   const scrollXForTab = useCallback(
     (name: ExploreHeaderTab) => {
-      const tabIndex = EXPLORE_HEADER_TABS.indexOf(name);
+      const tabIndex = headerTabs.indexOf(name);
       const layout = tabLayoutsRef.current[name];
       if (tabIndex < 0 || !layout || !isScrollReady()) return null;
       return computeScrollXForLayout(tabIndex, layout);
     },
-    [computeScrollXForLayout, isScrollReady],
+    [computeScrollXForLayout, headerTabs, isScrollReady],
   );
 
   const progressiveScrollToTab = useCallback(
@@ -235,14 +254,18 @@ export function ExploreTopBar() {
 
   const onTabPress = (name: ExploreHeaderTab) => {
     if (name === FOR_YOU_TAB) {
-      if (selectedRegion === null) return;
-      void setRegionFilter(null);
+      if (discoveryMode === "forYou" && selectedRegion === null) return;
+      void restoreForYouFeed();
+      return;
+    }
+
+    if (name === HERE_TAB) {
       return;
     }
 
     if (!isContinent(name)) return;
 
-    if (selectedRegion === name) {
+    if (selectedRegion === name && discoveryMode === "region") {
       void setRegionFilter(null);
       return;
     }
@@ -273,17 +296,16 @@ export function ExploreTopBar() {
               contentWidthRef.current = event.nativeEvent.layout.width;
             }}
           >
-            {EXPLORE_HEADER_TABS.map((name, index) => {
-              const selected =
-                name === FOR_YOU_TAB
-                  ? selectedRegion === null
-                  : selectedRegion === name;
+            {headerTabs.map((name, index) => {
+              const selected = name === selectedTab;
               const accessibilityLabel =
                 name === FOR_YOU_TAB
                   ? "Show your personalized country feed"
-                  : selected
-                    ? `Clear ${name} filter and show For You feed`
-                    : `Show countries in ${name}`;
+                  : name === HERE_TAB
+                    ? `Here mode: ${hereScopeLabel}, ${countryCount} countries`
+                    : selected
+                      ? `Clear ${name} filter and show For You feed`
+                      : `Show countries in ${name}`;
 
               return (
                 <View
@@ -325,7 +347,11 @@ export function ExploreTopBar() {
                             : styles.continentTextDefault,
                       ]}
                     >
-                      {name === FOR_YOU_TAB ? name : continentDisplayLabel(name)}
+                      {name === FOR_YOU_TAB
+                        ? name
+                        : name === HERE_TAB
+                          ? name
+                          : continentDisplayLabel(name)}
                     </Text>
                   </Pressable>
                 </View>
@@ -354,6 +380,12 @@ export function ExploreTopBar() {
           </View>
         </Pressable>
       </View>
+
+      {discoveryMode === "here" ? (
+        <Text style={styles.hereSubtitle}>
+          Here · {hereScopeLabel} · {countryCount} countries
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -412,5 +444,13 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.85,
+  },
+  hereSubtitle: {
+    marginTop: 2,
+    paddingHorizontal: 16,
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: "Poppins-Regular",
+    color: "rgba(255, 255, 255, 0.55)",
   },
 });

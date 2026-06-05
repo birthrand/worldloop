@@ -6,6 +6,7 @@ export type MapModeTogglePending = {
   pendingGlobeRegionFocus: string | null;
   pendingFlatFocusName: string | null;
   pendingFlatPresentationMode: MapPresentationMode | null;
+  pendingFlatRegionFocus: string | null;
 };
 
 /** Pending focus refs to apply after a 2D ↔ 3D crossfade completes. */
@@ -14,6 +15,7 @@ export function resolveMapModeTogglePending(input: {
   activeCountryName: string | null;
   focusTransitionCountryName: string | null;
   presentationMode: MapPresentationMode;
+  focusedRegion: string | null;
 }): MapModeTogglePending {
   if (input.currentMode === "3d") {
     const focusName =
@@ -21,6 +23,7 @@ export function resolveMapModeTogglePending(input: {
     return {
       pendingFlatFocusName: focusName,
       pendingFlatPresentationMode: input.presentationMode,
+      pendingFlatRegionFocus: focusName ? null : input.focusedRegion,
       pendingGlobeFocusName: null,
       pendingGlobeRegionFocus: null,
     };
@@ -31,9 +34,10 @@ export function resolveMapModeTogglePending(input: {
 
   return {
     pendingGlobeFocusName: countryFocus,
-    pendingGlobeRegionFocus: null,
+    pendingGlobeRegionFocus: countryFocus ? null : input.focusedRegion,
     pendingFlatFocusName: null,
     pendingFlatPresentationMode: null,
+    pendingFlatRegionFocus: null,
   };
 }
 

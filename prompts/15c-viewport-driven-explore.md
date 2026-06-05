@@ -65,14 +65,14 @@ This is the first user-visible “geo-aware discovery layer” moment.
 ## Feed store extensions
 
 ```ts
-type DiscoveryMode = "forYou" | "here" | "region";
+import type { DiscoveryScopeMode, GeoEntity } from "@/types/geo";
 
 // New state
-discoveryMode: DiscoveryMode;
+discoveryMode: DiscoveryScopeMode;
 
 // New actions
 loadHereFeed: (entities: GeoEntity[]) => Promise<void>;
-setDiscoveryMode: (mode: DiscoveryMode) => void;
+setDiscoveryMode: (mode: DiscoveryScopeMode) => void;
 restoreForYouFeed: () => void;
 ```
 

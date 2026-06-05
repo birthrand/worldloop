@@ -4,7 +4,14 @@ import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 
 import { images } from "@/constants/images";
 import { clearAllClientCache } from "@/lib/client-cache";
-import { useCountryFeedStore, useSavedCountriesStore } from "@/store";
+import { ensureGeoIndex } from "@/lib/geo-index";
+import { countriesInBBox } from "@/lib/spatial-query";
+import {
+  useCountryFeedStore,
+  useDiscoveryProgressStore,
+  useMapStore,
+  useSavedCountriesStore,
+} from "@/store";
 
 function DevButton({
   label,
@@ -30,6 +37,9 @@ function DevButton({
 }
 
 export default function DevScreen() {
+  const mapCountries = useMapStore((s) => s.countries);
+  const mapStatus = useMapStore((s) => s.status);
+  const loadMapCountries = useMapStore((s) => s.loadMapCountries);
   const countries = useCountryFeedStore((s) => s.countries);
   const nextCursor = useCountryFeedStore((s) => s.nextCursor);
   const currentIndex = useCountryFeedStore((s) => s.currentIndex);
@@ -40,13 +50,36 @@ export default function DevScreen() {
   const clearSaved = useSavedCountriesStore((s) => s.clearSaved);
   const toggleSaved = useSavedCountriesStore((s) => s.toggleSaved);
   const savedCount = useSavedCountriesStore((s) => s.savedCountries.length);
+  const countriesExplored = useDiscoveryProgressStore(
+    (s) => s.countriesExplored,
+  );
+  const worldProgressPercent = useDiscoveryProgressStore(
+    (s) => s.worldProgressPercent,
+  );
+  const streakDays = useDiscoveryProgressStore((s) => s.streakDays);
+  const resetProgress = useDiscoveryProgressStore((s) => s.resetProgress);
+  const seedSampleVisits = useDiscoveryProgressStore((s) => s.seedSampleVisits);
 
   const currentCountry = countries[currentIndex];
   const isFeedLoading = status === "loading" || status === "loadingMore";
 
   useEffect(() => {
     void loadInitialFeed();
-  }, [loadInitialFeed]);
+    void loadMapCountries();
+  }, [loadInitialFeed, loadMapCountries]);
+
+  useEffect(() => {
+    if (!__DEV__ || mapCountries.length === 0) return;
+
+    const index = ensureGeoIndex(mapCountries);
+    const europeBox = { west: -10, south: 35, east: 40, north: 70 };
+    console.log(
+      "[geo-index] entities",
+      index.length,
+      "in Europe bbox",
+      countriesInBBox(index, europeBox).map((c) => c.name),
+    );
+  }, [mapCountries]);
 
   const handleToggleSaved = () => {
     if (currentCountry) toggleSaved(currentCountry);
@@ -96,6 +129,17 @@ export default function DevScreen() {
         <Text className="body-sm text-muted">
           Current: {currentCountry?.name ?? "—"}
         </Text>
+        {__DEV__ ? (
+          <Text className="body-sm text-muted">
+            Map countries: {mapCountries.length} ({mapStatus})
+          </Text>
+        ) : null}
+        {__DEV__ ? (
+          <Text className="body-sm text-muted">
+            Progress: {countriesExplored} countries · {worldProgressPercent}%
+            world · {streakDays}-day streak
+          </Text>
+        ) : null}
         {error ? <Text className="body-sm text-error">{error}</Text> : null}
         <View className="flex-row flex-wrap gap-2">
           <DevButton
@@ -114,6 +158,8 @@ export default function DevScreen() {
             label="Clear local cache"
             onPress={() => void clearAllClientCache()}
           />
+          <DevButton label="Reset discovery progress" onPress={resetProgress} />
+          <DevButton label="Seed sample visits" onPress={seedSampleVisits} />
         </View>
       </View>
     </ScrollView>

@@ -1,5 +1,6 @@
 import type { Continent } from "@/constants/regions";
 import type { MapCountry } from "@/types/country";
+import type { BBox } from "@/types/geo";
 import type { LatLng } from "react-native-maps";
 
 type GeoJsonGeometry =
@@ -92,6 +93,50 @@ function toLatLng([longitude, latitude]: number[]): LatLng {
 
 function toRingPoints(ring: number[][]): LatLng[] {
   return ring.filter((point) => point.length >= 2).map(toLatLng);
+}
+
+/** Axis-aligned bounds from map ring coordinates (WGS84 degrees). */
+export function bboxFromLatLngPoints(points: LatLng[]): BBox | null {
+  if (points.length === 0) return null;
+
+  let west = Infinity;
+  let east = -Infinity;
+  let south = Infinity;
+  let north = -Infinity;
+
+  for (const point of points) {
+    west = Math.min(west, point.longitude);
+    east = Math.max(east, point.longitude);
+    south = Math.min(south, point.latitude);
+    north = Math.max(north, point.latitude);
+  }
+
+  if (
+    !Number.isFinite(west) ||
+    !Number.isFinite(east) ||
+    !Number.isFinite(south) ||
+    !Number.isFinite(north)
+  ) {
+    return null;
+  }
+
+  return { west, south, east, north };
+}
+
+/** Union of two bounding boxes (handles disjoint extents). */
+export function mergeBBoxes(a: BBox, b: BBox): BBox {
+  return {
+    west: Math.min(a.west, b.west),
+    south: Math.min(a.south, b.south),
+    east: Math.max(a.east, b.east),
+    north: Math.max(a.north, b.north),
+  };
+}
+
+export function bboxFromBoundaryPolygon(
+  polygon: Pick<CountryBoundaryPolygon, "coordinates">,
+): BBox | null {
+  return bboxFromLatLngPoints(polygon.coordinates);
 }
 
 /**

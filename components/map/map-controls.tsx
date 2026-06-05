@@ -351,7 +351,7 @@ export function MapControls({
         {onRandomCountryPress ? (
           <MapCircularFab
             variant="accent"
-            icon="locate"
+            icon="dice"
             accessibilityLabel="Pick a random country"
             accessibilityHint="Focuses a random country on the map without opening details"
             onPress={onRandomCountryPress}

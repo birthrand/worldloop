@@ -12,12 +12,15 @@ import Animated, { SlideInDown, SlideOutDown } from "react-native-reanimated";
 
 import { FlagBadge } from "@/components/explore/flag-badge";
 import { CLIENT_CACHE_KEYS, CLIENT_CACHE_TTL } from "@/constants/client-cache";
+import { prefetchCountryProfile } from "@/lib/prefetch-country-profiles";
 import { continentDisplayLabel } from "@/constants/regions";
 import { fetchCountryByName } from "@/lib/api";
 import { getClientCache, staleWhileRevalidate } from "@/lib/client-cache";
 import { formatPopulation } from "@/lib/format-country";
 import { mapCountryToCountry } from "@/lib/map-country";
+import { openCountryAiExplorer } from "@/lib/open-country-ai-explorer";
 import { openCountryInExplore } from "@/lib/open-country-in-explore";
+import { useSpatialContextStore } from "@/store/use-spatial-context-store";
 import type { Country, MapCountry } from "@/types/country";
 
 type MapCountryPreviewCardProps = {
@@ -57,6 +60,10 @@ export function MapCountryPreviewCard({
   backToRegionLabel,
   bottomInset = 0,
 }: MapCountryPreviewCardProps) {
+  const discoveryScopeMode = useSpatialContextStore(
+    (s) => s.discoveryScope.mode,
+  );
+  const queueLength = useSpatialContextStore((s) => s.queue.length);
   const [detail, setDetail] = useState<Country | null>(null);
   const [detailStatus, setDetailStatus] = useState<
     "idle" | "loading" | "error"
@@ -110,6 +117,7 @@ export function MapCountryPreviewCard({
     };
 
     void loadDetail();
+    void prefetchCountryProfile(country.name);
 
     return () => {
       cancelled = true;
@@ -228,6 +236,20 @@ export function MapCountryPreviewCard({
 
       <View style={styles.sectionDivider} />
 
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Open AI insights for ${country.name}`}
+        onPress={() => openCountryAiExplorer(countryForActions)}
+        style={({ pressed }) => [
+          styles.insightsButton,
+          pressed && styles.insightsButtonPressed,
+        ]}
+      >
+        <Ionicons name="sparkles" size={16} color="#00d4c7" />
+        <Text style={styles.insightsLabel}>AI Country Explorer</Text>
+        <Ionicons name="chevron-forward" size={16} color="#94a3b8" />
+      </Pressable>
+
       <View style={styles.actionStack}>
         {onBackToContinent ? (
           <>
@@ -281,7 +303,13 @@ export function MapCountryPreviewCard({
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`Open ${country.name} in Explore`}
-          onPress={() => openCountryInExplore(countryForActions)}
+          onPress={() =>
+            openCountryInExplore(countryForActions, {
+              mode: discoveryScopeMode === "here" ? "here" : undefined,
+              preserveHereMode: discoveryScopeMode === "here",
+              preserveQueue: discoveryScopeMode === "here" && queueLength > 0,
+            })
+          }
           style={({ pressed }) => [
             styles.actionSegment,
             styles.exploreSegment,
@@ -453,6 +481,27 @@ const styles = StyleSheet.create({
   },
   factTextMuted: {
     color: "#94a3b8",
+  },
+  insightsButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    minHeight: 44,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: "rgba(0, 212, 199, 0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(0, 212, 199, 0.25)",
+  },
+  insightsButtonPressed: {
+    opacity: 0.88,
+    backgroundColor: "rgba(0, 212, 199, 0.14)",
+  },
+  insightsLabel: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: "Poppins-SemiBold",
+    color: "#ffffff",
   },
   actionStack: {
     flexDirection: "row",

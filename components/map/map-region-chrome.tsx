@@ -8,6 +8,8 @@ type MapRegionChromeProps = {
   focusedRegion: string;
   bottom: number;
   onContinentPress: () => void;
+  onShowDiscovery: () => void;
+  discoveryChromeVisible?: boolean;
   onWorldPress: () => void;
 };
 
@@ -17,6 +19,8 @@ export function MapRegionChrome({
   focusedRegion,
   bottom,
   onContinentPress,
+  onShowDiscovery,
+  discoveryChromeVisible = false,
   onWorldPress,
 }: MapRegionChromeProps) {
   const label = continentDisplayLabel(focusedRegion);
@@ -24,6 +28,11 @@ export function MapRegionChrome({
   const handleContinentPress = () => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onContinentPress();
+  };
+
+  const handleShowDiscovery = () => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onShowDiscovery();
   };
 
   const handleWorldPress = () => {
@@ -57,6 +66,31 @@ export function MapRegionChrome({
 
         <Pressable
           accessibilityRole="button"
+          accessibilityLabel={
+            discoveryChromeVisible
+              ? "Hide explore this area"
+              : "Show explore this area"
+          }
+          onPress={handleShowDiscovery}
+          hitSlop={6}
+          style={({ pressed }) => [
+            styles.segment,
+            styles.iconSegment,
+            discoveryChromeVisible && styles.iconSegmentActive,
+            pressed && styles.pressed,
+          ]}
+        >
+          <Ionicons
+            name="information-circle-outline"
+            size={20}
+            color={discoveryChromeVisible ? "#fbbf24" : "#94a3b8"}
+          />
+        </Pressable>
+
+        <View style={styles.divider} />
+
+        <Pressable
+          accessibilityRole="button"
           accessibilityLabel="Back to world map"
           onPress={handleWorldPress}
           style={({ pressed }) => [
@@ -82,7 +116,7 @@ const styles = StyleSheet.create({
   stack: {
     flexDirection: "row",
     alignItems: "stretch",
-    minWidth: 168,
+    minWidth: 220,
     height: CHROME_HEIGHT,
     borderRadius: 32,
     backgroundColor: "#101828",
@@ -100,9 +134,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     alignItems: "center",
   },
+  iconSegment: {
+    width: CHROME_HEIGHT,
+    flexShrink: 0,
+    alignItems: "center",
+  },
+  iconSegmentActive: {
+    backgroundColor: "rgba(251, 191, 36, 0.1)",
+  },
   worldSegment: {
     flexDirection: "row",
     alignItems: "center",
+    flexShrink: 0,
     gap: 6,
     paddingHorizontal: 14,
   },

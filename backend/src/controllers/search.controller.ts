@@ -1,12 +1,10 @@
-import type { Request, Response, NextFunction } from "express";
+import type { NextFunction, Request, Response } from "express";
 
+import {
+  parseOptionalRegion,
+  parseOptionalSearchQuery,
+} from "../lib/validation.js";
 import { searchCountries } from "../services/search.service.js";
-
-function parseOptionalString(value: unknown): string | undefined {
-  if (value === undefined) return undefined;
-  if (typeof value !== "string") return undefined;
-  return value;
-}
 
 export async function searchCountriesHandler(
   req: Request,
@@ -14,8 +12,8 @@ export async function searchCountriesHandler(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const query = parseOptionalString(req.query.query);
-    const region = parseOptionalString(req.query.region);
+    const query = parseOptionalSearchQuery(req.query.query);
+    const region = parseOptionalRegion(req.query.region);
 
     const result = await searchCountries(query, region);
     res.json(result);

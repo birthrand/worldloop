@@ -3,6 +3,7 @@ import express from "express";
 
 import { aiRouter } from "./api/ai.routes.js";
 import { countryRouter } from "./api/country.routes.js";
+import { discoverRouter } from "./api/discover.routes.js";
 import { feedRouter } from "./api/feed.routes.js";
 import { healthRouter } from "./api/health.routes.js";
 import { mapRouter } from "./api/map.routes.js";
@@ -12,6 +13,7 @@ import {
   errorHandler,
   notFoundHandler,
 } from "./middleware/error.middleware.js";
+import { publicRateLimiter } from "./middleware/rate-limit.middleware.js";
 import { connectCache, disconnectCache } from "./services/cache.service.js";
 import { logger } from "./utils/logger.js";
 
@@ -25,10 +27,12 @@ logger.info("ENV CHECK", {
 });
 
 app.use("/health", healthRouter);
+app.use(publicRateLimiter);
 app.use("/country", countryRouter);
 app.use("/feed", feedRouter);
 app.use("/search", searchRouter);
 app.use("/map", mapRouter);
+app.use("/discover", discoverRouter);
 app.use("/ai", aiRouter);
 
 app.use(notFoundHandler);

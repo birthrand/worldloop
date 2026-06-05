@@ -50,10 +50,9 @@ function BoundaryLineSegment({
 
   useEffect(() => {
     return () => {
-      geometry.dispose();
       lineObject.material.dispose();
     };
-  }, [geometry, lineObject]);
+  }, [lineObject]);
 
   return <primitive object={lineObject} />;
 }
@@ -102,6 +101,14 @@ export function GlobeBoundaryLines({
     () => buildGlobeBoundaryLines(countryBoundaries),
     [countryBoundaries],
   );
+
+  useEffect(() => {
+    return () => {
+      for (const segment of lineSegments) {
+        segment.geometry.dispose();
+      }
+    };
+  }, [lineSegments]);
 
   const { threeColor, opacity } = useMemo(
     () => parseCssColorToThree(strokeColor),

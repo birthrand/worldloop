@@ -29,6 +29,7 @@ import {
 } from "@/constants/map-country-focus";
 import { MAP_DARK_STYLE } from "@/constants/map-dark-style";
 import { WORLD_INITIAL_REGION } from "@/constants/map-regions";
+import { getMapDisplayLatLng } from "@/lib/map-country";
 import {
   countryNamesMatch,
   filterBoundaryPolygonsByMapContext,
@@ -37,7 +38,10 @@ import {
 } from "@/lib/map-country-boundaries";
 import { shouldFillCountryHighlightGaps } from "@/lib/map-country-focus-polygons";
 import type { MapPressCoordinate } from "@/lib/map-map-tap-hit";
-import type { MapMarkerPresentation } from "@/lib/map-region-markers";
+import {
+  spreadNearbyMarkerCoordinate,
+  type MapMarkerPresentation,
+} from "@/lib/map-region-markers";
 import { areRegionBoundariesTappable } from "@/lib/map-signal-sources";
 import {
   useMapUiStore,
@@ -120,6 +124,8 @@ type WorldMapViewProps = {
   markerRefreshToken?: number;
   /** When false (3D mode), skip flat highlight layers — globe renders them. */
   showFocusLayers?: boolean;
+  /** Push deemphasized nearby flags away from the selected pin (2D only). */
+  spreadNearbyMarkers?: boolean;
 };
 
 export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
@@ -147,6 +153,7 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
       suspendMarkerSnapshot = false,
       markerRefreshToken = 0,
       showFocusLayers = true,
+      spreadNearbyMarkers = false,
     },
     ref,
   ) {
@@ -356,24 +363,38 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
           : null}
         {countries.map((country) => {
           const focusCountryName = selectedName ?? focusTransitionName ?? null;
+          const focalCountry =
+            focusCountryName != null
+              ? (countries.find((c) => c.name === focusCountryName) ??
+                boundaryCountries.find((c) => c.name === focusCountryName) ??
+                null)
+              : null;
           const isSelected = focusCountryName === country.name;
           const isFocusTransitioning =
             !!focusTransitionName &&
             focusTransitionName === country.name &&
             selectedName !== country.name;
           const isHighlighted = isSelected || isFocusTransitioning;
+          const deemphasized =
+            !!focusedRegion &&
+            !!focusCountryName &&
+            focusCountryName !== country.name;
+          const coordinate =
+            spreadNearbyMarkers && deemphasized && focalCountry
+              ? spreadNearbyMarkerCoordinate(focalCountry, country)
+              : (() => {
+                  const [lat, lng] = getMapDisplayLatLng(country);
+                  return { latitude: lat, longitude: lng };
+                })();
 
           return (
             <MapCountryMarker
               key={country.name}
               country={country}
+              coordinate={coordinate}
               selected={isSelected}
               focusTransitioning={isFocusTransitioning}
-              deemphasized={
-                !!focusedRegion &&
-                !!focusCountryName &&
-                focusCountryName !== country.name
-              }
+              deemphasized={deemphasized}
               displayMode={countryMarkerMode}
               presentation={markerPresentation}
               revealGeneration={markerRevealGeneration}
