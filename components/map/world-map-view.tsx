@@ -272,6 +272,14 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
       [boundaryCountries, onBoundaryCountryPress],
     );
 
+    const focusCountryName = selectedName ?? focusTransitionName ?? null;
+    const focalCountry =
+      focusCountryName != null
+        ? (countries.find((c) => c.name === focusCountryName) ??
+          boundaryCountries.find((c) => c.name === focusCountryName) ??
+          null)
+        : null;
+
     return (
       <MapView
         ref={mapRef}
@@ -362,13 +370,6 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
             ))
           : null}
         {countries.map((country) => {
-          const focusCountryName = selectedName ?? focusTransitionName ?? null;
-          const focalCountry =
-            focusCountryName != null
-              ? (countries.find((c) => c.name === focusCountryName) ??
-                boundaryCountries.find((c) => c.name === focusCountryName) ??
-                null)
-              : null;
           const isSelected = focusCountryName === country.name;
           const isFocusTransitioning =
             !!focusTransitionName &&

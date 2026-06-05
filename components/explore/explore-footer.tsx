@@ -1,4 +1,3 @@
-import { Ionicons } from "@expo/vector-icons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { FlagBadge } from "@/components/explore/flag-badge";
@@ -11,38 +10,31 @@ type ExploreFooterProps = {
 
 export function ExploreFooter({ country }: ExploreFooterProps) {
   return (
-    <View style={styles.root}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Open AI country explorer for ${country.name}`}
+      accessibilityHint="Opens a detailed AI-powered country profile"
+      onPress={() => openCountryAiExplorer(country)}
+      style={({ pressed }) => [styles.root, pressed && styles.rootPressed]}
+    >
       <View style={styles.row}>
-        <View style={styles.nameBlock}>
-          <FlagBadge
-            flag={country.flag}
-            iso2={country.cca2}
-            width={36}
-            height={24}
-          />
-          <Text
-            style={styles.countryName}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={15 / 18}
-            ellipsizeMode="tail"
-          >
-            {country.name}
-          </Text>
-        </View>
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Open AI insights for ${country.name}`}
-          accessibilityHint="Opens a detailed AI-powered country dashboard"
-          onPress={() => openCountryAiExplorer(country)}
-          style={({ pressed }) => [styles.link, pressed && styles.linkPressed]}
+        <FlagBadge
+          flag={country.flag}
+          iso2={country.cca2}
+          width={36}
+          height={24}
+        />
+        <Text
+          style={styles.countryName}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={15 / 18}
+          ellipsizeMode="tail"
         >
-          <Text style={styles.linkText}>AI Insights</Text>
-          <Ionicons name="chevron-forward" size={16} color="#00d4c7" />
-        </Pressable>
+          {country.name}
+        </Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -52,40 +44,20 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     paddingHorizontal: 8,
   },
+  rootPressed: {
+    opacity: 0.85,
+  },
   row: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-    minHeight: 44,
-  },
-  nameBlock: {
-    flex: 1,
-    minWidth: 0,
-    flexDirection: "row",
-    alignItems: "center",
     gap: 8,
+    minHeight: 44,
   },
   countryName: {
     flex: 1,
+    minWidth: 0,
     fontFamily: "Poppins-SemiBold",
     fontSize: 18,
     color: "#ffffff",
-  },
-  link: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-    minHeight: 44,
-    paddingHorizontal: 4,
-    justifyContent: "center",
-  },
-  linkPressed: {
-    opacity: 0.75,
-  },
-  linkText: {
-    fontFamily: "Poppins-SemiBold",
-    fontSize: 14,
-    color: "#00d4c7",
   },
 });

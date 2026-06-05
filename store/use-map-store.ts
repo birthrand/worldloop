@@ -161,14 +161,16 @@ export const useMapStore = create<MapState>()((set, get) => ({
             }
           },
           onFetched: (data) => {
-            const countries = withValidCoordinates(data);
-            set({
-              countries,
-              status: "idle",
-              error: null,
-              ...(countries.length > 0
-                ? { mapCountriesFullyLoaded: true }
-                : {}),
+            set((prev) => {
+              const normalized = withValidCoordinates(data);
+              const countries =
+                normalized.length > 0 ? normalized : prev.countries;
+              return {
+                countries,
+                status: "idle",
+                error: null,
+                mapCountriesFullyLoaded: countries.length > 0,
+              };
             });
           },
         });

@@ -192,6 +192,8 @@ type GlobeSceneProps = {
   autoRotateEnabled: boolean;
   /** Seeds globe distance from the map controller (2D latitudeDelta sync). */
   initialCameraDistance?: number;
+  /** True when the screen-space flag overlay replaces the focal 3D pin. */
+  screenSpaceFlagOverlayActive?: boolean;
 };
 
 function GlobeScene({
@@ -219,13 +221,12 @@ function GlobeScene({
   lockUserGestures,
   autoRotateEnabled,
   initialCameraDistance = DEFAULT_CAMERA_DISTANCE,
+  screenSpaceFlagOverlayActive = false,
 }: GlobeSceneProps) {
   const texture = useGlobeTexture();
   const { camera } = useThree();
   const globeGroupRef = useRef<THREE.Group>(null);
   const globeQuaternionRef = useRef(new THREE.Quaternion());
-  const nearbyFlagPinMode =
-    !!focusedRegion && (!!selectedName || !!focusTransitionName);
   const fillCountryHighlightGaps =
     !selectedName &&
     shouldFillCountryHighlightGaps(focusedRegion, previewRegion);
@@ -323,7 +324,10 @@ function GlobeScene({
         positions
           .filter((position) => {
             if (!position.visible) return false;
-            if (nearbyFlagPinMode && focusCountryName === position.name) {
+            if (
+              screenSpaceFlagOverlayActive &&
+              focusCountryName === position.name
+            ) {
               return false;
             }
             return true;
@@ -346,8 +350,8 @@ function GlobeScene({
     },
     [
       focusTransitionName,
-      nearbyFlagPinMode,
       onPinPositions,
+      screenSpaceFlagOverlayActive,
       selectedName,
       showGlobePins,
     ],
@@ -672,7 +676,10 @@ function GlobeScene({
                 selectedName !== country.name;
 
               // Focal country uses the screen-space flag overlay when selected.
-              if (nearbyFlagPinMode && (isSelected || isFocusTransitioning)) {
+              if (
+                screenSpaceFlagOverlayActive &&
+                (isSelected || isFocusTransitioning)
+              ) {
                 return null;
               }
 
@@ -684,9 +691,10 @@ function GlobeScene({
                 return null;
               }
 
-              const pinIsSelected = !nearbyFlagPinMode && isSelected;
+              const pinIsSelected =
+                !screenSpaceFlagOverlayActive && isSelected;
               const pinIsFocusTransitioning =
-                !nearbyFlagPinMode && isFocusTransitioning;
+                !screenSpaceFlagOverlayActive && isFocusTransitioning;
               const [lat, lng] = getMapDisplayLatLng(country);
               return (
                 <GlobeCountryPin
@@ -809,11 +817,11 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
       !!focusedRegion &&
       countries.length > 0 &&
       isGlobeYellowPinsVisible(countryMarkerMode);
-    const showSelectedCountryFlag =
+    const screenSpaceFlagOverlayActive =
       nearbyFlagPinMode && countryMarkerMode === "flag";
 
     const flagOverlayCountries = useMemo(() => {
-      if (!showSelectedCountryFlag) return [];
+      if (!screenSpaceFlagOverlayActive) return [];
 
       const names = new Set<string>();
       if (selectedName) names.add(selectedName);
@@ -821,7 +829,7 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
       if (names.size === 0) return [];
 
       return countries.filter((country) => names.has(country.name));
-    }, [countries, focusTransitionName, selectedName, showSelectedCountryFlag]);
+    }, [countries, focusTransitionName, selectedName, screenSpaceFlagOverlayActive]);
 
     const selectedCountry = useMemo(
       () =>
@@ -970,6 +978,7 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
             lockUserGestures={lockUserGestures}
             autoRotateEnabled={autoRotateEnabled}
             initialCameraDistance={initialCameraDistance}
+            screenSpaceFlagOverlayActive={screenSpaceFlagOverlayActive}
           />
         </Canvas>
 
@@ -982,7 +991,7 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
           onContinentPress={handleContinentLabelPress}
         />
 
-        {showSelectedCountryFlag && flagOverlayCountries.length > 0 ? (
+        {screenSpaceFlagOverlayActive && flagOverlayCountries.length > 0 ? (
           <GlobeFlagOverlay
             countries={flagOverlayCountries}
             positions={flagPinPositions}

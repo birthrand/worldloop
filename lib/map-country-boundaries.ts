@@ -95,21 +95,46 @@ function toRingPoints(ring: number[][]): LatLng[] {
   return ring.filter((point) => point.length >= 2).map(toLatLng);
 }
 
+function longitudeBoundsFromPoints(
+  longitudes: number[],
+): { west: number; east: number } | null {
+  if (longitudes.length === 0) return null;
+
+  const west = Math.min(...longitudes);
+  const east = Math.max(...longitudes);
+
+  if (east - west <= 180) {
+    return { west, east };
+  }
+
+  const shifted = longitudes.map((lng) => (lng < 0 ? lng + 360 : lng));
+  const shiftedWest = Math.min(...shifted);
+  const shiftedEast = Math.max(...shifted);
+
+  return {
+    west: shiftedWest >= 180 ? shiftedWest - 360 : shiftedWest,
+    east: shiftedEast > 180 ? shiftedEast - 360 : shiftedEast,
+  };
+}
+
 /** Axis-aligned bounds from map ring coordinates (WGS84 degrees). */
 export function bboxFromLatLngPoints(points: LatLng[]): BBox | null {
   if (points.length === 0) return null;
 
-  let west = Infinity;
-  let east = -Infinity;
   let south = Infinity;
   let north = -Infinity;
+  const longitudes: number[] = [];
 
   for (const point of points) {
-    west = Math.min(west, point.longitude);
-    east = Math.max(east, point.longitude);
+    longitudes.push(point.longitude);
     south = Math.min(south, point.latitude);
     north = Math.max(north, point.latitude);
   }
+
+  const longitudeBounds = longitudeBoundsFromPoints(longitudes);
+  if (!longitudeBounds) return null;
+
+  const { west, east } = longitudeBounds;
 
   if (
     !Number.isFinite(west) ||
@@ -123,12 +148,81 @@ export function bboxFromLatLngPoints(points: LatLng[]): BBox | null {
   return { west, south, east, north };
 }
 
-/** Union of two bounding boxes (handles disjoint extents). */
+type LongitudeInterval = { west: number; east: number };
+
+/**
+ * Antimeridian: when `west > east`, the bbox wraps across ±180° longitude.
+ * Split into two non-wrapping boxes (same convention as `lib/spatial-query.ts`).
+ */
+function splitBBoxOnAntimeridian(bbox: BBox): BBox[] {
+  if (bbox.west <= bbox.east) return [bbox];
+
+  return [
+    { west: bbox.west, south: bbox.south, east: 180, north: bbox.north },
+    { west: -180, south: bbox.south, east: bbox.east, north: bbox.north },
+  ];
+}
+
+/** Union longitude intervals on a circle; may return a wrapped interval (west > east). */
+function mergeLongitudeIntervals(
+  intervals: LongitudeInterval[],
+): LongitudeInterval {
+  if (intervals.length === 0) return { west: -180, east: 180 };
+
+  const sorted = [...intervals].sort((left, right) => left.west - right.west);
+  const merged: LongitudeInterval[] = [];
+
+  for (const interval of sorted) {
+    const last = merged[merged.length - 1];
+    if (!last || interval.west > last.east) {
+      merged.push({ west: interval.west, east: interval.east });
+      continue;
+    }
+
+    last.east = Math.max(last.east, interval.east);
+  }
+
+  if (merged.length === 1) {
+    return merged[0];
+  }
+
+  let maxGapSize = -Infinity;
+  let gapStart = merged[0].west;
+  let gapEnd = merged[0].east;
+
+  for (let index = 0; index < merged.length; index++) {
+    const current = merged[index];
+    const next = merged[(index + 1) % merged.length];
+    const start = current.east;
+    const end = next.west;
+    const size = index < merged.length - 1 ? end - start : 360 - start + end;
+
+    if (size > maxGapSize) {
+      maxGapSize = size;
+      gapStart = start;
+      gapEnd = end;
+    }
+  }
+
+  const span = 360 - maxGapSize;
+  if (span >= 360) {
+    return { west: -180, east: 180 };
+  }
+
+  return { west: gapEnd, east: gapStart };
+}
+
+/** Union of two bounding boxes (antimeridian-aware; disjoint extents may wrap). */
 export function mergeBBoxes(a: BBox, b: BBox): BBox {
+  const parts = [...splitBBoxOnAntimeridian(a), ...splitBBoxOnAntimeridian(b)];
+  const { west, east } = mergeLongitudeIntervals(
+    parts.map((part) => ({ west: part.west, east: part.east })),
+  );
+
   return {
-    west: Math.min(a.west, b.west),
+    west,
     south: Math.min(a.south, b.south),
-    east: Math.max(a.east, b.east),
+    east,
     north: Math.max(a.north, b.north),
   };
 }

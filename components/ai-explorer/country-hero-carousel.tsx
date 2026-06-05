@@ -7,15 +7,19 @@ import {
   FlatList,
   NativeScrollEvent,
   NativeSyntheticEvent,
-  Pressable,
   StyleSheet,
+  Text,
   View,
   useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-/** Share of screen height for the edge-to-edge hero. */
+/** Share of screen height for the edge-to-edge hero (reduced so facts appear sooner). */
 const HERO_HEIGHT_RATIO = 0.4;
+
+type GradientViewStyle = {
+  experimental_backgroundImage: string;
+};
 
 type CountryHeroCarouselProps = {
   images: string[];
@@ -59,15 +63,6 @@ export function CountryHeroCarousel({
     updateIndexFromOffset(event.nativeEvent.contentOffset.x);
   };
 
-  const goToSlide = (index: number) => {
-    if (index < 0 || index >= slides.length) return;
-    setActiveIndex(index);
-    listRef.current?.scrollToOffset({
-      offset: index * carouselWidth,
-      animated: true,
-    });
-  };
-
   const handleCarouselLayout = (width: number) => {
     if (width > 0 && Math.abs(width - carouselWidth) > 1) {
       setCarouselWidth(width);
@@ -95,6 +90,15 @@ export function CountryHeroCarousel({
         <View style={[styles.backOverlay, { top: backButtonTop }]}>
           <ExplorerBackButton onPress={onBack} />
         </View>
+        <View
+          pointerEvents="none"
+          style={[
+            styles.bottomScrim,
+            {
+              experimental_backgroundImage: `linear-gradient(to top, ${AI_EXPLORER_THEME.surface} 0%, rgba(15, 23, 42, 0.88) 28%, rgba(15, 23, 42, 0.45) 58%, rgba(15, 23, 42, 0) 100%)`,
+            } satisfies GradientViewStyle,
+          ]}
+        />
       </View>
     );
   }
@@ -139,30 +143,23 @@ export function CountryHeroCarousel({
         <ExplorerBackButton onPress={onBack} />
       </View>
 
+      <View
+        pointerEvents="none"
+        style={[
+          styles.bottomScrim,
+          {
+            experimental_backgroundImage: `linear-gradient(to top, ${AI_EXPLORER_THEME.surface} 0%, rgba(15, 23, 42, 0.88) 28%, rgba(15, 23, 42, 0.45) 58%, rgba(15, 23, 42, 0) 100%)`,
+          } satisfies GradientViewStyle,
+        ]}
+      />
+
       {slides.length > 1 ? (
-        <View style={styles.pagination}>
-          {slides.map((_, index) => {
-            const isActive = index === activeIndex;
-            return (
-              <Pressable
-                key={`dot-${index}`}
-                accessibilityRole="button"
-                accessibilityLabel={`Go to image ${index + 1} of ${slides.length}`}
-                accessibilityState={{ selected: isActive }}
-                onPress={() => goToSlide(index)}
-                hitSlop={8}
-                style={styles.dotHitArea}
-              >
-                <View
-                  style={[
-                    styles.dot,
-                    isActive ? styles.dotActive : styles.dotInactive,
-                  ]}
-                />
-              </Pressable>
-            );
-          })}
-        </View>
+        <Text
+          style={styles.imageCounter}
+          accessibilityLabel={`Image ${activeIndex + 1} of ${slides.length}`}
+        >
+          {activeIndex + 1}/{slides.length}
+        </Text>
       ) : null}
     </View>
   );
@@ -195,34 +192,23 @@ const styles = StyleSheet.create({
     left: 16,
     zIndex: 3,
   },
-  pagination: {
+  bottomScrim: {
     position: "absolute",
-    bottom: 28,
     left: 0,
     right: 0,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 4,
+    bottom: 0,
+    height: "55%",
+    zIndex: 1,
+  },
+  imageCounter: {
+    position: "absolute",
+    bottom: 48,
+    right: 16,
     zIndex: 2,
-  },
-  dotHitArea: {
-    padding: 6,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  dotActive: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: AI_EXPLORER_THEME.accent,
-  },
-  dotInactive: {
-    backgroundColor: "rgba(255, 255, 255, 0.4)",
+    fontFamily: "Poppins-Regular",
+    fontSize: 11,
+    lineHeight: 14,
+    color: AI_EXPLORER_THEME.textFaint,
+    letterSpacing: 0.4,
   },
 });

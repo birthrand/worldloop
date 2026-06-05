@@ -7,6 +7,8 @@ type StatItemProps = {
   value: string;
   align?: "center" | "start";
   compact?: boolean;
+  /** Profile explorer tile — value-first hierarchy. */
+  tile?: boolean;
 };
 
 export function StatItem({
@@ -14,22 +16,34 @@ export function StatItem({
   value,
   align = "center",
   compact = false,
+  tile = false,
 }: StatItemProps) {
   return (
     <View
       style={[
         styles.root,
         compact && styles.rootCompact,
+        tile && styles.rootTile,
         align === "start" && styles.rootStart,
       ]}
     >
       <Text
-        style={[styles.value, compact && styles.valueCompact]}
-        numberOfLines={1}
+        style={[
+          styles.value,
+          compact && styles.valueCompact,
+          tile && styles.valueTile,
+        ]}
+        numberOfLines={tile ? 2 : 1}
       >
         {value}
       </Text>
-      <Text style={[styles.label, compact && styles.labelCompact]}>
+      <Text
+        style={[
+          styles.label,
+          compact && styles.labelCompact,
+          tile && styles.labelTile,
+        ]}
+      >
         {label}
       </Text>
     </View>
@@ -46,6 +60,11 @@ const styles = StyleSheet.create({
     gap: 1,
     justifyContent: "center",
   },
+  rootTile: {
+    gap: 3,
+    paddingVertical: 2,
+    justifyContent: "center",
+  },
   rootStart: {
     alignItems: "flex-start",
   },
@@ -58,6 +77,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 15,
   },
+  valueTile: {
+    fontFamily: "Poppins-Medium",
+    fontSize: 13,
+    lineHeight: 17,
+  },
   label: {
     fontFamily: "Poppins-Regular",
     fontSize: 11,
@@ -66,5 +90,12 @@ const styles = StyleSheet.create({
   labelCompact: {
     fontSize: 10,
     lineHeight: 12,
+  },
+  labelTile: {
+    fontSize: 9,
+    lineHeight: 12,
+    letterSpacing: 0.4,
+    textTransform: "uppercase",
+    color: AI_EXPLORER_THEME.textMuted,
   },
 });

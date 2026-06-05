@@ -55,7 +55,10 @@ type CountryFeedState = {
   error: string | null;
   loadInitialFeed: (
     limit?: number,
-    options?: { force?: boolean },
+    options?: {
+      force?: boolean;
+      feedGenerationGuard?: { regionGen: number; hereGen: number };
+    },
   ) => Promise<void>;
   loadMoreFeed: (limit?: number) => Promise<void>;
   setRegionFilter: (region: string | null) => Promise<void>;
@@ -77,6 +80,12 @@ type CountryFeedState = {
 
 function isLoading(status: FeedStatus): boolean {
   return status === "loading" || status === "loadingMore";
+}
+
+function isFeedGenerationStale(regionGen: number, hereGen: number): boolean {
+  return (
+    regionGen !== regionFilterGeneration || hereGen !== hereFeedGeneration
+  );
 }
 
 function shuffleCountries<T>(items: T[]): T[] {
@@ -248,6 +257,11 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
     if (!options?.force && get().countries.length > 0) return;
     if (!options?.force && isLoading(get().status)) return;
 
+    const guard = options?.feedGenerationGuard;
+    const isStale = () =>
+      guard != null &&
+      isFeedGenerationStale(guard.regionGen, guard.hereGen);
+
     const cacheKey = CLIENT_CACHE_KEYS.feedFirstPage;
     let hydratedFromDisk = false;
 
@@ -258,6 +272,7 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
       }>(cacheKey);
 
       if (diskCache.data) {
+        if (isStale()) return;
         hydratedFromDisk = true;
         const normalized = normalizeCountriesRegions(diskCache.data.countries);
         const { sortField, sortOrder } = get();
@@ -277,6 +292,8 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
         });
       }
     }
+
+    if (isStale()) return;
 
     const showBlockingLoad = get().countries.length === 0;
     if (showBlockingLoad) {
@@ -300,6 +317,7 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
           };
         },
         onCached: (data) => {
+          if (isStale()) return;
           if (hydratedFromDisk || get().countries.length > 0) return;
           const { sortField, sortOrder } = get();
           const feedTail = sortCountries(data.countries, sortField, sortOrder);
@@ -319,7 +337,10 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
         },
       });
 
+      if (isStale()) return;
+
       await prefetchFeedHeroImages(payload.countries);
+      if (isStale()) return;
       const { sortField, sortOrder } = get();
       const feedTail = sortCountries(payload.countries, sortField, sortOrder);
       const { countries, currentIndex } = mergeFetchedWithFocusedCountry(
@@ -345,6 +366,7 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
       });
       prefetchRegionsSequentially(null);
     } catch (err) {
+      if (isStale()) return;
       if (get().countries.length === 0) {
         set({
           status: "error",
@@ -676,6 +698,8 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
   restoreForYouFeed: async () => {
     regionFilterGeneration += 1;
     hereFeedGeneration += 1;
+    const restoreRegionGen = regionFilterGeneration;
+    const restoreHereGen = hereFeedGeneration;
 
     useSpatialContextStore.setState((state) => ({
       discoveryScope: { ...state.discoveryScope, mode: "forYou" },
@@ -684,10 +708,10 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
     const snapshot = get().forYouSnapshot;
     if (snapshot && snapshot.countries.length > 0) {
       await prefetchFeedHeroImages(snapshot.countries);
-      const { sortField, sortOrder } = get();
+      if (isFeedGenerationStale(restoreRegionGen, restoreHereGen)) return;
 
       set({
-        countries: sortCountries(snapshot.countries, sortField, sortOrder),
+        countries: snapshot.countries,
         nextCursor: snapshot.nextCursor,
         currentIndex: 0,
         discoveryMode: "forYou",
@@ -699,12 +723,20 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
       return;
     }
 
+    if (isFeedGenerationStale(restoreRegionGen, restoreHereGen)) return;
+
     set({
       discoveryMode: "forYou",
       selectedRegion: null,
       error: null,
     });
-    await get().loadInitialFeed(undefined, { force: true });
+    await get().loadInitialFeed(undefined, {
+      force: true,
+      feedGenerationGuard: {
+        regionGen: restoreRegionGen,
+        hereGen: restoreHereGen,
+      },
+    });
   },
 
   focusCountryInFeed: (country: Country) => {

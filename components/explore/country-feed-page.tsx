@@ -1,17 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { View } from "react-native";
 
-import { AiFunFactCard } from "@/components/explore/ai-fun-fact-card";
-import { CountryHeader } from "@/components/explore/country-header";
-import {
-  CountryImage,
-  prefetchCountryImage,
-} from "@/components/explore/country-image";
-import { ExploreActionRail } from "@/components/explore/explore-action-rail";
-import { ExploreFooter } from "@/components/explore/explore-footer";
+import { prefetchCountryImage } from "@/components/explore/country-image";
+import { ExploreCountryCard } from "@/components/explore/explore-country-card";
+import { HeroImagePager } from "@/components/explore/hero-image-pager";
 import { HeroScrims } from "@/components/explore/hero-scrims";
-import { MediaCarousel } from "@/components/explore/media-carousel";
 import { getAiFactByIndex, getCountryImages } from "@/lib/format-country";
+import { openCountryAiExplorer } from "@/lib/open-country-ai-explorer";
 import type { Country } from "@/types/country";
 
 type CountryFeedPageProps = {
@@ -33,47 +28,40 @@ export function CountryFeedPage({ country, pageHeight }: CountryFeedPageProps) {
     }
   }, [images]);
 
-  const heroUri = images[heroIndex] ?? images[0];
   const onImageIndexChange = useCallback((index: number) => {
     setHeroIndex(index);
   }, []);
 
+  const openAiExplorer = useCallback(() => {
+    openCountryAiExplorer(country);
+  }, [country]);
+
   return (
     <View style={{ height: pageHeight, width: "100%" }}>
-      <CountryImage
-        uri={heroUri}
+      <HeroImagePager
+        images={images}
         flag={country.flag}
         iso2={country.cca2}
-        style={StyleSheet.absoluteFill}
-        contentFit="cover"
+        pageHeight={pageHeight}
+        activeIndex={heroIndex}
+        onIndexChange={onImageIndexChange}
+        onImagePress={openAiExplorer}
       />
 
       {/* pageheight here adjusts the height of the scrims to make them darker */}
       <HeroScrims pageHeight={pageHeight / 1.5} />
       <View className="flex-1" pointerEvents="box-none">
         <View className="flex-1 justify-end" pointerEvents="box-none">
-          <View className="px-2">
-            <CountryHeader country={country} />
-          </View>
-
-          <View className="px-2 pb-4">
-            <AiFunFactCard fact={getAiFactByIndex(country, heroIndex)} />
-            {/* <ExploreFooter country={country} /> */}
-
-            <MediaCarousel
-              key={country.name}
-              images={images}
-              flag={country.flag}
-              iso2={country.cca2}
-              onImageIndexChange={onImageIndexChange}
+          <View className="gap-2">
+            <ExploreCountryCard
+              country={country}
+              fact={getAiFactByIndex(country, heroIndex)}
+              imageIndex={heroIndex}
+              imageCount={images.length}
+              onPress={openAiExplorer}
             />
-
-            {/* <DidYouKnowCard body={getDidYouKnowText(country)} /> */}
-            <ExploreFooter country={country} />
           </View>
         </View>
-
-        <ExploreActionRail country={country} />
       </View>
     </View>
   );

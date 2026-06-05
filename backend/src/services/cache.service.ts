@@ -28,6 +28,8 @@ export const cacheKeys = {
     south: number;
     east: number;
     north: number;
+    centerLat: number;
+    centerLng: number;
     region: string | null;
     limit: number;
     cursor: number;
@@ -39,7 +41,11 @@ export const cacheKeys = {
       params.east.toFixed(4),
       params.north.toFixed(4),
     ].join(":");
-    return `discover:${bboxPart}:${regionPart}:${params.limit}:${params.cursor}`;
+    const centerPart = [
+      params.centerLat.toFixed(4),
+      params.centerLng.toFixed(4),
+    ].join(":");
+    return `discover:${bboxPart}:${centerPart}:${regionPart}:${params.limit}:${params.cursor}`;
   },
   images: (name: string) => `images:${name.trim().toLowerCase()}`,
   ai: (name: string) => `ai:${name.toLowerCase()}`,

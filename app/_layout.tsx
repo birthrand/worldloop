@@ -11,15 +11,14 @@ export default function RootLayout() {
   const { loaded } = useAppFonts();
 
   useEffect(() => {
-    const finishHydration = useDiscoveryProgressStore.persist.onFinishHydration(
-      () => {
-        useDiscoveryProgressStore.getState().recordAppOpen();
-      },
-    );
     if (useDiscoveryProgressStore.persist.hasHydrated()) {
       useDiscoveryProgressStore.getState().recordAppOpen();
+      return;
     }
-    return finishHydration;
+
+    return useDiscoveryProgressStore.persist.onFinishHydration(() => {
+      useDiscoveryProgressStore.getState().recordAppOpen();
+    });
   }, []);
 
   if (!loaded) {
@@ -37,7 +36,7 @@ export default function RootLayout() {
         <Stack.Screen name="index" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="country" options={{ headerShown: false }} />
-        <Stack.Screen name="dev" />
+        {__DEV__ ? <Stack.Screen name="dev" /> : null}
       </Stack>
     </View>
   );

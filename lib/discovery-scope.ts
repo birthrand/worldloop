@@ -55,6 +55,14 @@ const EMPTY_SCOPE: DiscoveryScope = {
   settledAt: 0,
 };
 
+let discoverySequence = 0;
+
+/** Monotonic per-commit token — unique across rapid map settles. */
+export function nextDiscoverySequence(): number {
+  discoverySequence += 1;
+  return discoverySequence;
+}
+
 export function defaultDiscoveryScope(): DiscoveryScope {
   return { ...EMPTY_SCOPE };
 }
@@ -69,7 +77,7 @@ export function buildDiscoveryScope(
     bbox: input.bbox,
     focusedRegion: input.focusedRegion,
     activeCountryName: input.activeCountryName,
-    settledAt: Date.now(),
+    settledAt: nextDiscoverySequence(),
   };
 }
 

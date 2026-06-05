@@ -103,7 +103,6 @@ import {
   shouldDelegateMapTapToCountrySelection,
   shouldSelectCountryAcrossFocusedContinentFromMapTap,
   shouldSelectCountryInFocusedContinentFromMapTap,
-  shouldShowFeaturedChipsInMapChrome,
   shouldShowMapOnboarding,
 } from "@/lib/map-signal-sources";
 import {
@@ -113,7 +112,6 @@ import {
   type MapViewTransition,
 } from "@/lib/map-view-transition";
 import { regionFromGlobeCamera } from "@/lib/map-viewport-bbox";
-import { useCountryFeedStore } from "@/store/use-country-feed-store";
 import { useDiscoveryProgressStore } from "@/store/use-discovery-progress-store";
 import { useExperienceStore } from "@/store/use-experience-store";
 import {
@@ -127,8 +125,6 @@ import {
   type MapMode,
 } from "@/store/use-map-store";
 import { useMapUiStore } from "@/store/use-map-ui-store";
-import { useRecentlyViewedStore } from "@/store/use-recently-viewed-store";
-import { useSavedCountriesStore } from "@/store/use-saved-countries-store";
 import { useSpatialContextStore } from "@/store/use-spatial-context-store";
 import type { MapCountry } from "@/types/country";
 import type { MapPresentationMode } from "@/types/map-presentation";
@@ -2157,98 +2153,6 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
     [activeCountry, focusCountryOnMap, isPreviewOpen, openCountryPreview],
   );
 
-  const handleAllPress = useCallback(async () => {
-    if (countries.length === 0) return;
-    const generation = ++randomPickGenerationRef.current;
-    useRecentlyViewedStore.getState().seedIfEmpty();
-    const entries = useRecentlyViewedStore.getState().entries;
-    const topName = entries[0]?.country?.name?.trim() ?? "";
-    const direct = countries.find((c) => c.name === topName) ?? null;
-
-    let pick = direct;
-    if (!pick) {
-      const feed = useCountryFeedStore.getState();
-      if (feed.countries.length === 0 && feed.status === "idle") {
-        await feed.loadInitialFeed();
-      }
-      const feedTop = feed.countries.slice(0, 3);
-      pick =
-        feedTop
-          .map((fc) => countries.find((c) => c.name === fc.name))
-          .find(Boolean) ?? null;
-    }
-
-    if (!pick) {
-      pick = countries[0] ?? null;
-    }
-
-    if (!pick) {
-      return;
-    }
-    if (
-      !isRandomPickGenerationCurrent(
-        generation,
-        randomPickGenerationRef.current,
-      )
-    )
-      return;
-
-    setActiveChip("all");
-    setFeaturedShortcut("all");
-    focusCountryOnMap(pick, "shuffle");
-  }, [countries, focusCountryOnMap, setActiveChip, setFeaturedShortcut]);
-
-  const handleTerrainPress = useCallback(async () => {
-    if (countries.length === 0) return;
-    const generation = ++randomPickGenerationRef.current;
-    const feed = useCountryFeedStore.getState();
-    if (feed.countries.length === 0 && feed.status === "idle") {
-      await feed.loadInitialFeed();
-    }
-
-    const feedTop = feed.countries.slice(0, 3);
-    const pick =
-      feedTop
-        .map((fc) => countries.find((c) => c.name === fc.name))
-        .find(Boolean) ?? countries[0];
-
-    if (!pick) return;
-    if (
-      !isRandomPickGenerationCurrent(
-        generation,
-        randomPickGenerationRef.current,
-      )
-    )
-      return;
-
-    setActiveChip("nature");
-    setFeaturedShortcut("terrain");
-    focusCountryOnMap(pick, "shuffle");
-  }, [countries, focusCountryOnMap, setActiveChip, setFeaturedShortcut]);
-
-  const handleSavedPress = useCallback(async () => {
-    if (countries.length === 0) return;
-    const generation = ++randomPickGenerationRef.current;
-    const saved = useSavedCountriesStore.getState().savedCountries;
-    const pick =
-      saved
-        .map((sc) => countries.find((c) => c.name === sc.name))
-        .find(Boolean) ?? null;
-
-    if (!pick) return;
-    if (
-      !isRandomPickGenerationCurrent(
-        generation,
-        randomPickGenerationRef.current,
-      )
-    )
-      return;
-
-    setActiveChip("all");
-    setFeaturedShortcut("saved");
-    focusCountryOnMap(pick, "shuffle");
-  }, [countries, focusCountryOnMap, setActiveChip, setFeaturedShortcut]);
-
   const handleRandomCountry = useCallback(async () => {
     if (
       !shouldAcceptRandomFabTap({
@@ -2747,11 +2651,6 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
     markerRefreshToken,
     showRegionChrome: regionChromeVisible,
     showCountryFocusPill: countryFocusPillVisible,
-    shouldShowFeaturedChips: shouldShowFeaturedChipsInMapChrome(
-      is3d,
-      cameraTier,
-      focusedRegion,
-    ),
     showFlagToggle,
     showOnboarding,
     dismissMapOnboarding,
@@ -2770,9 +2669,6 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
     handleReset,
     handleBackToWorld,
     handleBackToContinent,
-    handleAllPress,
-    handleTerrainPress,
-    handleSavedPress,
     dismissCountryPreview,
     exitCountryPreviewToContinent,
     clearCountryFocus,

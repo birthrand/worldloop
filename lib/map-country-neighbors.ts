@@ -245,6 +245,26 @@ function pickCardinalNeighbors(
     used.add(best.name);
   }
 
+  if (selected.length < limit) {
+    const unusedCandidates = candidates.filter(
+      (candidate) => !used.has(candidate.name),
+    );
+    unusedCandidates.sort((a, b) => {
+      const [latA, lngA] = getMapDisplayLatLng(a);
+      const [latB, lngB] = getMapDisplayLatLng(b);
+      return (
+        squaredDistance(focalLat, focalLng, latA, lngA) -
+        squaredDistance(focalLat, focalLng, latB, lngB)
+      );
+    });
+
+    for (const candidate of unusedCandidates) {
+      if (selected.length >= limit) break;
+      selected.push(candidate);
+      used.add(candidate.name);
+    }
+  }
+
   return selected;
 }
 

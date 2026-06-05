@@ -78,6 +78,10 @@ export function buildSpatialDiscoveryPool(input: {
     pool = allCountries;
   }
 
+  if (pool.length === 0 && focusedRegion) {
+    pool = allCountries.filter((country) => country.region === focusedRegion);
+  }
+
   return filterPoolPreferUnvisited(pool, visitedNames, preferUnvisited);
 }
 
@@ -116,7 +120,7 @@ export function buildSpatialMapRandomPool({
 
   if (filtered.length > 0) return filtered;
 
-  return filterMapCountriesByChip(countries, activeChip).filter((country) =>
+  return filterMapCountriesByChip(base, activeChip).filter((country) =>
     isValidLatLng(getMapDisplayLatLng(country)),
   );
 }

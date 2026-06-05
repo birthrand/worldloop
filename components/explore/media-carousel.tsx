@@ -1,121 +1,49 @@
-import { useRef, useState } from "react";
-import {
-  FlatList,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
-  Pressable,
-  StyleSheet,
-  View,
-} from "react-native";
-
-import { CountryImage } from "@/components/explore/country-image";
-
-const THUMB_SIZE = 72;
-const THUMB_GAP = 8;
+import { Pressable, StyleSheet, View } from "react-native";
 
 type MediaCarouselProps = {
   images: string[];
-  flag: string;
-  iso2?: string;
+  activeIndex: number;
   onImageIndexChange: (index: number) => void;
 };
 
 export function MediaCarousel({
   images,
-  flag,
-  iso2,
+  activeIndex,
   onImageIndexChange,
 }: MediaCarouselProps) {
-  const [activeIndex, setActiveIndex] = useState(0);
-  const listRef = useRef<FlatList<string>>(null);
+  const slideCount = Math.max(images.length, 1);
 
-  const displayImages =
-    images.length > 0 ? images : ([null] as (string | null)[]);
-
-  const handleSelect = (index: number) => {
-    setActiveIndex(index);
-    onImageIndexChange(index);
-    listRef.current?.scrollToIndex({
-      index,
-      animated: true,
-      viewPosition: 0.5,
-    });
-  };
-
-  const onScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const offsetX = e.nativeEvent.contentOffset.x;
-    const index = Math.round(offsetX / (THUMB_SIZE + THUMB_GAP));
-    if (index !== activeIndex && index >= 0 && index < displayImages.length) {
-      setActiveIndex(index);
-      onImageIndexChange(index);
-    }
-  };
+  if (slideCount <= 1) {
+    return null;
+  }
 
   return (
-    <View className="gap-3 -mb-4">
-      <FlatList
-        ref={listRef}
-        data={displayImages as string[]}
-        keyExtractor={(_, index) => `thumb-${index}`}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        snapToInterval={THUMB_SIZE + THUMB_GAP}
-        decelerationRate="fast"
-        contentContainerStyle={{ paddingHorizontal: 8, gap: THUMB_GAP }}
-        onMomentumScrollEnd={onScrollEnd}
-        getItemLayout={(_, index) => ({
-          length: THUMB_SIZE + THUMB_GAP,
-          offset: (THUMB_SIZE + THUMB_GAP) * index,
-          index,
-        })}
-        renderItem={({ item, index }) => {
-          const isActive = index === activeIndex;
-          return (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Image ${index + 1} of ${displayImages.length}`}
-              accessibilityState={{ selected: isActive }}
-              onPress={() => handleSelect(index)}
-            >
-              <CountryImage
-                uri={item ?? undefined}
-                flag={flag}
-                iso2={iso2}
-                style={[styles.thumb, isActive && styles.thumbActive]}
-                contentFit="cover"
-                flagSize={{ width: 40, height: 28 }}
-              />
-            </Pressable>
-          );
-        }}
-      />
-
-      <View className="flex-row items-center justify-center gap-2">
-        {displayImages.map((_, index) => (
-          <View
+    <View className="flex-row items-center justify-center gap-2 pb-4">
+      {Array.from({ length: slideCount }, (_, index) => {
+        const isActive = index === activeIndex;
+        return (
+          <Pressable
             key={`dot-${index}`}
-            style={[
-              styles.dot,
-              index === activeIndex ? styles.dotActive : styles.dotInactive,
-            ]}
-          />
-        ))}
-      </View>
+            accessibilityRole="button"
+            accessibilityLabel={`Show image ${index + 1} of ${slideCount}`}
+            accessibilityState={{ selected: isActive }}
+            onPress={() => onImageIndexChange(index)}
+            hitSlop={8}
+          >
+            <View
+              style={[
+                styles.dot,
+                isActive ? styles.dotActive : styles.dotInactive,
+              ]}
+            />
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  thumb: {
-    width: THUMB_SIZE,
-    height: THUMB_SIZE,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "transparent",
-  },
-  thumbActive: {
-    borderColor: "#ffffff",
-  },
   dot: {
     width: 6,
     height: 6,

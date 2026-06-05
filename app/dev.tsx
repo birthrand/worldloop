@@ -1,4 +1,5 @@
 import { Image } from "expo-image";
+import { Redirect } from "expo-router";
 import { useEffect } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 
@@ -36,7 +37,7 @@ function DevButton({
   );
 }
 
-export default function DevScreen() {
+function DevScreenContent() {
   const mapCountries = useMapStore((s) => s.countries);
   const mapStatus = useMapStore((s) => s.status);
   const loadMapCountries = useMapStore((s) => s.loadMapCountries);
@@ -57,8 +58,6 @@ export default function DevScreen() {
     (s) => s.worldProgressPercent,
   );
   const streakDays = useDiscoveryProgressStore((s) => s.streakDays);
-  const resetProgress = useDiscoveryProgressStore((s) => s.resetProgress);
-  const seedSampleVisits = useDiscoveryProgressStore((s) => s.seedSampleVisits);
 
   const currentCountry = countries[currentIndex];
   const isFeedLoading = status === "loading" || status === "loadingMore";
@@ -158,10 +157,16 @@ export default function DevScreen() {
             label="Clear local cache"
             onPress={() => void clearAllClientCache()}
           />
-          <DevButton label="Reset discovery progress" onPress={resetProgress} />
-          <DevButton label="Seed sample visits" onPress={seedSampleVisits} />
         </View>
       </View>
     </ScrollView>
   );
+}
+
+export default function DevScreen() {
+  if (!__DEV__) {
+    return <Redirect href="/(tabs)/explore" />;
+  }
+
+  return <DevScreenContent />;
 }

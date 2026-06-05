@@ -18,8 +18,6 @@ import { MapControls } from "@/components/map/map-controls";
 import { MapCountryFocusPill } from "@/components/map/map-country-focus-pill";
 import { MapCountryPreviewCard } from "@/components/map/map-country-preview-card";
 import { MapDiscoveryChrome } from "@/components/map/map-discovery-chrome";
-import { MapFeaturedChips } from "@/components/map/map-featured-chips";
-import { MapFilterChips } from "@/components/map/map-filter-chips";
 import { MapOnboardingSheet } from "@/components/map/map-onboarding-sheet";
 import { MapRandomCountryHint } from "@/components/map/map-random-country-hint";
 import { MapRegionChrome } from "@/components/map/map-region-chrome";
@@ -28,7 +26,7 @@ import { MapTopChromeScrim } from "@/components/map/map-top-chrome-scrim";
 import { continentDisplayLabel } from "@/constants/regions";
 import { useMapLogic } from "@/hooks/use-map-logic";
 import { resolveGlobeAutoRotateEnabled } from "@/lib/globe-rotation";
-import { openExploreHere } from "@/lib/open-explore-here";
+import { openExploreHere, openExploreRegion } from "@/lib/open-explore-here";
 import { useSpatialContextStore } from "@/store/use-spatial-context-store";
 
 /** Preview card "back to continent" action — off until UX is finalized. */
@@ -192,15 +190,6 @@ export default function MapScreen() {
               style={{ paddingTop: insets.top + 12, zIndex: 1 }}
             >
               <MapSearchRow />
-              {map.shouldShowFeaturedChips ? (
-                <MapFeaturedChips
-                  onAllPress={() => void map.handleAllPress()}
-                  onTerrainPress={() => void map.handleTerrainPress()}
-                  onSavedPress={() => void map.handleSavedPress()}
-                />
-              ) : (
-                <MapFilterChips />
-              )}
             </View>
           </>
         ) : null}
@@ -328,7 +317,13 @@ export default function MapScreen() {
                 : undefined
             }
             bottom={discoveryChromeBottom}
-            onExplorePress={() => void openExploreHere()}
+            onExplorePress={() => {
+              if (discoveryChromeFromRegionActive && map.focusedRegion) {
+                void openExploreRegion(map.focusedRegion);
+                return;
+              }
+              void openExploreHere();
+            }}
           />
         ) : null}
       </View>
