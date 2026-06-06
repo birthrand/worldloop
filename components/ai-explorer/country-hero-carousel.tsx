@@ -2,6 +2,7 @@ import { ExplorerBackButton } from "@/components/ai-explorer/explorer-back-butto
 import { AI_EXPLORER_THEME } from "@/constants/ai-explorer-theme";
 import { images as appImages } from "@/constants/images";
 import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
 import { useCallback, useRef, useState } from "react";
 import {
   FlatList,
@@ -17,9 +18,27 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 /** Share of screen height for the edge-to-edge hero (reduced so facts appear sooner). */
 const HERO_HEIGHT_RATIO = 0.4;
 
-type GradientViewStyle = {
-  experimental_backgroundImage: string;
-};
+const HERO_BOTTOM_SCRIM_COLORS = [
+  AI_EXPLORER_THEME.surface,
+  "rgba(15, 23, 42, 0.88)",
+  "rgba(15, 23, 42, 0.45)",
+  "rgba(15, 23, 42, 0)",
+] as const;
+
+const HERO_BOTTOM_SCRIM_LOCATIONS = [0, 0.28, 0.58, 1] as const;
+
+function HeroBottomScrim() {
+  return (
+    <LinearGradient
+      pointerEvents="none"
+      colors={[...HERO_BOTTOM_SCRIM_COLORS]}
+      locations={[...HERO_BOTTOM_SCRIM_LOCATIONS]}
+      start={{ x: 0, y: 1 }}
+      end={{ x: 0, y: 0 }}
+      style={styles.bottomScrim}
+    />
+  );
+}
 
 type CountryHeroCarouselProps = {
   images: string[];
@@ -90,15 +109,7 @@ export function CountryHeroCarousel({
         <View style={[styles.backOverlay, { top: backButtonTop }]}>
           <ExplorerBackButton onPress={onBack} />
         </View>
-        <View
-          pointerEvents="none"
-          style={[
-            styles.bottomScrim,
-            {
-              experimental_backgroundImage: `linear-gradient(to top, ${AI_EXPLORER_THEME.surface} 0%, rgba(15, 23, 42, 0.88) 28%, rgba(15, 23, 42, 0.45) 58%, rgba(15, 23, 42, 0) 100%)`,
-            } satisfies GradientViewStyle,
-          ]}
-        />
+        <HeroBottomScrim />
       </View>
     );
   }
@@ -143,15 +154,7 @@ export function CountryHeroCarousel({
         <ExplorerBackButton onPress={onBack} />
       </View>
 
-      <View
-        pointerEvents="none"
-        style={[
-          styles.bottomScrim,
-          {
-            experimental_backgroundImage: `linear-gradient(to top, ${AI_EXPLORER_THEME.surface} 0%, rgba(15, 23, 42, 0.88) 28%, rgba(15, 23, 42, 0.45) 58%, rgba(15, 23, 42, 0) 100%)`,
-          } satisfies GradientViewStyle,
-        ]}
-      />
+      <HeroBottomScrim />
 
       {slides.length > 1 ? (
         <Text

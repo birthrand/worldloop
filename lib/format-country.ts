@@ -3,6 +3,15 @@ import {
   stripUrlsFromText,
 } from "@/lib/normalize-image-url";
 
+/** Ensure landmark copy always starts with a capital letter. */
+export function formatLandmarkDescription(description: string): string {
+  const trimmed = description.trim();
+  if (!trimmed) return trimmed;
+  const first = trimmed.charAt(0);
+  if (first === first.toUpperCase()) return trimmed;
+  return first.toUpperCase() + trimmed.slice(1);
+}
+
 /** Compact population label (e.g. 33.7M). */
 export function formatPopulation(population: number): string {
   // Runtime safety: backend responses can occasionally miss population,

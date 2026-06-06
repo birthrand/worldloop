@@ -18,6 +18,7 @@ type HeroImagePagerProps = {
   activeIndex: number;
   onIndexChange: (index: number) => void;
   onImagePress?: () => void;
+  onImagePressIn?: () => void;
 };
 
 export function HeroImagePager({
@@ -28,6 +29,7 @@ export function HeroImagePager({
   activeIndex,
   onIndexChange,
   onImagePress,
+  onImagePressIn,
 }: HeroImagePagerProps) {
   const { width } = useWindowDimensions();
   const listRef = useRef<FlatList<string>>(null);
@@ -91,6 +93,7 @@ export function HeroImagePager({
           accessibilityLabel="Open AI country explorer"
           accessibilityHint="Opens a detailed AI-powered country profile"
           onPress={onImagePress}
+          onPressIn={onImagePressIn}
           disabled={!onImagePress}
           style={{ width, height: pageHeight }}
         >

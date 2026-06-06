@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
-import { AI_EXPLORER_THEME } from "@/constants/ai-explorer-theme";
+import { StatItem } from "@/components/ai-explorer/stat-item";
 
 type ProfileSectionProps = {
   title: string;
@@ -10,9 +10,11 @@ type ProfileSectionProps = {
 
 export function ProfileSection({ title, children }: ProfileSectionProps) {
   return (
-    <View style={styles.root}>
-      <Text style={styles.title}>{title}</Text>
-      <View style={styles.content}>{children}</View>
+    <View className="gap-2">
+      <Text className="font-medium text-[11px] leading-[14px] tracking-[0.6px] uppercase text-white/48">
+        {title}
+      </Text>
+      <View className="gap-2">{children}</View>
     </View>
   );
 }
@@ -24,57 +26,37 @@ type ProfileFactRowProps = {
   fullWidth?: boolean;
 };
 
+/** Geography / profile facts — matches explorer stat tiles (value above label). */
 export function ProfileFactRow({
   label,
   value,
   fullWidth = false,
 }: ProfileFactRowProps) {
   return (
-    <View style={[styles.factRow, fullWidth && styles.factRowFull]}>
-      <Text style={styles.factLabel}>{label}</Text>
-      <Text style={styles.factValue} numberOfLines={2}>
-        {value}
-      </Text>
+    <View
+      style={[
+        styles.factCell,
+        fullWidth ? styles.factCellFull : styles.factCellHalf,
+      ]}
+    >
+      <StatItem tile align="start" fill={false} label={label} value={value} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    gap: 8,
+  factCell: {
+    paddingVertical: 2,
+    alignSelf: "flex-start",
   },
-  title: {
-    fontFamily: "Poppins-Medium",
-    fontSize: 11,
-    lineHeight: 14,
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
-    color: AI_EXPLORER_THEME.textMuted,
+  factCellHalf: {
+    width: "48%",
+    flexGrow: 0,
+    flexShrink: 0,
   },
-  content: {
-    gap: 8,
-  },
-  factRow: {
-    flex: 1,
-    minWidth: "45%",
-    gap: 2,
-  },
-  factRowFull: {
-    minWidth: "100%",
-    flex: undefined,
+  factCellFull: {
     width: "100%",
-  },
-  factLabel: {
-    fontFamily: "Poppins-Regular",
-    fontSize: 10,
-    color: AI_EXPLORER_THEME.textFaint,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  factValue: {
-    fontFamily: "Poppins-Medium",
-    fontSize: 14,
-    lineHeight: 18,
-    color: AI_EXPLORER_THEME.textPrimary,
+    flexGrow: 0,
+    flexShrink: 0,
   },
 });

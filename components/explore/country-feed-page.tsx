@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { View } from "react-native";
 
 import { prefetchCountryImage } from "@/components/explore/country-image";
@@ -6,7 +6,11 @@ import { ExploreCountryCard } from "@/components/explore/explore-country-card";
 import { HeroImagePager } from "@/components/explore/hero-image-pager";
 import { HeroScrims } from "@/components/explore/hero-scrims";
 import { getAiFactByIndex, getCountryImages } from "@/lib/format-country";
-import { openCountryAiExplorer } from "@/lib/open-country-ai-explorer";
+import {
+  openCountryAiExplorer,
+  warmCountryAiExplorer,
+} from "@/lib/open-country-ai-explorer";
+import { prefetchCountryProfile } from "@/lib/prefetch-country-profiles";
 import type { Country } from "@/types/country";
 
 type CountryFeedPageProps = {
@@ -15,7 +19,7 @@ type CountryFeedPageProps = {
 };
 
 export function CountryFeedPage({ country, pageHeight }: CountryFeedPageProps) {
-  const images = getCountryImages(country);
+  const images = useMemo(() => getCountryImages(country), [country.name]);
   const [heroIndex, setHeroIndex] = useState(0);
 
   useEffect(() => {
@@ -28,9 +32,17 @@ export function CountryFeedPage({ country, pageHeight }: CountryFeedPageProps) {
     }
   }, [images]);
 
+  useEffect(() => {
+    void prefetchCountryProfile(country.name);
+  }, [country.name]);
+
   const onImageIndexChange = useCallback((index: number) => {
     setHeroIndex(index);
   }, []);
+
+  const warmAiExplorer = useCallback(() => {
+    warmCountryAiExplorer(country);
+  }, [country]);
 
   const openAiExplorer = useCallback(() => {
     openCountryAiExplorer(country);
@@ -46,6 +58,7 @@ export function CountryFeedPage({ country, pageHeight }: CountryFeedPageProps) {
         activeIndex={heroIndex}
         onIndexChange={onImageIndexChange}
         onImagePress={openAiExplorer}
+        onImagePressIn={warmAiExplorer}
       />
 
       {/* pageheight here adjusts the height of the scrims to make them darker */}
@@ -58,7 +71,9 @@ export function CountryFeedPage({ country, pageHeight }: CountryFeedPageProps) {
               fact={getAiFactByIndex(country, heroIndex)}
               imageIndex={heroIndex}
               imageCount={images.length}
+              onImageIndexChange={onImageIndexChange}
               onPress={openAiExplorer}
+              onPressIn={warmAiExplorer}
             />
           </View>
         </View>

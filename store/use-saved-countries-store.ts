@@ -14,6 +14,8 @@ type SavedCountriesState = {
   savedCountries: Country[];
   savedAtByName: Record<string, number>;
   categoryByName: Record<string, SavedCategory>;
+  /** Persisted sentinel — prevents demo seed from re-running after an intentional clear. */
+  hasSeeded: boolean;
   toggleSaved: (country: Country) => void;
   isSaved: (name: string) => boolean;
   getSavedAt: (name: string) => number | null;
@@ -24,6 +26,19 @@ type SavedCountriesState = {
   clearSaved: () => void;
 };
 
+const DEFAULT_SEED_FUN_FACT =
+  "Discover culture, landscapes, and stories worth saving.";
+
+const SEED_FUN_FACTS: Record<string, string> = {
+  Peru: "Land of ancient wonders, vibrant culture, and breathtaking landscapes.",
+  Japan: "Where tradition meets the future in harmony.",
+  Iceland: "Fire and ice unite in a land of raw natural beauty.",
+  "New Zealand": "Adventure awaits amidst stunning fjords and Maori culture.",
+  Italy: "A feast for the senses with art, history, and cuisine.",
+  Morocco: "Vibrant souks, majestic dunes, and ancient medinas.",
+  Canada: "Vast wilderness and cosmopolitan cities await.",
+};
+
 function seedCountry(
   name: string,
   cca2: string,
@@ -32,7 +47,10 @@ function seedCountry(
   population: number,
   latlng: [number, number],
   images?: string[],
+  funFact?: string,
 ): Country {
+  const fact = funFact ?? SEED_FUN_FACTS[name] ?? DEFAULT_SEED_FUN_FACT;
+
   return {
     name,
     cca2,
@@ -41,7 +59,13 @@ function seedCountry(
     population,
     flag: buildFlagCdnUrl(cca2),
     latlng,
-    images,
+    images: images ?? [],
+    ai: {
+      fact,
+      facts: [fact],
+      caption: fact,
+      narration: "",
+    },
   };
 }
 
@@ -180,6 +204,7 @@ export const useSavedCountriesStore = create<SavedCountriesState>()(
       savedCountries: [],
       savedAtByName: {},
       categoryByName: {},
+      hasSeeded: false,
 
       toggleSaved: (country: Country) => {
         const { savedCountries, savedAtByName, categoryByName } = get();
@@ -255,8 +280,12 @@ export const useSavedCountriesStore = create<SavedCountriesState>()(
       },
 
       seedIfEmpty: () => {
-        if (get().savedCountries.length > 0) return;
-        set(buildSeedData());
+        if (get().hasSeeded) return;
+        if (get().savedCountries.length > 0) {
+          set({ hasSeeded: true });
+          return;
+        }
+        set({ ...buildSeedData(), hasSeeded: true });
       },
 
       clearSaved: () =>
@@ -274,6 +303,9 @@ export const useSavedCountriesStore = create<SavedCountriesState>()(
 
         state.savedAtByName = state.savedAtByName ?? {};
         state.categoryByName = state.categoryByName ?? {};
+        if (state.hasSeeded === undefined) {
+          state.hasSeeded = state.savedCountries.length > 0;
+        }
 
         for (const country of state.savedCountries) {
           if (!state.savedAtByName[country.name]) {

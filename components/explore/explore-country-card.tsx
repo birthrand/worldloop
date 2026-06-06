@@ -1,8 +1,8 @@
-import { useEffect, useRef } from "react";
-import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ExploreActionRail } from "@/components/explore/explore-action-rail";
 import { FlagBadge } from "@/components/explore/flag-badge";
+import { MediaCarousel } from "@/components/explore/media-carousel";
 import { formatPopulation } from "@/lib/format-country";
 import type { Country } from "@/types/country";
 
@@ -16,6 +16,8 @@ const STAT_BLOCK_HEIGHT =
   STAT_VALUE_LINE_HEIGHT + STAT_ITEM_GAP + STAT_LABEL_LINE_HEIGHT;
 const FLAG_HEIGHT = STAT_BLOCK_HEIGHT;
 const FLAG_WIDTH = Math.round(FLAG_HEIGHT * 1.5);
+const FACT_LINE_HEIGHT = 17;
+const FACT_MAX_LINES = 3;
 type GradientViewStyle = {
   experimental_backgroundImage: string;
 };
@@ -28,13 +30,19 @@ type ExploreCountryCardProps = {
   fact: string;
   imageIndex?: number;
   imageCount?: number;
+  onImageIndexChange?: (index: number) => void;
   onPress?: () => void;
+  onPressIn?: () => void;
 };
 
 type StatItemProps = {
   value: string;
   label: string;
 };
+
+function StatDivider() {
+  return <View style={styles.statDivider} accessibilityElementsHidden />;
+}
 
 function StatItem({ value, label }: StatItemProps) {
   return (
@@ -54,22 +62,15 @@ export function ExploreCountryCard({
   fact,
   imageIndex = 0,
   imageCount = 1,
+  onImageIndexChange,
   onPress,
+  onPressIn,
 }: ExploreCountryCardProps) {
-  const factOpacity = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    factOpacity.setValue(0);
-    const animation = Animated.timing(factOpacity, {
-      toValue: 1,
-      duration: 220,
-      useNativeDriver: true,
-    });
-    animation.start();
-    return () => animation.stop();
-  }, [fact, factOpacity]);
-
   const capital = country.capital?.trim() || "—";
+  const heroSlides = Array.from(
+    { length: imageCount },
+    (_, index) => `${index}`,
+  );
 
   const openDetails = onPress;
   const pressableProps = {
@@ -77,6 +78,7 @@ export function ExploreCountryCard({
     accessibilityLabel: `${country.name} country details`,
     accessibilityHint: "Opens a detailed AI-powered country profile",
     onPress: openDetails,
+    onPressIn,
     disabled: !openDetails,
   };
 
@@ -91,6 +93,17 @@ export function ExploreCountryCard({
         ]}
       >
         <View style={styles.topSection}>
+          {imageCount > 1 ? (
+            <View style={styles.paginationWrap}>
+              <MediaCarousel
+                compact
+                images={heroSlides}
+                activeIndex={imageIndex}
+                onImageIndexChange={onImageIndexChange ?? (() => {})}
+              />
+            </View>
+          ) : null}
+
           <View style={styles.titleRow}>
             <Pressable
               {...pressableProps}
@@ -108,12 +121,7 @@ export function ExploreCountryCard({
               </Text>
             </Pressable>
 
-            <ExploreActionRail
-              country={country}
-              variant="header"
-              imageIndex={imageIndex}
-              imageCount={imageCount}
-            />
+            <ExploreActionRail country={country} variant="header" />
           </View>
 
           <Pressable
@@ -131,11 +139,14 @@ export function ExploreCountryCard({
                   height={FLAG_HEIGHT}
                 />
               </View>
+              <StatDivider />
               <StatItem value={country.region || "—"} label="Region" />
+              <StatDivider />
               <StatItem
                 value={formatPopulation(country.population)}
                 label="Population"
               />
+              <StatDivider />
               <StatItem value={capital} label="Capital" />
             </View>
           </Pressable>
@@ -147,12 +158,15 @@ export function ExploreCountryCard({
             pressed && openDetails ? styles.pressablePressed : null,
           ]}
         >
-          <Animated.View style={[styles.factSection, { opacity: factOpacity }]}>
+          <View style={styles.factSection}>
+            <View style={styles.sectionDivider} accessibilityElementsHidden />
             <View style={styles.factHeader}>
               <Text style={styles.factLabel}>DID YOU KNOW?</Text>
             </View>
-            <Text style={styles.factText}>{fact}</Text>
-          </Animated.View>
+            <Text style={styles.factText} numberOfLines={FACT_MAX_LINES}>
+              {fact}
+            </Text>
+          </View>
         </Pressable>
       </View>
     </View>
@@ -170,10 +184,15 @@ const styles = StyleSheet.create({
     paddingTop: FADE_HEADROOM,
     paddingBottom: 8,
     paddingHorizontal: CARD_PADDING,
-    gap: 12,
+    gap: 4,
   },
   topSection: {
     gap: 10,
+  },
+  paginationWrap: {
+    marginHorizontal: -CARD_PADDING,
+    alignItems: "center",
+    marginBottom: 2,
   },
   titleRow: {
     flexDirection: "row",
@@ -193,7 +212,13 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 10,
+  },
+  statDivider: {
+    width: StyleSheet.hairlineWidth,
+    height: STAT_BLOCK_HEIGHT,
+    backgroundColor: "rgba(255, 255, 255, 0.14)",
+    flexShrink: 0,
   },
   flagCell: {
     height: STAT_BLOCK_HEIGHT,
@@ -220,12 +245,18 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
     paddingTop: 8,
     paddingBottom: 12,
+    gap: 6,
+  },
+  sectionDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: "rgba(255, 255, 255, 0.14)",
+    alignSelf: "stretch",
   },
   factHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   factLabel: {
     fontFamily: "Poppins-Medium",
@@ -238,8 +269,8 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
     fontFamily: "Poppins-Regular",
     fontSize: 14,
-    lineHeight: 17,
+    lineHeight: FACT_LINE_HEIGHT,
+    minHeight: FACT_LINE_HEIGHT * FACT_MAX_LINES,
     color: "rgba(255, 255, 255, 0.88)",
-    // textAlign: "justify",
   },
 });

@@ -1,19 +1,20 @@
-import { Ionicons } from "@expo/vector-icons";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, {
   Easing,
   scrollTo,
   useAnimatedReaction,
   useAnimatedRef,
+  useAnimatedScrollHandler,
   useSharedValue,
-  withSpring,
   withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { GlassIconButton } from "@/components/explore/glass-icon-button";
 import {
   continentDisplayLabel,
+  continentTabLabel,
   EXPLORE_HEADER_TABS,
   FOR_YOU_TAB,
   HERE_TAB,
@@ -24,9 +25,6 @@ import { useCountryFeedStore } from "@/store/use-country-feed-store";
 import { useSearchUiStore } from "@/store/use-search-ui-store";
 import { useSpatialContextStore } from "@/store/use-spatial-context-store";
 
-const UNDERLINE_WIDTH_RATIO = 0.55;
-const UNDERLINE_MAX_WIDTH = 40;
-const UNDERLINE_SPRING = { damping: 20, stiffness: 280 };
 const PROGRESSIVE_EASING = Easing.out(Easing.cubic);
 const PROGRESSIVE_MIN_SCROLL_MS = 250;
 const PROGRESSIVE_MAX_SCROLL_MS = 550;
@@ -34,8 +32,22 @@ const PROGRESSIVE_DISTANCE_TO_MS = 0.6;
 const SCROLL_POSITION_EPSILON = 2;
 /** Place selected tab center at this fraction of the viewport width. */
 const TAB_ANCHOR_RATIO = 0.5;
+const TAB_EDGE_PADDING = 8;
+/** Shared row height — tab labels and search icon align on one centerline. */
+const HEADER_ROW_HEIGHT = 44;
+const UNDERLINE_HEIGHT = 2;
+const LABEL_UNDERLINE_GAP = 2;
+const TAB_UNDERLINE_INSET = UNDERLINE_HEIGHT + LABEL_UNDERLINE_GAP;
+/** Fixed underline width — only horizontal position changes per tab. */
+const UNDERLINE_WIDTH = 40;
 
 type TabLayout = { x: number; width: number };
+
+type UnderlineLayout = {
+  left: number;
+  width: number;
+  visible: boolean;
+};
 
 export function ExploreTopBar() {
   const insets = useSafeAreaInsets();
@@ -73,68 +85,74 @@ export function ExploreTopBar() {
   const previousTabRef = useRef<ExploreHeaderTab>(selectedTab);
   const trackRef = useRef<View>(null);
   const tabRefs = useRef<Partial<Record<string, View>>>({});
-  const underlineVisibleRef = useRef(false);
+  const labelRefs = useRef<Partial<Record<string, Text>>>({});
+  const [underline, setUnderline] = useState<UnderlineLayout>({
+    left: 0,
+    width: 0,
+    visible: false,
+  });
 
   const scrollOffsetX = useSharedValue(0);
+  const isUserDragging = useSharedValue(false);
 
-  const underlineX = useSharedValue(0);
-  const underlineWidth = useSharedValue(0);
-  const underlineOpacity = useSharedValue(0);
-
-  const moveUnderlineTo = useCallback(
-    (layout: TabLayout | undefined, animate: boolean) => {
-      if (!layout) {
-        underlineOpacity.value = withTiming(0, { duration: 180 });
-        underlineVisibleRef.current = false;
-        return;
-      }
-
-      const narrowWidth = Math.min(
-        layout.width * UNDERLINE_WIDTH_RATIO,
-        UNDERLINE_MAX_WIDTH,
-      );
-      const targetX = layout.x + (layout.width - narrowWidth) / 2;
-
-      underlineOpacity.value = withTiming(1, { duration: 180 });
-      underlineVisibleRef.current = true;
-
-      if (animate) {
-        underlineX.value = withSpring(targetX, UNDERLINE_SPRING);
-        underlineWidth.value = withSpring(narrowWidth, UNDERLINE_SPRING);
-      } else {
-        underlineX.value = targetX;
-        underlineWidth.value = narrowWidth;
-      }
+  const onTabScroll = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollOffsetX.value = event.contentOffset.x;
     },
-    [underlineOpacity, underlineWidth, underlineX],
-  );
-
-  const measureSelectedTab = useCallback(
-    (animate: boolean) => {
-      const tab = tabRefs.current[selectedTab];
-      const track = trackRef.current;
-      if (!tab || !track) return;
-
-      tab.measureLayout(
-        track,
-        (x, _y, width) => {
-          moveUnderlineTo({ x, width }, animate);
-        },
-        () => {
-          requestAnimationFrame(() => measureSelectedTab(animate));
-        },
-      );
+    onBeginDrag: () => {
+      isUserDragging.value = true;
     },
-    [moveUnderlineTo, selectedTab],
-  );
+    onEndDrag: () => {
+      isUserDragging.value = false;
+    },
+    onMomentumBegin: () => {
+      isUserDragging.value = true;
+    },
+    onMomentumEnd: () => {
+      isUserDragging.value = false;
+    },
+  });
+
+  const moveUnderlineTo = useCallback((layout: TabLayout | undefined) => {
+    if (!layout || layout.width <= 0) {
+      setUnderline((prev) => ({ ...prev, visible: false }));
+      return;
+    }
+
+    const width = UNDERLINE_WIDTH;
+    const left = layout.x + (layout.width - width) / 2;
+
+    setUnderline({
+      left,
+      width,
+      visible: true,
+    });
+  }, []);
+
+  const measureSelectedTab = useCallback(() => {
+    const label = labelRefs.current[selectedTab];
+    const track = trackRef.current;
+    if (!label || !track) return;
+
+    label.measureLayout(
+      track,
+      (x, _y, width) => {
+        moveUnderlineTo({ x, width });
+      },
+      () => {
+        requestAnimationFrame(() => measureSelectedTab());
+      },
+    );
+  }, [moveUnderlineTo, selectedTab]);
 
   useEffect(() => {
-    measureSelectedTab(underlineVisibleRef.current);
+    measureSelectedTab();
   }, [measureSelectedTab, selectedTab]);
 
   useAnimatedReaction(
     () => scrollOffsetX.value,
     (x, previous) => {
+      if (isUserDragging.value) return;
       if (previous === null || x !== previous) {
         scrollTo(scrollRef, x, 0, false);
       }
@@ -170,27 +188,52 @@ export function ExploreTopBar() {
       if (!isScrollReady()) return null;
 
       const tabCenter = layout.x + layout.width / 2;
+      let target = tabCenter - viewport * TAB_ANCHOR_RATIO;
+      target = clampScrollX(target);
 
-      const target = tabCenter - viewport * TAB_ANCHOR_RATIO;
+      const tabStart = layout.x - TAB_EDGE_PADDING;
+      const tabEnd = layout.x + layout.width + TAB_EDGE_PADDING;
 
-      return clampScrollX(target);
+      if (target > tabStart) {
+        target = clampScrollX(tabStart);
+      }
+
+      if (target + viewport < tabEnd) {
+        target = clampScrollX(tabEnd - viewport);
+      }
+
+      return target;
     },
     [clampScrollX, isScrollReady],
   );
 
-  const cacheTabLayout = useCallback((name: ExploreHeaderTab) => {
-    const tab = tabRefs.current[name];
-    const track = trackRef.current;
-    if (!tab || !track) return;
+  const cacheTabLayout = useCallback(
+    (name: ExploreHeaderTab, scrollIfSelected = false) => {
+      const tab = tabRefs.current[name];
+      const track = trackRef.current;
+      if (!tab || !track) return;
 
-    tab.measureLayout(
-      track,
-      (x, _y, width) => {
-        tabLayoutsRef.current[name] = { x, width };
-      },
-      () => {},
-    );
-  }, []);
+      tab.measureLayout(
+        track,
+        (x, _y, width) => {
+          const layout = { x, width };
+          tabLayoutsRef.current[name] = layout;
+
+          if (!scrollIfSelected || name !== selectedTab) return;
+
+          const targetX = computeScrollXForLayout(
+            headerTabs.indexOf(name),
+            layout,
+          );
+          if (targetX !== null) {
+            scrollOffsetX.value = targetX;
+          }
+        },
+        () => {},
+      );
+    },
+    [computeScrollXForLayout, headerTabs, scrollOffsetX, selectedTab],
+  );
 
   const scrollXForTab = useCallback(
     (name: ExploreHeaderTab) => {
@@ -250,7 +293,10 @@ export function ExploreTopBar() {
 
   useEffect(() => {
     progressiveScrollToTab(selectedTab, true);
-  }, [progressiveScrollToTab, selectedTab]);
+    requestAnimationFrame(() => {
+      cacheTabLayout(selectedTab, true);
+    });
+  }, [cacheTabLayout, progressiveScrollToTab, selectedTab]);
 
   const onTabPress = (name: ExploreHeaderTab) => {
     if (name === FOR_YOU_TAB) {
@@ -275,15 +321,16 @@ export function ExploreTopBar() {
 
   return (
     <View style={{ paddingTop: insets.top + 8 }}>
-      <View className="flex-row items-center px-4">
+      <View style={styles.headerRow}>
         <Animated.ScrollView
           ref={scrollRef}
           horizontal
-          scrollEnabled={false}
+          scrollEnabled
           showsHorizontalScrollIndicator={false}
           style={styles.continentsScroll}
           contentContainerStyle={styles.continentsRow}
           scrollEventThrottle={16}
+          onScroll={onTabScroll}
           onLayout={(event) => {
             scrollViewWidthRef.current = event.nativeEvent.layout.width;
           }}
@@ -317,12 +364,15 @@ export function ExploreTopBar() {
                       delete tabRefs.current[name];
                     }
                   }}
-                  style={index > 0 ? styles.continentTabSpacing : undefined}
+                  style={[
+                    styles.continentTab,
+                    index > 0 ? styles.continentTabSpacing : undefined,
+                  ]}
                   collapsable={false}
                   onLayout={() => {
-                    cacheTabLayout(name);
+                    cacheTabLayout(name, name === selectedTab);
                     if (selectedTab === name) {
-                      measureSelectedTab(underlineVisibleRef.current);
+                      measureSelectedTab();
                     }
                   }}
                 >
@@ -338,47 +388,62 @@ export function ExploreTopBar() {
                     ]}
                   >
                     <Text
-                      style={[
-                        styles.continentText,
+                      ref={(node) => {
+                        if (node) {
+                          labelRefs.current[name] = node;
+                        } else {
+                          delete labelRefs.current[name];
+                        }
+                      }}
+                      className={
                         selected
-                          ? styles.continentTextSelected
+                          ? "shrink-0 pb-0 text-[15px] leading-[15px] font-semibold text-white"
                           : hasActiveFilter
-                            ? styles.continentTextDimmed
-                            : styles.continentTextDefault,
-                      ]}
+                            ? "shrink-0 pb-0 text-[15px] leading-[15px] font-normal text-white/40"
+                            : "shrink-0 pb-0 text-[15px] leading-[15px] font-normal text-white/70"
+                      }
+                      style={styles.continentLabel}
+                      onLayout={() => {
+                        if (selectedTab === name) {
+                          measureSelectedTab();
+                        }
+                      }}
                     >
                       {name === FOR_YOU_TAB
                         ? name
                         : name === HERE_TAB
                           ? name
-                          : continentDisplayLabel(name)}
+                          : continentTabLabel(name, selected)}
                     </Text>
                   </Pressable>
                 </View>
               );
             })}
 
-            {/* <Animated.View
-              style={[styles.slidingUnderline, animatedUnderlineStyle]}
-              pointerEvents="none"
-            /> */}
+            {underline.visible ? (
+              <View
+                style={[
+                  styles.slidingUnderline,
+                  { left: underline.left, width: underline.width },
+                ]}
+                pointerEvents="none"
+              />
+            ) : null}
           </View>
         </Animated.ScrollView>
 
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Search countries"
-          onPress={() => openSearch()}
-          hitSlop={8}
-          style={({ pressed }) => [
-            styles.searchButton,
-            pressed && styles.pressed,
-          ]}
-        >
-          <View className="p-2 bg-white/10 rounded-full border border-white/10">
-            <Ionicons name="search" size={24} color="#ffffff" />
-          </View>
-        </Pressable>
+        <View style={styles.searchDivider} accessibilityElementsHidden />
+
+        <View style={styles.searchSlot}>
+          <GlassIconButton
+            icon="search-outline"
+            label="Search"
+            variant="plain"
+            onPress={() => openSearch()}
+            accessibilityLabel="Search countries"
+            accessibilityHint="Opens country search"
+          />
+        </View>
       </View>
 
       {discoveryMode === "here" ? (
@@ -391,56 +456,65 @@ export function ExploreTopBar() {
 }
 
 const styles = StyleSheet.create({
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    minHeight: HEADER_ROW_HEIGHT,
+    paddingLeft: 16,
+    paddingRight: 4,
+  },
   continentsScroll: {
     flex: 1,
-    marginRight: 12,
+    height: HEADER_ROW_HEIGHT,
+    marginRight: 4,
   },
   continentsRow: {
     alignItems: "center",
+    minHeight: HEADER_ROW_HEIGHT,
   },
   continentsTrack: {
     flexDirection: "row",
     alignItems: "center",
-    paddingRight: 4,
+    height: HEADER_ROW_HEIGHT,
+    paddingHorizontal: TAB_EDGE_PADDING,
     position: "relative",
-    minHeight: 44,
-    paddingBottom: 2,
+    paddingBottom: TAB_UNDERLINE_INSET,
+  },
+  continentTab: {
+    flexShrink: 0,
+    justifyContent: "center",
   },
   continentTabSpacing: {
-    marginLeft: 16,
+    marginLeft: 4,
   },
   continentItem: {
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: 8,
+    flexShrink: 0,
   },
-  continentText: {
-    fontSize: 15,
-    fontFamily: "Poppins-Medium",
-    paddingBottom: 0,
-  },
-  continentTextDefault: {
-    color: "rgba(255, 255, 255, 0.7)",
-  },
-  continentTextDimmed: {
-    color: "rgba(255, 255, 255, 0.4)",
-  },
-  continentTextSelected: {
-    color: "#ffffff",
-    fontFamily: "Poppins-SemiBold",
+  continentLabel: {
+    includeFontPadding: false,
   },
   slidingUnderline: {
     position: "absolute",
-    bottom: 0,
-    height: 2,
+    bottom: 4,
+    height: UNDERLINE_HEIGHT,
     borderRadius: 1,
     backgroundColor: "#ffffff",
   },
-  searchButton: {
-    width: 44,
-    height: 44,
+  searchDivider: {
+    alignSelf: "center",
+    width: StyleSheet.hairlineWidth,
+    height: 20,
+    marginRight: 0,
+    backgroundColor: "rgba(255, 255, 255, 0.25)",
+  },
+  searchSlot: {
+    width: HEADER_ROW_HEIGHT,
+    height: HEADER_ROW_HEIGHT,
     alignItems: "center",
     justifyContent: "center",
-    flexShrink: 0,
   },
   pressed: {
     opacity: 0.85,
