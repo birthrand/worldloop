@@ -29,9 +29,7 @@ export function openCountryInExplore(
   const spatial = useSpatialContextStore.getState();
   const feed = useCountryFeedStore.getState();
   const hereMode =
-    options?.mode === "here" ||
-    options?.preserveHereMode ||
-    spatial.discoveryScope.mode === "here";
+    options?.mode === "here" || options?.preserveHereMode === true;
 
   if (hereMode) {
     useSpatialContextStore.getState().enterHereMode();
@@ -40,10 +38,7 @@ export function openCountryInExplore(
     feed.setDiscoveryMode("forYou");
   }
 
-  const canPreserveQueue =
-    options?.preserveQueue === true && spatial.queue.length > 0;
-
-  if (canPreserveQueue) {
+  if (options?.preserveQueue === true) {
     const focused = feed.focusCountryInDiscoveryQueue(country.name);
     if (focused) {
       useRecentlyViewedStore.getState().recordView(country);

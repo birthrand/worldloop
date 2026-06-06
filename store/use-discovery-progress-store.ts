@@ -145,13 +145,18 @@ export const useDiscoveryProgressStore = create<DiscoveryProgressState>()(
 
         if (!Array.isArray(state.visitedCountryIds)) {
           state.visitedCountryIds = [];
-          state.visitedAtByCountryId = {};
-          state.lastActiveDate = null;
-          state.streakDays = 0;
-          state.weekProgress = createEmptyWeekProgress();
-          state.countriesExplored = 0;
-          state.worldProgressPercent = 0;
-          state.quizzesCompleted = 0;
+          if (
+            typeof state.visitedAtByCountryId !== "object" ||
+            state.visitedAtByCountryId === null
+          ) {
+            state.visitedAtByCountryId = {};
+          }
+          if (state.lastActiveDate === undefined) {
+            state.lastActiveDate = null;
+          }
+          if (state.weekProgress === undefined) {
+            state.weekProgress = createEmptyWeekProgress();
+          }
           return;
         }
 

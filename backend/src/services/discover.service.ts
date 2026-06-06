@@ -24,10 +24,10 @@ function bboxFromCentroid(
   paddingDegrees: number,
 ): BBox {
   return {
-    west: lng - paddingDegrees,
-    east: lng + paddingDegrees,
-    south: lat - paddingDegrees,
-    north: lat + paddingDegrees,
+    west: Math.max(-180, lng - paddingDegrees),
+    east: Math.min(180, lng + paddingDegrees),
+    south: Math.max(-90, lat - paddingDegrees),
+    north: Math.min(90, lat + paddingDegrees),
   };
 }
 
@@ -144,6 +144,8 @@ export async function discoverCountries(
     south: query.south,
     east: query.east,
     north: query.north,
+    centerLat: query.centerLat,
+    centerLng: query.centerLng,
     region: query.region,
     limit: query.limit,
     cursor: query.cursor,

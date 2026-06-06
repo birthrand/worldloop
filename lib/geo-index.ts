@@ -40,9 +40,7 @@ function bboxFromCentroid(
 
 function buildSourceKey(countries: MapCountry[]): string {
   if (countries.length === 0) return "empty";
-  const first = countries[0]?.name ?? "";
-  const last = countries[countries.length - 1]?.name ?? "";
-  return `${countries.length}:${first}:${last}`;
+  return countries.map(countryEntityId).join(",");
 }
 
 function resolveCountryBbox(

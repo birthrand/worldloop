@@ -27,7 +27,7 @@ export default function TabsLayout() {
         <Tabs.Screen name="index" options={{ href: null }} />
         <Tabs.Screen name="explore" options={{ title: "Explore" }} />
         <Tabs.Screen name="map" options={{ title: "Map" }} />
-        <Tabs.Screen name="saved" options={{ href: null }} />
+        <Tabs.Screen name="saved" options={{ title: "Saved" }} />
         <Tabs.Screen name="profile" options={{ title: "Profile" }} />
       </Tabs>
       <SearchOverlay />

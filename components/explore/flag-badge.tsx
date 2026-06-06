@@ -9,6 +9,7 @@ type FlagBadgeProps = {
   iso2?: string;
   width?: number;
   height?: number;
+  circular?: boolean;
 };
 
 /**
@@ -20,13 +21,30 @@ export function FlagBadge({
   iso2,
   width = 48,
   height = 32,
+  circular = false,
 }: FlagBadgeProps) {
   const uri = resolveFlagCdnUrl(flag, iso2);
+  const size = circular ? Math.min(width, height) : undefined;
+  const frameStyle = [
+    styles.frame,
+    circular && styles.frameCircular,
+    circular && size != null
+      ? { width: size, height: size, borderRadius: size / 2 }
+      : { width, height },
+  ];
 
   if (!uri) {
     return (
-      <View style={[styles.frame, { width, height }]}>
-        <Text style={styles.placeholderEmoji}>🏳️</Text>
+      <View style={frameStyle}>
+        <Text
+          style={[
+            styles.placeholderEmoji,
+            circular &&
+              size != null && { fontSize: size * 0.55, lineHeight: size },
+          ]}
+        >
+          🏳️
+        </Text>
       </View>
     );
   }
@@ -34,7 +52,7 @@ export function FlagBadge({
   return (
     <Image
       source={{ uri }}
-      style={[styles.frame, { width, height }]}
+      style={frameStyle}
       contentFit="cover"
       accessibilityLabel="Country flag"
       cachePolicy="memory-disk"
@@ -49,6 +67,9 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255, 255, 255, 0.2)",
     overflow: "hidden",
     backgroundColor: "rgba(255, 255, 255, 0.08)",
+  },
+  frameCircular: {
+    borderColor: "rgba(255, 255, 255, 0.28)",
   },
   placeholderEmoji: {
     fontSize: 22,

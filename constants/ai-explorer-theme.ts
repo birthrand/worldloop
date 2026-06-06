@@ -17,15 +17,17 @@ export const AI_EXPLORER_THEME = {
   successSoft: AMBER_SOFT,
 
   textPrimary: "#ffffff",
-  textSecondary: "rgba(255, 255, 255, 0.72)",
-  textMuted: "rgba(255, 255, 255, 0.55)",
-  textFaint: "rgba(255, 255, 255, 0.5)",
+  textSecondary: "rgba(255, 255, 255, 0.82)",
+  textMuted: "rgba(255, 255, 255, 0.48)",
+  textFaint: "rgba(255, 255, 255, 0.38)",
 
-  divider: "rgba(255, 255, 255, 0.12)",
-  borderStrong: "rgba(255, 255, 255, 0.22)",
+  divider: "rgba(255, 255, 255, 0.08)",
+  borderStrong: "rgba(255, 255, 255, 0.16)",
 
   /** Opaque panel behind profile content (covers hero overlap). */
   surface: "#0f172a",
+  /** Raised inner modules (stat tiles, callouts). */
+  surfaceRaised: "rgba(255, 255, 255, 0.04)",
 } as const;
 
 export const DIVIDER_COLOR = AI_EXPLORER_THEME.divider;

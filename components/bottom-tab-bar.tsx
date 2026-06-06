@@ -13,7 +13,10 @@ const TAB_ACTIVE = "#fbbf24";
 const TAB_INACTIVE = "#94a3b8";
 
 /** Bar chrome only — add safe-area bottom inset for full tab bar height. */
-export const TAB_BAR_CONTENT_HEIGHT = 62;
+export const TAB_BAR_CONTENT_HEIGHT = 54;
+
+/** Floating explore UI clearance above the tab bar (card fact block + padding). */
+export const EXPLORE_FLOATING_CHROME_OFFSET = 94;
 
 type IoniconsName = keyof typeof Ionicons.glyphMap;
 
@@ -38,10 +41,10 @@ const TAB_ITEMS: TabItem[] = [
     iconFocused: "globe",
   },
   {
-    routeName: "index",
-    label: "Home",
-    icon: "home-outline",
-    iconFocused: "home",
+    routeName: "saved",
+    label: "Saved",
+    icon: "bookmark-outline",
+    iconFocused: "bookmark",
   },
   {
     routeName: "profile",
@@ -119,10 +122,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-around",
     backgroundColor: TAB_BAR_BG,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingTop: 6,
-    paddingBottom: 4,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingTop: 8,
+    paddingBottom: 2,
     paddingHorizontal: 8,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -4 },
@@ -135,8 +138,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 2,
-    minHeight: 52,
-    paddingTop: 2,
+    minHeight: 44,
   },
   label: {
     fontSize: 11,

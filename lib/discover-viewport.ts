@@ -17,9 +17,17 @@ export type DiscoverViewportParams = {
   limit?: number;
 };
 
+function resolveDiscoverRequestRegion(
+  focusedRegion: string | null,
+  tier: ZoomTier,
+): string | undefined {
+  return focusedRegion && tier === "continent" ? focusedRegion : undefined;
+}
+
 function buildDiscoverCacheKey(params: DiscoverViewportParams): string {
-  const { bbox, focusedRegion, viewportCenter, limit = 50 } = params;
-  const regionPart = focusedRegion?.trim().toLowerCase() ?? "all";
+  const { bbox, focusedRegion, viewportCenter, tier, limit = 50 } = params;
+  const effectiveRegion = resolveDiscoverRequestRegion(focusedRegion, tier);
+  const regionPart = effectiveRegion?.trim().toLowerCase() ?? "all";
   const bboxPart = [
     bbox.west.toFixed(4),
     bbox.south.toFixed(4),
@@ -59,8 +67,7 @@ export async function fetchDiscoverViewportCountries(
   const { bbox, viewportCenter, focusedRegion, tier, mapCountries } = params;
   const limit = params.limit ?? 50;
 
-  const region =
-    focusedRegion && tier === "continent" ? focusedRegion : undefined;
+  const region = resolveDiscoverRequestRegion(focusedRegion, tier);
 
   const request = {
     west: bbox.west,

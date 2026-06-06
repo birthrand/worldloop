@@ -37,8 +37,9 @@ export default function ExploreScreen() {
 
   useEffect(() => {
     if (discoveryMode !== "here") return;
-    if (countries.length > 0 || status === "loading") return;
+    if (countries.length > 0) return;
     if (viewportCountries.length === 0) return;
+    if (status !== "idle") return;
     void loadHereFeed(viewportCountries);
   }, [
     countries.length,

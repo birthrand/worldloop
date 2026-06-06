@@ -41,16 +41,18 @@ export function ProfileFactRow({
 
 const styles = StyleSheet.create({
   root: {
-    gap: 6,
+    gap: 8,
   },
   title: {
     fontFamily: "Poppins-Medium",
-    fontSize: 13,
-    lineHeight: 16,
-    color: AI_EXPLORER_THEME.textSecondary,
+    fontSize: 11,
+    lineHeight: 14,
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+    color: AI_EXPLORER_THEME.textMuted,
   },
   content: {
-    gap: 6,
+    gap: 8,
   },
   factRow: {
     flex: 1,
@@ -64,15 +66,15 @@ const styles = StyleSheet.create({
   },
   factLabel: {
     fontFamily: "Poppins-Regular",
-    fontSize: 11,
-    color: AI_EXPLORER_THEME.textMuted,
+    fontSize: 10,
+    color: AI_EXPLORER_THEME.textFaint,
     textTransform: "uppercase",
-    letterSpacing: 0.4,
+    letterSpacing: 0.5,
   },
   factValue: {
     fontFamily: "Poppins-Medium",
-    fontSize: 13,
-    lineHeight: 16,
+    fontSize: 14,
+    lineHeight: 18,
     color: AI_EXPLORER_THEME.textPrimary,
   },
 });

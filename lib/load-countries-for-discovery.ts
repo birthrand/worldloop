@@ -137,11 +137,18 @@ export async function hasCachedCountryInViewport(
   entities: GeoEntity[],
 ): Promise<boolean> {
   const deduped = dedupeEntities(entities).slice(0, HERE_FEED_PAGE_SIZE);
+  if (deduped.length === 0) return false;
 
-  for (const entity of deduped) {
-    const cached = await readCachedCountry(entity.name);
-    if (cached) return true;
+  try {
+    await Promise.any(
+      deduped.map(async (entity) => {
+        const cached = await readCachedCountry(entity.name);
+        if (cached) return cached;
+        throw new Error("cache miss");
+      }),
+    );
+    return true;
+  } catch {
+    return false;
   }
-
-  return false;
 }

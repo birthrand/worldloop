@@ -18,16 +18,35 @@ import type { BBox, ZoomTier } from "@/types/geo";
 /** Visible longitude span relative to latitude span (globe fixed camera is slightly wider). */
 const GLOBE_LONGITUDE_SPAN_FACTOR = 1.15;
 
-export function bboxFromMapRegion(region: Region): BBox {
-  const halfLat = region.latitudeDelta / 2;
-  const halfLng = region.longitudeDelta / 2;
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
 
-  return {
-    south: region.latitude - halfLat,
-    north: region.latitude + halfLat,
-    west: region.longitude - halfLng,
-    east: region.longitude + halfLng,
-  };
+function wrapLongitude(lng: number): number {
+  return ((((lng + 180) % 360) + 360) % 360) - 180;
+}
+
+function buildViewportBBox(input: {
+  centerLat: number;
+  centerLng: number;
+  halfLat: number;
+  halfLng: number;
+}): BBox {
+  const south = clamp(input.centerLat - input.halfLat, -90, 90);
+  const north = clamp(input.centerLat + input.halfLat, -90, 90);
+  const west = wrapLongitude(input.centerLng - input.halfLng);
+  const east = wrapLongitude(input.centerLng + input.halfLng);
+
+  return { south, north, west, east };
+}
+
+export function bboxFromMapRegion(region: Region): BBox {
+  return buildViewportBBox({
+    centerLat: region.latitude,
+    centerLng: region.longitude,
+    halfLat: region.latitudeDelta / 2,
+    halfLng: region.longitudeDelta / 2,
+  });
 }
 
 /**
@@ -74,15 +93,12 @@ export function bboxFromGlobeCamera(state: {
 }): BBox {
   const latitudeDelta = resolveLatitudeDeltaFromGlobeDistance(state.distance);
   const longitudeDelta = latitudeDelta * GLOBE_LONGITUDE_SPAN_FACTOR;
-  const halfLat = latitudeDelta / 2;
-  const halfLng = longitudeDelta / 2;
-
-  return {
-    south: state.targetLat - halfLat,
-    north: state.targetLat + halfLat,
-    west: state.targetLng - halfLng,
-    east: state.targetLng + halfLng,
-  };
+  return buildViewportBBox({
+    centerLat: state.targetLat,
+    centerLng: state.targetLng,
+    halfLat: latitudeDelta / 2,
+    halfLng: longitudeDelta / 2,
+  });
 }
 
 /** Flat-map region matching a live globe camera (3D → 2D viewport handoff). */

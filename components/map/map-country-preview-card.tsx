@@ -11,8 +11,8 @@ import {
 import Animated, { SlideInDown, SlideOutDown } from "react-native-reanimated";
 
 import { FlagBadge } from "@/components/explore/flag-badge";
+import { AI_EXPLORER_THEME } from "@/constants/ai-explorer-theme";
 import { CLIENT_CACHE_KEYS, CLIENT_CACHE_TTL } from "@/constants/client-cache";
-import { prefetchCountryProfile } from "@/lib/prefetch-country-profiles";
 import { continentDisplayLabel } from "@/constants/regions";
 import { fetchCountryByName } from "@/lib/api";
 import { getClientCache, staleWhileRevalidate } from "@/lib/client-cache";
@@ -20,6 +20,7 @@ import { formatPopulation } from "@/lib/format-country";
 import { mapCountryToCountry } from "@/lib/map-country";
 import { openCountryAiExplorer } from "@/lib/open-country-ai-explorer";
 import { openCountryInExplore } from "@/lib/open-country-in-explore";
+import { prefetchCountryProfile } from "@/lib/prefetch-country-profiles";
 import { useSpatialContextStore } from "@/store/use-spatial-context-store";
 import type { Country, MapCountry } from "@/types/country";
 
@@ -245,9 +246,13 @@ export function MapCountryPreviewCard({
           pressed && styles.insightsButtonPressed,
         ]}
       >
-        <Ionicons name="sparkles" size={16} color="#00d4c7" />
+        <Ionicons name="sparkles" size={16} color={AI_EXPLORER_THEME.accent} />
         <Text style={styles.insightsLabel}>AI Country Explorer</Text>
-        <Ionicons name="chevron-forward" size={16} color="#94a3b8" />
+        <Ionicons
+          name="chevron-forward"
+          size={16}
+          color={AI_EXPLORER_THEME.textMuted}
+        />
       </Pressable>
 
       <View style={styles.actionStack}>
@@ -304,11 +309,16 @@ export function MapCountryPreviewCard({
           accessibilityRole="button"
           accessibilityLabel={`Open ${country.name} in Explore`}
           onPress={() =>
-            openCountryInExplore(countryForActions, {
-              mode: discoveryScopeMode === "here" ? "here" : undefined,
-              preserveHereMode: discoveryScopeMode === "here",
-              preserveQueue: discoveryScopeMode === "here" && queueLength > 0,
-            })
+            openCountryInExplore(
+              countryForActions,
+              discoveryScopeMode === "here" && queueLength > 0
+                ? {
+                    mode: "here",
+                    preserveHereMode: true,
+                    preserveQueue: true,
+                  }
+                : undefined,
+            )
           }
           style={({ pressed }) => [
             styles.actionSegment,
@@ -488,20 +498,20 @@ const styles = StyleSheet.create({
     gap: 8,
     minHeight: 44,
     paddingHorizontal: 14,
-    borderRadius: 12,
-    backgroundColor: "rgba(0, 212, 199, 0.08)",
-    borderWidth: 1,
-    borderColor: "rgba(0, 212, 199, 0.25)",
+    borderRadius: 14,
+    backgroundColor: AI_EXPLORER_THEME.surfaceRaised,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: AI_EXPLORER_THEME.divider,
   },
   insightsButtonPressed: {
-    opacity: 0.88,
-    backgroundColor: "rgba(0, 212, 199, 0.14)",
+    opacity: 0.92,
+    backgroundColor: "rgba(255, 255, 255, 0.06)",
   },
   insightsLabel: {
     flex: 1,
     fontSize: 14,
-    fontFamily: "Poppins-SemiBold",
-    color: "#ffffff",
+    fontFamily: "Poppins-Medium",
+    color: AI_EXPLORER_THEME.textPrimary,
   },
   actionStack: {
     flexDirection: "row",

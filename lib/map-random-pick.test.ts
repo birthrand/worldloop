@@ -58,6 +58,23 @@ describe("buildSpatialDiscoveryPool", () => {
     expect(pool.map((country) => country.name)).toEqual(["France"]);
   });
 
+  it("falls back to focused region when viewport entities do not resolve", () => {
+    const oceaniaCountries = [
+      ...allCountries,
+      mapCountry("Fiji", "Oceania"),
+      mapCountry("Samoa", "Oceania"),
+    ];
+
+    const pool = buildSpatialDiscoveryPool({
+      viewportCountries: [entity("Atlantis", "Oceania")],
+      focusedRegion: "Oceania",
+      allCountries: oceaniaCountries,
+      tier: "continent",
+    });
+
+    expect(pool.map((country) => country.name)).toEqual(["Fiji", "Samoa"]);
+  });
+
   it("uses world pool at world tier without viewport or region", () => {
     const pool = buildSpatialDiscoveryPool({
       viewportCountries: [],

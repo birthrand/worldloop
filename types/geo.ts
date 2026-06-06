@@ -29,6 +29,6 @@ export type DiscoveryScope = {
   bbox: BBox | null;
   focusedRegion: string | null;
   activeCountryName: string | null;
-  /** ISO timestamp when scope last committed (after settle). */
+  /** Monotonic commit token — increments on each map scope settle. */
   settledAt: number;
 };

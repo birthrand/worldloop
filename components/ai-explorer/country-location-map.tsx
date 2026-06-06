@@ -1,7 +1,6 @@
 import { Image } from "expo-image";
 import { useEffect } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import MapView, { Marker } from "react-native-maps";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -11,87 +10,52 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { AI_EXPLORER_THEME } from "@/constants/ai-explorer-theme";
-import { MAP_DARK_STYLE } from "@/constants/map-dark-style";
-import { resolveFlagCdnUrl } from "@/lib/flag-url";
+import { images } from "@/constants/images";
+import { formatCoordinates } from "@/lib/format-country";
 import { getMapDisplayLatLng, isValidLatLng } from "@/lib/map-country";
 import type { Country } from "@/types/country";
 
-const MAP_HEIGHT = 148;
-/** Tighter zoom so the country sits in the middle of the preview. */
-const LAT_DELTA = 8;
-const FLAG_SIZE = 32;
-
-function longitudeDeltaForLatitude(latitude: number): number {
-  const radians = (latitude * Math.PI) / 180;
-  const adjusted = LAT_DELTA * Math.cos(radians);
-  return Math.max(adjusted, 4);
-}
-
-type FlagMapMarkerProps = {
-  flag: string;
-  iso2: string;
-};
-
-function FlagMapMarker({ flag, iso2 }: FlagMapMarkerProps) {
-  const pulse = useSharedValue(1);
-  const flagUri = resolveFlagCdnUrl(flag, iso2);
-
-  useEffect(() => {
-    pulse.value = withRepeat(
-      withTiming(1.55, { duration: 1800, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true,
-    );
-  }, [pulse]);
-
-  const innerGlowStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulse.value }],
-    opacity: Math.max(0.2, 1.1 - pulse.value),
-  }));
-
-  const outerGlowStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulse.value * 1.25 }],
-    opacity: Math.max(0.08, 0.55 - pulse.value * 0.2),
-  }));
-
-  return (
-    <View style={styles.markerAnchor} pointerEvents="none">
-      <Animated.View style={[styles.glowRingOuter, outerGlowStyle]} />
-      <Animated.View style={[styles.glowRingInner, innerGlowStyle]} />
-      <View style={styles.flagCircle}>
-        {flagUri ? (
-          <Image
-            source={{ uri: flagUri }}
-            style={styles.flagImage}
-            contentFit="cover"
-            cachePolicy="memory-disk"
-            accessibilityLabel="Country flag on map"
-          />
-        ) : (
-          <Text style={styles.flagFallback}>🏳️</Text>
-        )}
-      </View>
-    </View>
-  );
-}
+const MODULE_HEIGHT = 132;
 
 type CountryLocationMapProps = {
   country: Pick<Country, "name" | "latlng" | "flag" | "cca2">;
   onPress: () => void;
 };
 
+function PulsingLocationPin() {
+  const pulse = useSharedValue(1);
+
+  useEffect(() => {
+    pulse.value = withRepeat(
+      withTiming(1.45, { duration: 1800, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true,
+    );
+  }, [pulse]);
+
+  const ringStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulse.value }],
+    opacity: Math.max(0.15, 1.35 - pulse.value),
+  }));
+
+  return (
+    <View style={styles.pinAnchor} pointerEvents="none">
+      <Animated.View style={[styles.pinRing, ringStyle]} />
+      <View style={styles.pinDot} />
+    </View>
+  );
+}
+
 export function CountryLocationMap({
   country,
   onPress,
 }: CountryLocationMapProps) {
-  const [latitude, longitude] = getMapDisplayLatLng(country);
-  const hasValidCoords = isValidLatLng(country.latlng);
-
-  if (!hasValidCoords) {
+  if (!isValidLatLng(country.latlng)) {
     return null;
   }
 
-  const longitudeDelta = longitudeDeltaForLatitude(latitude);
+  const [latitude, longitude] = getMapDisplayLatLng(country);
+  const coordinatesLabel = formatCoordinates([latitude, longitude]);
 
   return (
     <Pressable
@@ -100,98 +64,93 @@ export function CountryLocationMap({
       onPress={onPress}
       style={({ pressed }) => [styles.wrap, pressed && styles.wrapPressed]}
     >
-      <MapView
-        style={styles.map}
-        customMapStyle={MAP_DARK_STYLE}
-        region={{
-          latitude,
-          longitude,
-          latitudeDelta: LAT_DELTA,
-          longitudeDelta,
-        }}
-        scrollEnabled={false}
-        zoomEnabled={false}
-        rotateEnabled={false}
-        pitchEnabled={false}
-        toolbarEnabled={false}
-        showsUserLocation={false}
-        showsCompass={false}
-        showsScale={false}
-        pointerEvents="none"
-      >
-        <Marker
-          coordinate={{ latitude, longitude }}
-          anchor={{ x: 0.5, y: 0.5 }}
-          tracksViewChanges={false}
-        >
-          <FlagMapMarker flag={country.flag} iso2={country.cca2} />
-        </Marker>
-      </MapView>
+      <Image
+        source={images.earthMap}
+        style={styles.mapImage}
+        contentFit="cover"
+        accessibilityLabel={`${country.name} region outline`}
+      />
+      <View style={styles.mapTint} pointerEvents="none" />
+      <PulsingLocationPin />
+      <View style={styles.captionRow} pointerEvents="none">
+        <Text style={styles.captionLabel}>Coordinates</Text>
+        <Text style={styles.captionValue}>{coordinatesLabel}</Text>
+      </View>
+      <Text style={styles.mapLink}>View on map</Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: {
-    height: MAP_HEIGHT,
-    borderRadius: 0,
+    height: MODULE_HEIGHT,
+    borderRadius: 14,
     overflow: "hidden",
-    backgroundColor: "rgba(30, 41, 59, 0.5)",
+    backgroundColor: AI_EXPLORER_THEME.surfaceRaised,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: AI_EXPLORER_THEME.divider,
   },
   wrapPressed: {
     opacity: 0.92,
   },
-  map: {
-    width: "100%",
-    height: MAP_HEIGHT,
+  mapImage: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.55,
   },
-  markerAnchor: {
-    width: 52,
-    height: 52,
+  mapTint: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(15, 23, 42, 0.42)",
+  },
+  pinAnchor: {
+    position: "absolute",
+    top: "34%",
+    left: "44%",
+    width: 28,
+    height: 28,
     alignItems: "center",
     justifyContent: "center",
   },
-  glowRingOuter: {
+  pinRing: {
     position: "absolute",
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     borderWidth: 2,
     borderColor: AI_EXPLORER_THEME.accentMuted,
-    backgroundColor: "rgba(251, 191, 36, 0.08)",
-  },
-  glowRingInner: {
-    position: "absolute",
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    borderWidth: 2,
-    borderColor: AI_EXPLORER_THEME.accent,
     backgroundColor: AI_EXPLORER_THEME.accentSoft,
   },
-  flagCircle: {
-    width: FLAG_SIZE,
-    height: FLAG_SIZE,
-    borderRadius: FLAG_SIZE / 2,
-    overflow: "hidden",
+  pinDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: AI_EXPLORER_THEME.accent,
     borderWidth: 2,
-    borderColor: "rgba(255, 255, 255, 0.95)",
-    backgroundColor: "rgba(15, 23, 42, 0.6)",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: AI_EXPLORER_THEME.accent,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.85,
-    shadowRadius: 6,
-    elevation: 6,
+    borderColor: "rgba(255, 255, 255, 0.9)",
   },
-  flagImage: {
-    width: FLAG_SIZE,
-    height: FLAG_SIZE,
+  captionRow: {
+    position: "absolute",
+    left: 12,
+    bottom: 10,
+    gap: 1,
   },
-  flagFallback: {
-    fontSize: 16,
-    lineHeight: FLAG_SIZE,
-    textAlign: "center",
+  captionLabel: {
+    fontFamily: "Poppins-Regular",
+    fontSize: 9,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+    color: AI_EXPLORER_THEME.textMuted,
+  },
+  captionValue: {
+    fontFamily: "Poppins-Medium",
+    fontSize: 12,
+    color: AI_EXPLORER_THEME.textPrimary,
+  },
+  mapLink: {
+    position: "absolute",
+    right: 12,
+    bottom: 12,
+    fontFamily: "Poppins-Medium",
+    fontSize: 12,
+    color: AI_EXPLORER_THEME.accent,
   },
 });
