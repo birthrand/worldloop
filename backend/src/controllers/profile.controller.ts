@@ -22,8 +22,11 @@ export async function getCountryProfile(
     const [wikipedia, landmarks] = await Promise.all([
       getWikipediaForCountry(withAi.name),
       getLandmarksForCountry(withAi.name, withAi.images ?? [], {
+        cca2: withAi.cca2,
+        countryName: withAi.name,
         capital: withAi.capital,
         latlng: withAi.latlng,
+        area: withAi.area,
       }),
     ]);
 

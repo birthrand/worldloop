@@ -2,13 +2,14 @@ import { ExplorerBackButton } from "@/components/ai-explorer/explorer-back-butto
 import { AI_EXPLORER_THEME } from "@/constants/ai-explorer-theme";
 import { images as appImages } from "@/constants/images";
 import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
 import { useCallback, useRef, useState } from "react";
 import {
   FlatList,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  Pressable,
   StyleSheet,
-  Text,
   View,
   useWindowDimensions,
 } from "react-native";
@@ -17,9 +18,27 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 /** Share of screen height for the edge-to-edge hero (reduced so facts appear sooner). */
 const HERO_HEIGHT_RATIO = 0.4;
 
-type GradientViewStyle = {
-  experimental_backgroundImage: string;
-};
+const HERO_BOTTOM_SCRIM_COLORS = [
+  AI_EXPLORER_THEME.surface,
+  "rgba(15, 23, 42, 0.88)",
+  "rgba(15, 23, 42, 0.45)",
+  "rgba(15, 23, 42, 0)",
+] as const;
+
+const HERO_BOTTOM_SCRIM_LOCATIONS = [0, 0.28, 0.58, 1] as const;
+
+function HeroBottomScrim() {
+  return (
+    <LinearGradient
+      pointerEvents="none"
+      colors={[...HERO_BOTTOM_SCRIM_COLORS]}
+      locations={[...HERO_BOTTOM_SCRIM_LOCATIONS]}
+      start={{ x: 0, y: 1 }}
+      end={{ x: 0, y: 0 }}
+      style={styles.bottomScrim}
+    />
+  );
+}
 
 type CountryHeroCarouselProps = {
   images: string[];
@@ -90,15 +109,7 @@ export function CountryHeroCarousel({
         <View style={[styles.backOverlay, { top: backButtonTop }]}>
           <ExplorerBackButton onPress={onBack} />
         </View>
-        <View
-          pointerEvents="none"
-          style={[
-            styles.bottomScrim,
-            {
-              experimental_backgroundImage: `linear-gradient(to top, ${AI_EXPLORER_THEME.surface} 0%, rgba(15, 23, 42, 0.88) 28%, rgba(15, 23, 42, 0.45) 58%, rgba(15, 23, 42, 0) 100%)`,
-            } satisfies GradientViewStyle,
-          ]}
-        />
+        <HeroBottomScrim />
       </View>
     );
   }
@@ -143,23 +154,37 @@ export function CountryHeroCarousel({
         <ExplorerBackButton onPress={onBack} />
       </View>
 
-      <View
-        pointerEvents="none"
-        style={[
-          styles.bottomScrim,
-          {
-            experimental_backgroundImage: `linear-gradient(to top, ${AI_EXPLORER_THEME.surface} 0%, rgba(15, 23, 42, 0.88) 28%, rgba(15, 23, 42, 0.45) 58%, rgba(15, 23, 42, 0) 100%)`,
-          } satisfies GradientViewStyle,
-        ]}
-      />
+      <HeroBottomScrim />
 
       {slides.length > 1 ? (
-        <Text
-          style={styles.imageCounter}
+        <View
+          style={styles.paginationDots}
           accessibilityLabel={`Image ${activeIndex + 1} of ${slides.length}`}
         >
-          {activeIndex + 1}/{slides.length}
-        </Text>
+          {slides.map((_, index) => {
+            const isActive = index === activeIndex;
+            return (
+              <Pressable
+                key={`hero-dot-${index}`}
+                accessibilityRole="button"
+                accessibilityLabel={`Show image ${index + 1} of ${slides.length}`}
+                accessibilityState={{ selected: isActive }}
+                hitSlop={8}
+                onPress={() => {
+                  listRef.current?.scrollToIndex({ index, animated: true });
+                  setActiveIndex(index);
+                }}
+              >
+                <View
+                  style={[
+                    styles.dot,
+                    isActive ? styles.dotActive : styles.dotInactive,
+                  ]}
+                />
+              </Pressable>
+            );
+          })}
+        </View>
       ) : null}
     </View>
   );
@@ -200,15 +225,29 @@ const styles = StyleSheet.create({
     height: "55%",
     zIndex: 1,
   },
-  imageCounter: {
+  paginationDots: {
     position: "absolute",
     bottom: 48,
-    right: 16,
+    left: 0,
+    right: 0,
     zIndex: 2,
-    fontFamily: "Poppins-Regular",
-    fontSize: 11,
-    lineHeight: 14,
-    color: AI_EXPLORER_THEME.textFaint,
-    letterSpacing: 0.4,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  dotActive: {
+    backgroundColor: AI_EXPLORER_THEME.accent,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  dotInactive: {
+    backgroundColor: "rgba(255, 255, 255, 0.35)",
   },
 });

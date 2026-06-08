@@ -5,7 +5,6 @@ import {
   NativeSyntheticEvent,
   Pressable,
   StyleSheet,
-  useWindowDimensions,
 } from "react-native";
 
 import { CountryImage } from "@/components/explore/country-image";
@@ -14,22 +13,25 @@ type HeroImagePagerProps = {
   images: string[];
   flag: string;
   iso2?: string;
-  pageHeight: number;
+  heroWidth: number;
+  heroHeight: number;
   activeIndex: number;
   onIndexChange: (index: number) => void;
   onImagePress?: () => void;
+  onImagePressIn?: () => void;
 };
 
 export function HeroImagePager({
   images,
   flag,
   iso2,
-  pageHeight,
+  heroWidth,
+  heroHeight,
   activeIndex,
   onIndexChange,
   onImagePress,
+  onImagePressIn,
 }: HeroImagePagerProps) {
-  const { width } = useWindowDimensions();
   const listRef = useRef<FlatList<string>>(null);
   const syncedIndexRef = useRef(activeIndex);
   const slides = images.length > 0 ? images : [""];
@@ -38,11 +40,11 @@ export function HeroImagePager({
     (index: number, animated: boolean) => {
       if (index < 0 || index >= slides.length) return;
       listRef.current?.scrollToOffset({
-        offset: index * width,
+        offset: index * heroWidth,
         animated,
       });
     },
-    [slides.length, width],
+    [heroWidth, slides.length],
   );
 
   useEffect(() => {
@@ -59,7 +61,7 @@ export function HeroImagePager({
   const handleMomentumScrollEnd = (
     event: NativeSyntheticEvent<NativeScrollEvent>,
   ) => {
-    const index = Math.round(event.nativeEvent.contentOffset.x / width);
+    const index = Math.round(event.nativeEvent.contentOffset.x / heroWidth);
     const clamped = Math.max(0, Math.min(index, slides.length - 1));
     syncedIndexRef.current = clamped;
     if (clamped !== activeIndex) {
@@ -78,11 +80,11 @@ export function HeroImagePager({
       showsHorizontalScrollIndicator={false}
       decelerationRate="fast"
       scrollEventThrottle={16}
-      style={styles.list}
+      style={{ width: heroWidth, height: heroHeight }}
       onMomentumScrollEnd={handleMomentumScrollEnd}
       getItemLayout={(_, index) => ({
-        length: width,
-        offset: width * index,
+        length: heroWidth,
+        offset: heroWidth * index,
         index,
       })}
       renderItem={({ item }) => (
@@ -91,8 +93,9 @@ export function HeroImagePager({
           accessibilityLabel="Open AI country explorer"
           accessibilityHint="Opens a detailed AI-powered country profile"
           onPress={onImagePress}
+          onPressIn={onImagePressIn}
           disabled={!onImagePress}
-          style={{ width, height: pageHeight }}
+          style={{ width: heroWidth, height: heroHeight }}
         >
           <CountryImage
             uri={item || undefined}
@@ -106,9 +109,3 @@ export function HeroImagePager({
     />
   );
 }
-
-const styles = StyleSheet.create({
-  list: {
-    ...StyleSheet.absoluteFillObject,
-  },
-});

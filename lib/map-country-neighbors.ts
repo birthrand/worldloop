@@ -4,6 +4,7 @@ import {
   countryNamesMatch,
   getCountryBoundaryPolygons,
 } from "@/lib/map-country-boundaries";
+import { bboxesIntersect } from "@/lib/spatial-query";
 import type { MapCountry } from "@/types/country";
 import type { BBox } from "@/types/geo";
 import type { LatLng } from "react-native-maps";
@@ -31,12 +32,12 @@ let cachedBorderGraph: Map<string, Set<string>> | null = null;
 let cachedGeoNamesByApiCountry: Map<string, string[]> | null = null;
 
 function bboxesWithinGap(a: BBox, b: BBox, gapDeg: number): boolean {
-  return (
-    a.west <= b.east + gapDeg &&
-    a.east >= b.west - gapDeg &&
-    a.south <= b.north + gapDeg &&
-    a.north >= b.south - gapDeg
-  );
+  return bboxesIntersect(a, {
+    west: b.west - gapDeg,
+    south: b.south - gapDeg,
+    east: b.east + gapDeg,
+    north: b.north + gapDeg,
+  });
 }
 
 function roundCoord(value: number): number {

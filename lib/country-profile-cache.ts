@@ -83,16 +83,21 @@ export function getCachedCountryProfile(
 export function isCountryProfileEnriched(
   profile: CachedCountryProfile | undefined,
 ): boolean {
-  return Boolean(profile?.wikipedia?.extract?.trim());
+  return Boolean(
+    profile?.wikipedia?.extract?.trim() ||
+    (profile?.landmarks?.length ?? 0) > 0,
+  );
 }
 
-/** Full explorer payload from API — memory + AsyncStorage (7d). */
+/** Full explorer payload from API — memory always; disk only when Wikipedia is present. */
 export function setCachedCountryProfile(
   name: string,
   profile: CachedCountryProfile,
 ): CachedCountryProfile {
   const merged = setMemoryProfile(name, profile);
-  void persistProfileToDisk(name, merged);
+  if (isCountryProfileEnriched(merged)) {
+    void persistProfileToDisk(name, merged);
+  }
   return merged;
 }
 

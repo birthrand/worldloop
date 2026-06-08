@@ -18,7 +18,7 @@ export function MediaCarousel({
   }
 
   return (
-    <View className="flex-row items-center justify-center gap-2 pb-4">
+    <View className="flex-row items-center justify-center gap-2">
       {Array.from({ length: slideCount }, (_, index) => {
         const isActive = index === activeIndex;
         return (
@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   dotActive: {
-    backgroundColor: "#ffffff",
+    backgroundColor: "#fbbf24",
     width: 8,
     height: 8,
     borderRadius: 4,

@@ -8,7 +8,8 @@ import { useContext } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const TAB_BAR_BG = "#0b132b";
+import { SPACE_TAB_BAR_BG } from "@/constants/space-theme";
+
 const TAB_ACTIVE = "#fbbf24";
 const TAB_INACTIVE = "#94a3b8";
 
@@ -113,25 +114,23 @@ export function BottomTabBar({ state, navigation }: BottomTabBarProps) {
   );
 }
 
+const TAB_BAR_BORDER = "rgba(148, 163, 184, 0.24)";
+
 const styles = StyleSheet.create({
   shell: {
-    backgroundColor: TAB_BAR_BG,
+    overflow: "hidden",
+    backgroundColor: SPACE_TAB_BAR_BG,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: TAB_BAR_BORDER,
   },
   bar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-around",
-    backgroundColor: TAB_BAR_BG,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    backgroundColor: SPACE_TAB_BAR_BG,
     paddingTop: 8,
     paddingBottom: 2,
     paddingHorizontal: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 16,
   },
   tab: {
     flex: 1,

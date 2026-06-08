@@ -21,13 +21,16 @@ function resolveDiscoverRequestRegion(
   focusedRegion: string | null,
   tier: ZoomTier,
 ): string | undefined {
-  return focusedRegion && tier === "continent" ? focusedRegion : undefined;
+  const normalizedRegion = focusedRegion?.trim() || null;
+  return tier === "continent" && normalizedRegion
+    ? normalizedRegion
+    : undefined;
 }
 
 function buildDiscoverCacheKey(params: DiscoverViewportParams): string {
   const { bbox, focusedRegion, viewportCenter, tier, limit = 50 } = params;
   const effectiveRegion = resolveDiscoverRequestRegion(focusedRegion, tier);
-  const regionPart = effectiveRegion?.trim().toLowerCase() ?? "all";
+  const regionPart = effectiveRegion?.toLowerCase() ?? "all";
   const bboxPart = [
     bbox.west.toFixed(4),
     bbox.south.toFixed(4),

@@ -51,7 +51,7 @@ export const cacheKeys = {
   ai: (name: string) => `ai:${name.toLowerCase()}`,
   news: (name: string) => `news:${name.trim().toLowerCase()}`,
   wikipedia: (name: string) => `wikipedia:${name.trim().toLowerCase()}`,
-  landmarks: (name: string) => `landmarks:v4:${name.trim().toLowerCase()}`,
+  landmarks: (cca2: string) => `landmarks:v6:${cca2.trim().toUpperCase()}`,
 } as const;
 
 let client: RedisClientType | null = null;

@@ -34,8 +34,16 @@ function buildViewportBBox(input: {
 }): BBox {
   const south = clamp(input.centerLat - input.halfLat, -90, 90);
   const north = clamp(input.centerLat + input.halfLat, -90, 90);
-  const west = wrapLongitude(input.centerLng - input.halfLng);
-  const east = wrapLongitude(input.centerLng + input.halfLng);
+
+  let west: number;
+  let east: number;
+  if (input.halfLng >= 180) {
+    west = -180;
+    east = 180;
+  } else {
+    west = wrapLongitude(input.centerLng - input.halfLng);
+    east = wrapLongitude(input.centerLng + input.halfLng);
+  }
 
   return { south, north, west, east };
 }

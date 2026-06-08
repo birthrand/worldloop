@@ -7,8 +7,8 @@ type HapticStyle = "light" | "medium" | "none";
 const GLASS_ICON_SIZE = 24;
 const GLASS_TOUCH_SIZE = 48;
 /** Compact header rail — icon only, no glass circle. */
-export const COMPACT_ICON_SIZE = 20;
-export const COMPACT_TOUCH_SIZE = 28;
+export const COMPACT_ICON_SIZE = 24;
+export const COMPACT_TOUCH_SIZE = 32;
 export const COMPACT_ICON_EDGE_INSET =
   (COMPACT_TOUCH_SIZE - COMPACT_ICON_SIZE) / 2;
 

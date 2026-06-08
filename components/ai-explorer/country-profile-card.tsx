@@ -1,6 +1,7 @@
 import * as WebBrowser from "expo-web-browser";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Animated,
   Pressable,
   StyleSheet,
   Text,
@@ -13,10 +14,7 @@ import { CountryHeroCarousel } from "@/components/ai-explorer/country-hero-carou
 import { CountryLandmarksSection } from "@/components/ai-explorer/country-landmarks-section";
 import { CountryLocationMap } from "@/components/ai-explorer/country-location-map";
 import { Divider } from "@/components/ai-explorer/divider";
-import {
-  ProfileFactRow,
-  ProfileSection,
-} from "@/components/ai-explorer/profile-section";
+import { ProfileSection } from "@/components/ai-explorer/profile-section";
 import { StatItem } from "@/components/ai-explorer/stat-item";
 import { FlagBadge } from "@/components/explore/flag-badge";
 import { AI_EXPLORER_THEME } from "@/constants/ai-explorer-theme";
@@ -38,6 +36,9 @@ import {
 import type { Country } from "@/types/country";
 
 const DESCRIPTION_COLLAPSED_LINES = 3;
+const DESCRIPTION_READ_MORE_CHAR_THRESHOLD = 200;
+const OVERVIEW_LINE_HEIGHT = 22;
+const OVERVIEW_SKELETON_LINE_WIDTHS = ["100%", "94%", "78%"] as const;
 const COUNTRY_NAME_FONT_SIZE = 19;
 const COUNTRY_NAME_MIN_FONT_SIZE = 15;
 const COUNTRY_NAME_LINE_HEIGHT = 24;
@@ -53,8 +54,9 @@ function buildOverviewPreview(
   const truncated = lines
     .slice(0, maxLines)
     .map((line) => line.text)
-    .join("")
-    .trimEnd();
+    .join(" ")
+    .trim()
+    .replace(/\s+/g, " ");
   const lastSpace = truncated.lastIndexOf(" ");
   const preview =
     lastSpace > 0 ? truncated.slice(0, lastSpace).trimEnd() : truncated;
@@ -67,12 +69,68 @@ type CountryProfileCardProps = {
   images: string[];
   wikipedia: CountryWikipediaSummary | null;
   landmarks: CountryLandmark[];
+  overviewLoading?: boolean;
   onBack: () => void;
   onShowMap: () => void;
 };
 
 function SectionDivider() {
   return <Divider style={styles.sectionDivider} />;
+}
+
+function OverviewTextSkeleton({
+  lines = DESCRIPTION_COLLAPSED_LINES,
+}: {
+  lines?: number;
+}) {
+  const pulse = useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 0.85,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 0.4,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    animation.start();
+    return () => animation.stop();
+  }, [pulse]);
+
+  return (
+    <View
+      style={[
+        styles.overviewSkeleton,
+        { minHeight: lines * OVERVIEW_LINE_HEIGHT },
+      ]}
+      accessibilityLabel="Loading overview"
+    >
+      {Array.from({ length: lines }, (_, index) => (
+        <View
+          key={`overview-skeleton-line-${index}`}
+          style={styles.overviewSkeletonLine}
+        >
+          <Animated.View
+            style={[
+              styles.overviewSkeletonBar,
+              {
+                width: OVERVIEW_SKELETON_LINE_WIDTHS[index] ?? "64%",
+                opacity: pulse,
+              },
+            ]}
+          />
+        </View>
+      ))}
+    </View>
+  );
 }
 
 function QuickStatsGrid({
@@ -103,17 +161,88 @@ function QuickStatsGrid({
   );
 }
 
+type GeographyFacts = {
+  coordinates: string;
+  subregion: string;
+  area: string;
+  landlocked: string;
+  timezone: string;
+  hemisphere: string;
+  climate: string;
+  countryCode: string;
+};
+
+function GeographyGrid({ facts }: { facts: GeographyFacts }) {
+  return (
+    <View style={styles.statsPanel}>
+      <View style={styles.statsRow}>
+        <StatItem
+          tile
+          align="start"
+          label="Coordinates"
+          value={facts.coordinates}
+        />
+        <Divider vertical />
+        <StatItem
+          tile
+          align="start"
+          label="Subregion"
+          value={facts.subregion}
+        />
+      </View>
+      <Divider />
+      <View style={styles.statsRow}>
+        <StatItem tile align="start" label="Area" value={facts.area} />
+        <Divider vertical />
+        <StatItem
+          tile
+          align="start"
+          label="Landlocked"
+          value={facts.landlocked}
+        />
+      </View>
+      <Divider />
+      <View style={styles.statsRow}>
+        <StatItem tile align="start" label="Time zone" value={facts.timezone} />
+        <Divider vertical />
+        <StatItem
+          tile
+          align="start"
+          label="Hemisphere"
+          value={facts.hemisphere}
+        />
+      </View>
+      <Divider />
+      <View style={styles.statsRow}>
+        <StatItem tile align="start" label="Climate" value={facts.climate} />
+        <Divider vertical />
+        <StatItem
+          tile
+          align="start"
+          label="Country code"
+          value={facts.countryCode}
+        />
+      </View>
+    </View>
+  );
+}
+
 export function CountryProfileCard({
   country,
   images,
   wikipedia,
   landmarks,
+  overviewLoading = false,
   onBack,
   onShowMap,
 }: CountryProfileCardProps) {
   const [overviewExpanded, setOverviewExpanded] = useState(false);
   const [overviewOverflows, setOverviewOverflows] = useState(false);
-  const [overviewPreview, setOverviewPreview] = useState("");
+
+  useEffect(() => {
+    setOverviewExpanded(false);
+    setOverviewOverflows(false);
+  }, [wikipedia?.extract]);
 
   const regionLabel = continentDisplayLabel(country.region);
   const languagesLabel = formatOfficialLanguages(country.languages);
@@ -133,27 +262,29 @@ export function CountryProfileCard({
   const aiFacts = useMemo(() => getProfileAiFacts(country), [country]);
   const featuredFact = aiFacts[0];
 
+  const wikipediaExtract = wikipedia?.extract?.trim() ?? "";
   const overviewText =
-    wikipedia?.extract?.trim() ||
-    country.ai?.caption?.trim() ||
-    country.ai?.fact?.trim() ||
-    `Explore ${country.name} — discover its people, places, and stories.`;
+    wikipediaExtract ||
+    (overviewLoading
+      ? ""
+      : country.ai?.caption?.trim() ||
+        country.ai?.fact?.trim() ||
+        `Explore ${country.name} — discover its people, places, and stories.`);
 
   const handleOverviewMeasure = (
     event: NativeSyntheticEvent<TextLayoutEventData>,
   ) => {
-    const { overflows, preview } = buildOverviewPreview(
+    const { overflows } = buildOverviewPreview(
       event.nativeEvent.lines,
       DESCRIPTION_COLLAPSED_LINES,
     );
     setOverviewOverflows(overflows);
-    setOverviewPreview(preview);
   };
 
-  const displayOverview =
-    overviewExpanded || !overviewOverflows
-      ? overviewText
-      : overviewPreview || overviewText;
+  const showReadMoreControl =
+    overviewOverflows ||
+    overviewExpanded ||
+    overviewText.length > DESCRIPTION_READ_MORE_CHAR_THRESHOLD;
 
   const openWikipedia = () => {
     if (wikipedia?.pageUrl) {
@@ -201,102 +332,95 @@ export function CountryProfileCard({
           language={languagesLabel}
         />
 
-        <ProfileSection title="Location">
-          <CountryLocationMap country={country} onPress={onShowMap} />
-        </ProfileSection>
+        <View style={styles.profileSections}>
+          <SectionDivider />
+          <ProfileSection title="Location">
+            <CountryLocationMap country={country} onPress={onShowMap} />
+          </ProfileSection>
 
-        <SectionDivider />
+          <SectionDivider />
+          <ProfileSection title="Overview">
+            {overviewLoading && !wikipediaExtract ? (
+              <OverviewTextSkeleton />
+            ) : (
+              <>
+                <View style={styles.overviewBody}>
+                  <Text
+                    key={overviewText}
+                    style={styles.overviewMeasure}
+                    onTextLayout={handleOverviewMeasure}
+                  >
+                    {overviewText}
+                  </Text>
+                  <Text
+                    style={styles.bodyText}
+                    numberOfLines={
+                      overviewExpanded ? undefined : DESCRIPTION_COLLAPSED_LINES
+                    }
+                  >
+                    {overviewText}
+                  </Text>
+                </View>
+                {showReadMoreControl ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      overviewExpanded ? "Read less" : "Read more"
+                    }
+                    onPress={() => setOverviewExpanded((value) => !value)}
+                    style={styles.readMoreRow}
+                  >
+                    <Text style={styles.linkText}>
+                      {overviewExpanded ? "Read less" : "Read more"}
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </>
+            )}
+          </ProfileSection>
 
-        <ProfileSection title="Overview">
-          <View>
-            <Text
-              style={styles.overviewMeasure}
-              onTextLayout={handleOverviewMeasure}
-            >
-              {overviewText}
-            </Text>
-            <Text style={styles.bodyText}>{displayOverview}</Text>
-          </View>
-          {(overviewOverflows || overviewExpanded) && (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={overviewExpanded ? "Read less" : "Read more"}
-              onPress={() => setOverviewExpanded((value) => !value)}
-              style={styles.readMoreRow}
-            >
-              <Text style={styles.linkText}>
-                {overviewExpanded ? "Read less" : "Read more"}
-              </Text>
-            </Pressable>
-          )}
-        </ProfileSection>
+          {featuredFact ? (
+            <>
+              <SectionDivider />
+              <View style={styles.factCallout}>
+                <Text style={styles.factCalloutLabel}>Did you know?</Text>
+                <Text style={styles.factCalloutText}>{featuredFact}</Text>
+              </View>
+            </>
+          ) : null}
 
-        {featuredFact ? (
-          <>
-            <SectionDivider />
-            <View style={styles.factCallout}>
-              <Text style={styles.factCalloutLabel}>Did you know?</Text>
-              <Text style={styles.factCalloutText}>{featuredFact}</Text>
-            </View>
-          </>
-        ) : null}
+          {landmarks.length > 0 ? (
+            <>
+              <SectionDivider />
+              <CountryLandmarksSection landmarks={landmarks} />
+            </>
+          ) : null}
 
-        {landmarks.length > 0 ? (
-          <>
-            <SectionDivider />
-            <CountryLandmarksSection landmarks={landmarks} />
-          </>
-        ) : null}
+          <SectionDivider />
+          <ProfileSection title="Geography">
+            <GeographyGrid facts={geographyFacts} />
+          </ProfileSection>
 
-        <SectionDivider />
-
-        <ProfileSection title="Geography">
-          <View style={styles.geographyGrid}>
-            <ProfileFactRow
-              label="Coordinates"
-              value={geographyFacts.coordinates}
-            />
-            <ProfileFactRow
-              label="Subregion"
-              value={geographyFacts.subregion}
-            />
-            <ProfileFactRow label="Area" value={geographyFacts.area} />
-            <ProfileFactRow
-              label="Landlocked"
-              value={geographyFacts.landlocked}
-            />
-            <ProfileFactRow label="Time zone" value={geographyFacts.timezone} />
-            <ProfileFactRow
-              label="Hemisphere"
-              value={geographyFacts.hemisphere}
-            />
-            <ProfileFactRow label="Climate" value={geographyFacts.climate} />
-            <ProfileFactRow
-              label="Country code"
-              value={geographyFacts.countryCode}
-            />
-          </View>
-        </ProfileSection>
-
-        {wikipedia?.pageUrl ? (
-          <>
-            <SectionDivider />
-            <ProfileSection title="Learn more">
-              <Text style={styles.bodyText}>
-                Read the full article on Wikipedia for history, culture, and
-                more detail about {country.name}.
-              </Text>
-              <Pressable
-                accessibilityRole="link"
-                accessibilityLabel="Open Wikipedia article"
-                onPress={openWikipedia}
-                style={styles.wikipediaButton}
-              >
-                <Text style={styles.linkText}>Open on Wikipedia</Text>
-              </Pressable>
-            </ProfileSection>
-          </>
-        ) : null}
+          {wikipedia?.pageUrl ? (
+            <>
+              <SectionDivider />
+              <ProfileSection title="Learn more">
+                <Text style={styles.bodyText}>
+                  Read the full article on Wikipedia for history, culture, and
+                  more detail about {country.name}.
+                </Text>
+                <Pressable
+                  accessibilityRole="link"
+                  accessibilityLabel="Open Wikipedia article"
+                  onPress={openWikipedia}
+                  style={styles.wikipediaButton}
+                >
+                  <Text style={styles.linkText}>Open on Wikipedia</Text>
+                </Pressable>
+              </ProfileSection>
+            </>
+          ) : null}
+        </View>
       </View>
     </View>
   );
@@ -375,11 +499,24 @@ const styles = StyleSheet.create({
   sectionDivider: {
     marginVertical: 0,
   },
-  geographyGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-    rowGap: 12,
+  profileSections: {
+    gap: 8,
+    marginTop: -12,
+  },
+  overviewSkeleton: {
+    width: "100%",
+  },
+  overviewSkeletonLine: {
+    height: OVERVIEW_LINE_HEIGHT,
+    justifyContent: "center",
+  },
+  overviewSkeletonBar: {
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+  },
+  overviewBody: {
+    width: "100%",
   },
   overviewMeasure: {
     position: "absolute",

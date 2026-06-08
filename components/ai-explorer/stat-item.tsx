@@ -9,6 +9,8 @@ type StatItemProps = {
   compact?: boolean;
   /** Profile explorer tile — value-first hierarchy. */
   tile?: boolean;
+  /** Grow to fill a flex row (stats panel). Off for wrapped geography grids. */
+  fill?: boolean;
 };
 
 export function StatItem({
@@ -17,6 +19,7 @@ export function StatItem({
   align = "center",
   compact = false,
   tile = false,
+  fill = true,
 }: StatItemProps) {
   return (
     <View
@@ -25,6 +28,7 @@ export function StatItem({
         compact && styles.rootCompact,
         tile && styles.rootTile,
         align === "start" && styles.rootStart,
+        !fill && styles.rootNoFill,
       ]}
     >
       <Text
@@ -67,6 +71,11 @@ const styles = StyleSheet.create({
   },
   rootStart: {
     alignItems: "flex-start",
+  },
+  rootNoFill: {
+    flex: 0,
+    alignSelf: "stretch",
+    width: "100%",
   },
   value: {
     fontFamily: "Poppins-Medium",
