@@ -2,14 +2,11 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ExploreActionRail } from "@/components/explore/explore-action-rail";
 import { FlagBadge } from "@/components/explore/flag-badge";
-import { MediaCarousel } from "@/components/explore/media-carousel";
 import { formatPopulation } from "@/lib/format-country";
 import type { Country } from "@/types/country";
 
-const CARD_PADDING = 16;
-/** Extra space above content so the gradient can fade in from the hero image. */
-const FADE_HEADROOM = 48;
-const STAT_VALUE_LINE_HEIGHT = 18;
+const CARD_PADDING = 8;
+const STAT_VALUE_LINE_HEIGHT = 16;
 const STAT_LABEL_LINE_HEIGHT = 14;
 const STAT_ITEM_GAP = 2;
 const STAT_BLOCK_HEIGHT =
@@ -18,19 +15,10 @@ const FLAG_HEIGHT = STAT_BLOCK_HEIGHT;
 const FLAG_WIDTH = Math.round(FLAG_HEIGHT * 1.5);
 const FACT_LINE_HEIGHT = 17;
 const FACT_MAX_LINES = 3;
-type GradientViewStyle = {
-  experimental_backgroundImage: string;
-};
-
-const CARD_FADE_GRADIENT =
-  "linear-gradient(to top, rgb(0, 0, 0) 0%, rgba(0, 0, 0, 0.94) 28%, rgba(0, 0, 0, 0.72) 52%, rgba(0, 0, 0, 0.38) 76%, rgba(0, 0, 0, 0) 100%)";
 
 type ExploreCountryCardProps = {
   country: Country;
   fact: string;
-  imageIndex?: number;
-  imageCount?: number;
-  onImageIndexChange?: (index: number) => void;
   onPress?: () => void;
   onPressIn?: () => void;
 };
@@ -50,7 +38,13 @@ function StatItem({ value, label }: StatItemProps) {
       <Text style={styles.statLabel} numberOfLines={1}>
         {label}
       </Text>
-      <Text style={styles.statValue} numberOfLines={1} ellipsizeMode="tail">
+      <Text
+        style={styles.statValue}
+        numberOfLines={1}
+        ellipsizeMode="tail"
+        adjustsFontSizeToFit
+        minimumFontScale={0.85}
+      >
         {value}
       </Text>
     </View>
@@ -60,17 +54,10 @@ function StatItem({ value, label }: StatItemProps) {
 export function ExploreCountryCard({
   country,
   fact,
-  imageIndex = 0,
-  imageCount = 1,
-  onImageIndexChange,
   onPress,
   onPressIn,
 }: ExploreCountryCardProps) {
   const capital = country.capital?.trim() || "—";
-  const heroSlides = Array.from(
-    { length: imageCount },
-    (_, index) => `${index}`,
-  );
 
   const openDetails = onPress;
   const pressableProps = {
@@ -84,26 +71,8 @@ export function ExploreCountryCard({
 
   return (
     <View style={styles.pressable}>
-      <View
-        style={[
-          styles.card,
-          {
-            experimental_backgroundImage: CARD_FADE_GRADIENT,
-          } satisfies GradientViewStyle,
-        ]}
-      >
-        <View style={styles.topSection}>
-          {imageCount > 1 ? (
-            <View style={styles.paginationWrap}>
-              <MediaCarousel
-                compact
-                images={heroSlides}
-                activeIndex={imageIndex}
-                onImageIndexChange={onImageIndexChange ?? (() => {})}
-              />
-            </View>
-          ) : null}
-
+      <View style={styles.card}>
+        <View style={styles.borderedContent}>
           <View style={styles.titleRow}>
             <Pressable
               {...pressableProps}
@@ -123,6 +92,8 @@ export function ExploreCountryCard({
 
             <ExploreActionRail country={country} variant="header" />
           </View>
+
+          <View style={styles.headerDivider} accessibilityElementsHidden />
 
           <Pressable
             {...pressableProps}
@@ -150,24 +121,24 @@ export function ExploreCountryCard({
               <StatItem value={capital} label="Capital" />
             </View>
           </Pressable>
-        </View>
 
-        <Pressable
-          {...pressableProps}
-          style={({ pressed }) => [
-            pressed && openDetails ? styles.pressablePressed : null,
-          ]}
-        >
-          <View style={styles.factSection}>
-            <View style={styles.sectionDivider} accessibilityElementsHidden />
-            <View style={styles.factHeader}>
-              <Text style={styles.factLabel}>DID YOU KNOW?</Text>
+          <Pressable
+            {...pressableProps}
+            style={({ pressed }) => [
+              pressed && openDetails ? styles.pressablePressed : null,
+            ]}
+          >
+            <View style={styles.factSection}>
+              <View style={styles.sectionDivider} accessibilityElementsHidden />
+              <View style={styles.factHeader}>
+                <Text style={styles.factLabel}>DID YOU KNOW?</Text>
+              </View>
+              <Text style={styles.factText} numberOfLines={FACT_MAX_LINES}>
+                {fact}
+              </Text>
             </View>
-            <Text style={styles.factText} numberOfLines={FACT_MAX_LINES}>
-              {fact}
-            </Text>
-          </View>
-        </Pressable>
+          </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -181,18 +152,24 @@ const styles = StyleSheet.create({
     opacity: 0.92,
   },
   card: {
-    paddingTop: FADE_HEADROOM,
     paddingBottom: 8,
     paddingHorizontal: CARD_PADDING,
-    gap: 4,
   },
-  topSection: {
+  borderedContent: {
+    alignSelf: "stretch",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.14)",
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 4,
     gap: 10,
+    overflow: "hidden",
   },
-  paginationWrap: {
-    marginHorizontal: -CARD_PADDING,
-    alignItems: "center",
-    marginBottom: 2,
+  headerDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: "rgba(255, 255, 255, 0.14)",
+    alignSelf: "stretch",
   },
   titleRow: {
     flexDirection: "row",
@@ -231,7 +208,7 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontFamily: "Poppins-Medium",
-    fontSize: 13,
+    fontSize: 12,
     lineHeight: STAT_VALUE_LINE_HEIGHT,
     color: "#ffffff",
   },
@@ -243,8 +220,8 @@ const styles = StyleSheet.create({
   },
   factSection: {
     alignSelf: "stretch",
-    paddingTop: 8,
-    paddingBottom: 12,
+    paddingTop: 0,
+    paddingBottom: 8,
     gap: 6,
   },
   sectionDivider: {

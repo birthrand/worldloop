@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -21,12 +21,19 @@ import { MapDiscoveryChrome } from "@/components/map/map-discovery-chrome";
 import { MapOnboardingSheet } from "@/components/map/map-onboarding-sheet";
 import { MapRandomCountryHint } from "@/components/map/map-random-country-hint";
 import { MapRegionChrome } from "@/components/map/map-region-chrome";
-import { MapSearchRow } from "@/components/map/map-search-row";
+import { MapSearchResultsPanel } from "@/components/map/map-search-results-panel";
+import {
+  getMapSearchPanelTop,
+  MapTopChrome,
+} from "@/components/map/map-top-chrome";
 import { MapTopChromeScrim } from "@/components/map/map-top-chrome-scrim";
+import { WORLDLOOP_HEADER_TOP_PADDING } from "@/components/worldloop-header";
 import { continentDisplayLabel } from "@/constants/regions";
 import { useMapLogic } from "@/hooks/use-map-logic";
 import { resolveGlobeAutoRotateEnabled } from "@/lib/globe-rotation";
+import type { MapCluster } from "@/lib/map-clusters";
 import { openExploreHere, openExploreRegion } from "@/lib/open-explore-here";
+import { useSearchUiStore } from "@/store/use-search-ui-store";
 import { useSpatialContextStore } from "@/store/use-spatial-context-store";
 
 /** Preview card "back to continent" action — off until UX is finalized. */
@@ -41,6 +48,9 @@ export default function MapScreen() {
   const mapRef = useRef<MapCanvasHandle>(null);
 
   const map = useMapLogic(mapRef);
+  const isMapSearchOpen = useSearchUiStore(
+    (s) => s.isOpen && s.context === "map",
+  );
   const viewportCountryCount = useSpatialContextStore(
     (s) => s.viewportCountryCount,
   );
@@ -111,6 +121,17 @@ export default function MapScreen() {
   const discoveryChromeLabelMode = discoveryChromeFromRegionActive
     ? "region"
     : "viewport";
+  const handleMenuContinentSelect = useCallback(
+    (cluster: MapCluster) => {
+      if (map.focusedRegion === cluster.region) {
+        map.handleBackToContinent();
+        return;
+      }
+      map.requestContinentFocus(cluster);
+    },
+    [map],
+  );
+
   const discoveryChromeCount = discoveryChromeFromRegionActive
     ? regionCountryCount
     : viewportCountryCount;
@@ -183,14 +204,24 @@ export default function MapScreen() {
 
         {!previewOverlayActive ? (
           <>
-            <MapTopChromeScrim paddingTop={insets.top + 12} />
-            <View
-              pointerEvents="box-none"
-              className="gap-1.5"
-              style={{ paddingTop: insets.top + 12, zIndex: 1 }}
-            >
-              <MapSearchRow />
+            <MapTopChromeScrim
+              paddingTop={insets.top + WORLDLOOP_HEADER_TOP_PADDING}
+              compact={isMapSearchOpen}
+            />
+            <View pointerEvents="box-none" style={{ zIndex: 1 }}>
+              <MapTopChrome
+                focusedRegion={map.focusedRegion}
+                clusters={map.clusters}
+                onSelectContinent={handleMenuContinentSelect}
+                onSelectWorld={map.handleBackToWorld}
+              />
             </View>
+
+            {isMapSearchOpen ? (
+              <MapSearchResultsPanel
+                panelTop={getMapSearchPanelTop(insets.top)}
+              />
+            ) : null}
           </>
         ) : null}
 
@@ -280,7 +311,7 @@ export default function MapScreen() {
           />
         ) : null}
 
-        {map.randomCountryHint ? (
+        {map.randomCountryHint && !isMapSearchOpen ? (
           <MapRandomCountryHint
             country={map.randomCountryHint}
             bottom={randomHintBottom}
@@ -288,7 +319,7 @@ export default function MapScreen() {
           />
         ) : null}
 
-        {!previewOverlayActive ? (
+        {!previewOverlayActive && !isMapSearchOpen ? (
           <MapControls
             mapMode={map.mapMode}
             mapViewTransition={map.mapViewTransition}

@@ -64,33 +64,33 @@ Do **not** add external UI kits, React Query, or axios without user approval.
 
 ## Route & files
 
-| Path | Purpose |
-| ---- | ------- |
-| `app/country/[name]/ai-explorer.tsx` | **Primary route** — stack screen; `name` param is country name |
-| `app/country/_layout.tsx` | Stack layout — `headerShown: false`, navy background, slide animation |
-| `components/ai-explorer/` | Reusable UI blocks |
-| `hooks/use-ai-explorer-country.ts` | Country + Wikipedia + landmarks state, cache hydration |
-| `lib/open-country-ai-explorer.ts` | Navigation helpers (`openCountryAiExplorer`, `warmCountryAiExplorer`) |
-| `lib/country-profile-cache.ts` | In-memory + AsyncStorage profile cache |
-| `lib/prefetch-country-profiles.ts` | Background prefetch (feed neighbors, touch warmup) |
-| `constants/ai-explorer-theme.ts` | Screen-specific amber + surface tokens |
-| `data/ai-explorer-content.ts` | Nigeria fallback country + legacy mock content helpers |
+| Path                                 | Purpose                                                               |
+| ------------------------------------ | --------------------------------------------------------------------- |
+| `app/country/[name]/ai-explorer.tsx` | **Primary route** — stack screen; `name` param is country name        |
+| `app/country/_layout.tsx`            | Stack layout — `headerShown: false`, navy background, slide animation |
+| `components/ai-explorer/`            | Reusable UI blocks                                                    |
+| `hooks/use-ai-explorer-country.ts`   | Country + Wikipedia + landmarks state, cache hydration                |
+| `lib/open-country-ai-explorer.ts`    | Navigation helpers (`openCountryAiExplorer`, `warmCountryAiExplorer`) |
+| `lib/country-profile-cache.ts`       | In-memory + AsyncStorage profile cache                                |
+| `lib/prefetch-country-profiles.ts`   | Background prefetch (feed neighbors, touch warmup)                    |
+| `constants/ai-explorer-theme.ts`     | Screen-specific amber + surface tokens                                |
+| `data/ai-explorer-content.ts`        | Nigeria fallback country + legacy mock content helpers                |
 
 There is **no** `(tabs)/explore/ai-content.tsx` route. The explorer is always pushed as `app/country/[name]/ai-explorer`.
 
 ### Active components (used by the screen)
 
-| Component | Responsibility |
-| --------- | -------------- |
-| `BlurredGlobeBackground` | Full-screen ambient blurred earth texture + navy scrim |
-| `CountryProfileCard` | Main scroll content — orchestrates all profile sections |
-| `CountryHeroCarousel` | Edge-to-edge horizontal image pager (~40% screen height) |
-| `ExplorerBackButton` | Circular light back button overlaid on hero |
-| `StatItem` | Value-first stat tile (Population, Capital, Region, Language, geography) |
-| `ProfileSection` | Uppercase section label + children |
-| `CountryLocationMap` | Equirectangular map crop centered on country; pulsing pin; "View on map" |
-| `CountryLandmarksSection` | Landmark cards with images, descriptions, show-more toggle |
-| `Divider` | Hairline dividers between stat rows and sections |
+| Component                 | Responsibility                                                           |
+| ------------------------- | ------------------------------------------------------------------------ |
+| `BlurredGlobeBackground`  | Full-screen ambient blurred earth texture + navy scrim                   |
+| `CountryProfileCard`      | Main scroll content — orchestrates all profile sections                  |
+| `CountryHeroCarousel`     | Edge-to-edge horizontal image pager (~40% screen height)                 |
+| `ExplorerBackButton`      | Circular light back button overlaid on hero                              |
+| `StatItem`                | Value-first stat tile (Population, Capital, Region, Language, geography) |
+| `ProfileSection`          | Uppercase section label + children                                       |
+| `CountryLocationMap`      | Equirectangular map crop centered on country; pulsing pin; "View on map" |
+| `CountryLandmarksSection` | Landmark cards with images, descriptions, show-more toggle               |
+| `Divider`                 | Hairline dividers between stat rows and sections                         |
 
 ### Legacy components (present in repo, not wired to main screen)
 
@@ -111,26 +111,26 @@ The screen has **two layers**: fixed ambient background + scrollable profile bod
 
 ### 1. Screen shell (`ai-explorer.tsx`)
 
-| Element | Spec |
-| ------- | ---- |
-| Background | `BlurredGlobeBackground` with `centerY={0.42}` |
-| Scroll | `ScrollView`, transparent, `paddingBottom: 20` |
-| Safe area | `SafeAreaView` with `edges={["bottom"]}` only — hero extends under status bar |
-| Loading | Full-page `ActivityIndicator` when no country name is available yet |
-| Main content | `CountryProfileCard` once country data exists |
+| Element      | Spec                                                                          |
+| ------------ | ----------------------------------------------------------------------------- |
+| Background   | `BlurredGlobeBackground` with `centerY={0.42}`                                |
+| Scroll       | `ScrollView`, transparent, `paddingBottom: 20`                                |
+| Safe area    | `SafeAreaView` with `edges={["bottom"]}` only — hero extends under status bar |
+| Loading      | Full-page `ActivityIndicator` when no country name is available yet           |
+| Main content | `CountryProfileCard` once country data exists                                 |
 
 No sticky "AI Content Explorer" header. Navigation back lives on the hero carousel.
 
 ### 2. Hero carousel (`CountryHeroCarousel`)
 
-| Element | Spec |
-| ------- | ---- |
-| Height | ~40% of screen height (`HERO_HEIGHT_RATIO = 0.4`) |
-| Images | Horizontal `FlatList`, paging, `country.images[]` via `getCountryImages` |
-| Fallback | `images.earthTopography` when no remote images |
-| Back button | `ExplorerBackButton` — top-left, safe-area offset |
-| Bottom scrim | `LinearGradient` fade into profile panel |
-| Counter | `{n}/{total}` bottom-right when multiple images |
+| Element      | Spec                                                                     |
+| ------------ | ------------------------------------------------------------------------ |
+| Height       | ~40% of screen height (`HERO_HEIGHT_RATIO = 0.4`)                        |
+| Images       | Horizontal `FlatList`, paging, `country.images[]` via `getCountryImages` |
+| Fallback     | `images.earthTopography` when no remote images                           |
+| Back button  | `ExplorerBackButton` — top-left, safe-area offset                        |
+| Bottom scrim | `LinearGradient` fade into profile panel                                 |
+| Counter      | `{n}/{total}` bottom-right when multiple images                          |
 
 ### 3. Profile panel (`CountryProfileCard`)
 
@@ -138,30 +138,30 @@ Raised card overlapping hero (`marginTop: -36`, `borderTopRadius: 24`, `backgrou
 
 **Header row**
 
-| Element | Data source |
-| ------- | ----------- |
+| Element      | Data source                                  |
+| ------------ | -------------------------------------------- |
 | Country name | `country.name` — Poppins Medium, auto-shrink |
-| Flag chip | `FlagBadge` + "FLAG" label |
+| Flag chip    | `FlagBadge` + "FLAG" label                   |
 
 **Quick stats grid** (2×2 tile panel)
 
-| Stat | Source |
-| ---- | ------ |
-| Population | `formatPopulation(country.population)` |
-| Capital | `country.capital` |
-| Region | `continentDisplayLabel(country.region)` |
-| Language | `formatOfficialLanguages(country.languages)` |
+| Stat       | Source                                       |
+| ---------- | -------------------------------------------- |
+| Population | `formatPopulation(country.population)`       |
+| Capital    | `country.capital`                            |
+| Region     | `continentDisplayLabel(country.region)`      |
+| Language   | `formatOfficialLanguages(country.languages)` |
 
 **Sections** (in order, separated by `Divider`)
 
-| Section | Content |
-| ------- | ------- |
-| Location | `CountryLocationMap` — tap calls `focusCountryOnMap` + `router.push("/(tabs)/map")` |
-| Overview | Wikipedia `extract`; skeleton while refreshing; read more/less at 3 lines |
-| Did you know? | First AI fact from `getProfileAiFacts(country)` — hidden if empty |
-| Landmarks | `CountryLandmarksSection` — only when `landmarks.length > 0` |
-| Geography | 4-row stat panel: coordinates, subregion, area, landlocked, timezone, hemisphere, climate, country code |
-| Learn more | Wikipedia link via `expo-web-browser` — only when `wikipedia.pageUrl` exists |
+| Section       | Content                                                                                                 |
+| ------------- | ------------------------------------------------------------------------------------------------------- |
+| Location      | `CountryLocationMap` — tap calls `focusCountryOnMap` + `router.push("/(tabs)/map")`                     |
+| Overview      | Wikipedia `extract`; skeleton while refreshing; read more/less at 3 lines                               |
+| Did you know? | First AI fact from `getProfileAiFacts(country)` — hidden if empty                                       |
+| Landmarks     | `CountryLandmarksSection` — only when `landmarks.length > 0`                                            |
+| Geography     | 4-row stat panel: coordinates, subregion, area, landlocked, timezone, hemisphere, climate, country code |
+| Learn more    | Wikipedia link via `expo-web-browser` — only when `wikipedia.pageUrl` exists                            |
 
 ---
 
@@ -169,14 +169,14 @@ Raised card overlapping hero (`marginTop: -36`, `borderTopRadius: 24`, `backgrou
 
 Screen tokens live in `constants/ai-explorer-theme.ts`:
 
-| Token | Value / usage |
-| ----- | ------------- |
-| Accent | Amber `#fbbf24` — links, pin, call-to-action |
-| Background | Navy `#0b132b` (globe background) + surface `#0f172a` (profile panel) |
-| Raised surfaces | `rgba(255,255,255,0.04)` with hairline `divider` borders |
-| Text | White primary; muted secondary at 48–82% opacity |
-| Typography | Poppins — section labels 11px uppercase; body 13–14px |
-| Motion | Reanimated pulse on location pin; RN `Animated` skeleton on overview load; press scale on back button |
+| Token           | Value / usage                                                                                         |
+| --------------- | ----------------------------------------------------------------------------------------------------- |
+| Accent          | Amber `#fbbf24` — links, pin, call-to-action                                                          |
+| Background      | Navy `#0b132b` (globe background) + surface `#0f172a` (profile panel)                                 |
+| Raised surfaces | `rgba(255,255,255,0.04)` with hairline `divider` borders                                              |
+| Text            | White primary; muted secondary at 48–82% opacity                                                      |
+| Typography      | Poppins — section labels 11px uppercase; body 13–14px                                                 |
+| Motion          | Reanimated pulse on location pin; RN `Animated` skeleton on overview load; press scale on back button |
 
 ### Styling rules
 
@@ -234,9 +234,9 @@ Return shape:
 
 ### Navigation (`lib/open-country-ai-explorer.ts`)
 
-| Function | When |
-| -------- | ---- |
-| `warmCountryAiExplorer(country)` | `onPressIn` on entry CTAs |
+| Function                         | When                                                                    |
+| -------------------------------- | ----------------------------------------------------------------------- |
+| `warmCountryAiExplorer(country)` | `onPressIn` on entry CTAs                                               |
 | `openCountryAiExplorer(country)` | `onPress` — records recently viewed, prefetches neighbors, pushes route |
 
 **Entry points (implemented):**
@@ -247,23 +247,23 @@ Return shape:
 
 ### Data wiring
 
-| UI element | Source |
-| ---------- | ------ |
-| Flag, name, capital, population, region, languages, geography | `Country` from profile endpoint or feed cache |
-| Hero images | `country.images[]` via `getCountryImages` |
-| Overview text | `wikipedia.extract` → fallback `ai.caption` / `ai.fact` → generic copy |
-| Did you know? | `getProfileAiFacts(country)[0]` |
-| Landmarks | `GET /country/:name/profile` → `landmarks[]` |
-| Location map | `country.latlng` + `images.earthMap` equirectangular crop |
-| Wikipedia link | `wikipedia.pageUrl` → `WebBrowser.openBrowserAsync` |
+| UI element                                                    | Source                                                                 |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Flag, name, capital, population, region, languages, geography | `Country` from profile endpoint or feed cache                          |
+| Hero images                                                   | `country.images[]` via `getCountryImages`                              |
+| Overview text                                                 | `wikipedia.extract` → fallback `ai.caption` / `ai.fact` → generic copy |
+| Did you know?                                                 | `getProfileAiFacts(country)[0]`                                        |
+| Landmarks                                                     | `GET /country/:name/profile` → `landmarks[]`                           |
+| Location map                                                  | `country.latlng` + `images.earthMap` equirectangular crop              |
+| Wikipedia link                                                | `wikipedia.pageUrl` → `WebBrowser.openBrowserAsync`                    |
 
 ### Header / navigation actions
 
-| Control | Behavior |
-| ------- | -------- |
-| Back (hero overlay) | `router.back()` |
+| Control                        | Behavior                                               |
+| ------------------------------ | ------------------------------------------------------ |
+| Back (hero overlay)            | `router.back()`                                        |
 | View on map (location section) | `focusCountryOnMap(country, "explore")` + push Map tab |
-| Open on Wikipedia | In-app browser via `expo-web-browser` |
+| Open on Wikipedia              | In-app browser via `expo-web-browser`                  |
 
 ---
 
