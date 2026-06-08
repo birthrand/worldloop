@@ -84,12 +84,12 @@ export default function SavedScreen() {
   );
 
   const isEmpty = mapCountries.length === 0;
+  const isMapView = !isEmpty && !selectedCountry;
   const selectedIndex = selectedCountry
     ? detailCountries.findIndex(
         (country) => country.name === selectedCountry.name,
       )
     : -1;
-  const isMapView = !isEmpty && selectedIndex < 0;
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -109,7 +109,7 @@ export default function SavedScreen() {
               showExploreCta
             />
           </Animated.View>
-        ) : selectedIndex >= 0 ? (
+        ) : selectedCountry && selectedIndex >= 0 ? (
           <Animated.View
             entering={FadeIn.duration(320)}
             exiting={FadeOut.duration(200)}

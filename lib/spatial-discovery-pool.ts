@@ -120,7 +120,7 @@ export function buildSpatialMapRandomPool({
 
   if (filtered.length > 0) return filtered;
 
-  return filterMapCountriesByChip(countries, activeChip).filter((country) =>
+  return filterMapCountriesByChip(base, activeChip).filter((country) =>
     isValidLatLng(getMapDisplayLatLng(country)),
   );
 }

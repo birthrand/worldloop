@@ -28,17 +28,6 @@ export const CONTINENT_DISPLAY_LABELS: Record<Continent, string> = {
   Oceania: "Oceania",
 };
 
-/** Compact header labels — selected tab uses full `CONTINENT_DISPLAY_LABELS`. */
-export const CONTINENT_SHORT_LABELS: Record<Continent, string> = {
-  Africa: "Africa",
-  "North America": "North America",
-  "South America": "South America",
-  Antarctic: "Antarctica",
-  Asia: "Asia",
-  Europe: "Europe",
-  Oceania: "Oceania",
-};
-
 /** Explore top bar tabs: For You first, then continents. */
 export const EXPLORE_HEADER_TABS = [FOR_YOU_TAB, ...CONTINENTS] as const;
 
@@ -53,13 +42,6 @@ export function isContinent(value: string): value is Continent {
 export function continentDisplayLabel(region: string): string {
   if (isContinent(region)) return CONTINENT_DISPLAY_LABELS[region];
   return region;
-}
-
-export function continentTabLabel(region: string, expanded: boolean): string {
-  if (!isContinent(region)) return region;
-  return expanded
-    ? CONTINENT_DISPLAY_LABELS[region]
-    : CONTINENT_SHORT_LABELS[region];
 }
 
 /** Step to previous/next continent in a list (wraps around). */

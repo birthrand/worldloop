@@ -18,10 +18,7 @@ import { fetchCountryByName } from "@/lib/api";
 import { getClientCache, staleWhileRevalidate } from "@/lib/client-cache";
 import { formatPopulation } from "@/lib/format-country";
 import { mapCountryToCountry } from "@/lib/map-country";
-import {
-  openCountryAiExplorer,
-  warmCountryAiExplorer,
-} from "@/lib/open-country-ai-explorer";
+import { openCountryAiExplorer } from "@/lib/open-country-ai-explorer";
 import { openCountryInExplore } from "@/lib/open-country-in-explore";
 import { prefetchCountryProfile } from "@/lib/prefetch-country-profiles";
 import { useSpatialContextStore } from "@/store/use-spatial-context-store";
@@ -243,7 +240,6 @@ export function MapCountryPreviewCard({
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`Open AI insights for ${country.name}`}
-        onPressIn={() => warmCountryAiExplorer(countryForActions)}
         onPress={() => openCountryAiExplorer(countryForActions)}
         style={({ pressed }) => [
           styles.insightsButton,
@@ -315,11 +311,11 @@ export function MapCountryPreviewCard({
           onPress={() =>
             openCountryInExplore(
               countryForActions,
-              discoveryScopeMode === "here"
+              discoveryScopeMode === "here" && queueLength > 0
                 ? {
                     mode: "here",
                     preserveHereMode: true,
-                    preserveQueue: queueLength > 0,
+                    preserveQueue: true,
                   }
                 : undefined,
             )

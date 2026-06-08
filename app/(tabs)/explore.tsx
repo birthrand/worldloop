@@ -1,11 +1,10 @@
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
-import { StyleSheet, View } from "react-native";
+import { View } from "react-native";
 
 import { ExploreError } from "@/components/explore/explore-error";
 import { ExploreFeed } from "@/components/explore/explore-feed";
 import { ExploreLoading } from "@/components/explore/explore-loading";
-import { SavedSpaceBackground } from "@/components/saved/saved-space-background";
 import { useCountryFeedStore } from "@/store/use-country-feed-store";
 import { useSpatialContextStore } from "@/store/use-spatial-context-store";
 
@@ -69,9 +68,8 @@ export default function ExploreScreen() {
     countries.length > 0 || selectedRegion !== null || discoveryMode === "here";
 
   return (
-    <View style={styles.screen}>
+    <View className="flex-1 bg-midnight-navy">
       <StatusBar style="light" />
-      <SavedSpaceBackground />
 
       {showError ? (
         <ExploreError
@@ -94,10 +92,3 @@ export default function ExploreScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: "#0b132b",
-  },
-});

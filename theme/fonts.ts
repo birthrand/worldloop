@@ -1,4 +1,3 @@
-import PlayfairDisplay from "@/assets/fonts/PlayfairDisplay.ttf";
 import PoppinsBold from "@/assets/fonts/Poppins-Bold.ttf";
 import PoppinsMedium from "@/assets/fonts/Poppins-Medium.ttf";
 import PoppinsRegular from "@/assets/fonts/Poppins-Regular.ttf";
@@ -12,7 +11,6 @@ export const fontAssets = {
   "Poppins-Medium": PoppinsMedium,
   "Poppins-SemiBold": PoppinsSemiBold,
   "Poppins-Bold": PoppinsBold,
-  PlayfairDisplay,
 } as const;
 
 export const fontFamily = {
@@ -20,7 +18,6 @@ export const fontFamily = {
   medium: "Poppins-Medium",
   semiBold: "Poppins-SemiBold",
   bold: "Poppins-Bold",
-  display: "PlayfairDisplay",
 } as const;
 
 export type FontFamily = typeof fontFamily;

@@ -145,26 +145,26 @@ export const useDiscoveryProgressStore = create<DiscoveryProgressState>()(
 
         if (!Array.isArray(state.visitedCountryIds)) {
           state.visitedCountryIds = [];
-          state.visitedAtByCountryId = {};
-          state.lastActiveDate = null;
-          state.weekProgress = createEmptyWeekProgress();
+          if (
+            typeof state.visitedAtByCountryId !== "object" ||
+            state.visitedAtByCountryId === null
+          ) {
+            state.visitedAtByCountryId = {};
+          }
+          if (state.lastActiveDate === undefined) {
+            state.lastActiveDate = null;
+          }
+          if (state.weekProgress === undefined) {
+            state.weekProgress = createEmptyWeekProgress();
+          }
+          return;
         }
-
-        if (
-          typeof state.visitedAtByCountryId !== "object" ||
-          state.visitedAtByCountryId === null
-        ) {
-          state.visitedAtByCountryId = {};
-        }
-        if (state.lastActiveDate === undefined) {
-          state.lastActiveDate = null;
-        }
-        state.weekProgress = state.weekProgress ?? createEmptyWeekProgress();
-        state.quizzesCompleted = state.quizzesCompleted ?? 0;
 
         const derived = recomputeDerived(state.visitedCountryIds);
         state.countriesExplored = derived.countriesExplored;
         state.worldProgressPercent = derived.worldProgressPercent;
+        state.weekProgress = state.weekProgress ?? createEmptyWeekProgress();
+        state.quizzesCompleted = state.quizzesCompleted ?? 0;
       },
     },
   ),

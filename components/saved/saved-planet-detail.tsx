@@ -141,12 +141,12 @@ export function SavedPlanetDetail({
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
       const nextIndex = viewableItems[0]?.index;
-      if (nextIndex == null || nextIndex === safeIndex) return;
+      if (nextIndex == null) return;
 
       skipProgrammaticScrollRef.current = true;
       onSelectedIndexChange(nextIndex);
     },
-    [onSelectedIndexChange, safeIndex],
+    [onSelectedIndexChange],
   );
 
   const viewabilityConfig = useRef({

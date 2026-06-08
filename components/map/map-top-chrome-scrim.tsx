@@ -6,16 +6,11 @@ type GradientViewStyle = {
 
 type MapTopChromeScrimProps = {
   paddingTop: number;
-  /** Shorter fade when only the search bar is visible (header hidden). */
-  compact?: boolean;
 };
 
 /** Darkens the top of the map so search + chips stay readable on busy satellite imagery. */
-export function MapTopChromeScrim({
-  paddingTop,
-  compact = false,
-}: MapTopChromeScrimProps) {
-  const height = paddingTop + (compact ? 56 : 108);
+export function MapTopChromeScrim({ paddingTop }: MapTopChromeScrimProps) {
+  const height = paddingTop + 108;
 
   return (
     <View

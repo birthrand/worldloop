@@ -18,7 +18,7 @@ export const CLIENT_CACHE_KEYS = {
 export const CLIENT_CACHE_TTL = {
   mapCountries: 30 * 24 * 60 * 60, // 30d — match backend map TTL
   countryDetail: 7 * 24 * 60 * 60, // 7d — AI + images can change
-  countryProfile: 30 * 24 * 60 * 60, // 30d — Wikipedia + landmarks
+  countryProfile: 7 * 24 * 60 * 60, // 7d — Wikipedia + landmarks
   feedFirstPage: 24 * 60 * 60, // 1d — feed order is shuffled server-side
   feedRegion: 7 * 24 * 60 * 60,
   search: 7 * 24 * 60 * 60, // 7d — match backend search TTL

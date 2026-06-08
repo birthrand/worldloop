@@ -3,13 +3,13 @@ import { useEffect, useMemo, useState } from "react";
 
 import { NIGERIA_FALLBACK_COUNTRY } from "@/data/ai-explorer-content";
 import type { CountryLandmark, CountryWikipediaSummary } from "@/lib/api";
+import { prefetchCountryProfile } from "@/lib/prefetch-country-profiles";
 import {
   getCachedCountryProfile,
   hydrateCountryProfileFromDisk,
   isCountryProfileEnriched,
   seedCachedCountryProfile,
 } from "@/lib/country-profile-cache";
-import { prefetchCountryProfile } from "@/lib/prefetch-country-profiles";
 import { useCountryFeedStore } from "@/store/use-country-feed-store";
 import type { Country } from "@/types/country";
 
@@ -51,26 +51,6 @@ function resolveInitialProfile(
   };
 }
 
-function applyCachedProfile(
-  targetName: string,
-  feedMatch: Country | null | undefined,
-): ReturnType<typeof resolveInitialProfile> {
-  const cached = getCachedCountryProfile(targetName);
-  if (cached) {
-    return {
-      country: cached.country,
-      wikipedia: cached.wikipedia,
-      landmarks: cached.landmarks,
-    };
-  }
-
-  if (feedMatch?.name.toLowerCase() === targetName.toLowerCase()) {
-    return { country: feedMatch, wikipedia: null, landmarks: [] };
-  }
-
-  return resolveInitialProfile(targetName, feedMatch);
-}
-
 export function useAiExplorerCountry(): UseAiExplorerCountryResult {
   const { name } = useLocalSearchParams<{ name: string }>();
   const routeName =
@@ -104,62 +84,144 @@ export function useAiExplorerCountry(): UseAiExplorerCountryResult {
     initial.landmarks,
   );
   const [loading, setLoading] = useState(
-    () =>
-      !isCountryProfileEnriched(getCachedCountryProfile(targetName)) &&
-      !feedMatch,
+    () => !getCachedCountryProfile(targetName) && !feedMatch,
   );
-  const [refreshing, setRefreshing] = useState(
-    () => !getCachedCountryProfile(targetName)?.wikipedia?.extract?.trim(),
-  );
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!feedMatch) return;
-
-    seedCachedCountryProfile(feedMatch);
-    setCountry((prev) => {
-      if (prev.name.toLowerCase() !== feedMatch.name.toLowerCase()) {
-        return feedMatch;
-      }
-      return {
-        ...feedMatch,
-        images: feedMatch.images?.length ? feedMatch.images : prev.images,
-        ai: feedMatch.ai ?? prev.ai,
-      };
-    });
-    setLoading(false);
+    if (feedMatch) {
+      seedCachedCountryProfile(feedMatch);
+      setCountry((prev) => {
+        if (prev.name.toLowerCase() !== feedMatch.name.toLowerCase()) {
+          return feedMatch;
+        }
+        return {
+          ...feedMatch,
+          images: feedMatch.images?.length ? feedMatch.images : prev.images,
+          ai: feedMatch.ai ?? prev.ai,
+        };
+      });
+      setLoading(false);
+    }
   }, [feedMatch]);
 
   useEffect(() => {
     let cancelled = false;
 
-    const syncFromCache = () => {
-      const profile = applyCachedProfile(targetName, feedMatch);
+    const applyProfile = (
+      profile: ReturnType<typeof getCachedCountryProfile>,
+    ) => {
+      if (!profile) return;
       setCountry(profile.country);
       setWikipedia(profile.wikipedia);
       setLandmarks(profile.landmarks);
-
-      setLoading(false);
-      setRefreshing(!profile.wikipedia?.extract?.trim());
-      setError(null);
+      if (isCountryProfileEnriched(profile)) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     };
 
-    syncFromCache();
+    const cached = getCachedCountryProfile(targetName);
+    if (cached) {
+      applyProfile(cached);
+    } else {
+      setLandmarks([]);
+      setWikipedia(null);
+      if (feedMatch?.name.toLowerCase() === targetName.toLowerCase()) {
+        setCountry(feedMatch);
+      }
+    }
 
-    void hydrateCountryProfileFromDisk(targetName).then(() => {
+    void hydrateCountryProfileFromDisk(targetName).then((profile) => {
       if (cancelled) return;
-      syncFromCache();
-    });
-
-    void prefetchCountryProfile(targetName).then(() => {
-      if (cancelled) return;
-      syncFromCache();
+      applyProfile(profile ?? getCachedCountryProfile(targetName));
     });
 
     return () => {
       cancelled = true;
     };
   }, [targetName, feedMatch]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const memoryCached = getCachedCountryProfile(targetName);
+    const hasEnrichedCache = isCountryProfileEnriched(memoryCached);
+    const hasInstantData = hasEnrichedCache || Boolean(feedMatch);
+
+    if (hasEnrichedCache) {
+      setLoading(false);
+      setRefreshing(false);
+    } else if (hasInstantData) {
+      setLoading(false);
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+      setRefreshing(false);
+    }
+
+    setError(null);
+
+    void (async () => {
+      await hydrateCountryProfileFromDisk(targetName);
+      if (cancelled) return;
+
+      const hydrated = getCachedCountryProfile(targetName);
+      if (hydrated && isCountryProfileEnriched(hydrated)) {
+        setCountry(hydrated.country);
+        setWikipedia(hydrated.wikipedia);
+        setLandmarks(hydrated.landmarks);
+        setLoading(false);
+        setRefreshing(false);
+        setError(null);
+        return;
+      }
+
+      await prefetchCountryProfile(targetName);
+      if (cancelled) return;
+
+      const cached = getCachedCountryProfile(targetName);
+      if (cached && isCountryProfileEnriched(cached)) {
+        setCountry(cached.country);
+        setWikipedia(cached.wikipedia);
+        setLandmarks(cached.landmarks);
+        setLoading(false);
+        setRefreshing(false);
+        setError(null);
+        return;
+      }
+
+      if (cached) {
+        setCountry(cached.country);
+        setWikipedia(cached.wikipedia);
+        setLandmarks(cached.landmarks);
+      } else if (feedMatch) {
+        setCountry(feedMatch);
+      } else if (targetName.toLowerCase() === "nigeria") {
+        setCountry(NIGERIA_FALLBACK_COUNTRY);
+      } else {
+        setCountry({
+          ...NIGERIA_FALLBACK_COUNTRY,
+          name: targetName,
+          capital: "—",
+          region: "—",
+          cca2: "UN",
+          flag: "",
+        });
+      }
+
+      setWikipedia(cached?.wikipedia ?? null);
+      setLandmarks(cached?.landmarks ?? []);
+      setError(null);
+      setLoading(false);
+      setRefreshing(false);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [feedMatch, targetName]);
 
   const landmarksForCountry = useMemo(
     () =>

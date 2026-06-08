@@ -18,7 +18,7 @@ import {
   TAB_BAR_CONTENT_HEIGHT,
 } from "@/components/bottom-tab-bar";
 import {
-  COMPACT_TOUCH_SIZE,
+  COMPACT_ICON_EDGE_INSET,
   GlassIconButton,
 } from "@/components/explore/glass-icon-button";
 import { focusCountryOnMap } from "@/lib/open-country-on-map";
@@ -36,29 +36,14 @@ type ExploreActionRailProps = {
   country: Country;
   /** `header` = horizontal icons beside the country name. */
   variant?: "header" | "overlay";
+  imageIndex?: number;
+  imageCount?: number;
 };
 
 const SHEET_ENTER = SlideInDown.springify()
   .damping(20)
   .stiffness(150)
   .mass(0.85);
-
-/** Header rail: compact touch target + vertical padding (4 + 4). */
-const RAIL_HEADER_VERTICAL_PADDING = 8;
-const RAIL_HEADER_BORDER_RADIUS = 12;
-
-function RailIconDivider({ vertical = true }: { vertical?: boolean }) {
-  return (
-    <View
-      style={
-        vertical
-          ? styles.railIconDividerVertical
-          : styles.railIconDividerHorizontal
-      }
-      accessibilityElementsHidden
-    />
-  );
-}
 
 function getOrderLabels(field: FeedSortField): { asc: string; desc: string } {
   if (field === "population") {
@@ -239,6 +224,8 @@ function MoreMenuRow({
 export function ExploreActionRail({
   country,
   variant = "overlay",
+  imageIndex = 0,
+  imageCount = 1,
 }: ExploreActionRailProps) {
   const insets = useSafeAreaInsets();
   const toggleSaved = useSavedCountriesStore((s) => s.toggleSaved);
@@ -340,49 +327,55 @@ export function ExploreActionRail({
         accessibilityLabel="Country actions"
       >
         {variant === "header" ? (
-          <View style={[styles.railSurface, styles.railHeader]}>
-            <GlassIconButton
-              icon="globe-outline"
-              label="Map"
-              variant="compact"
-              onPress={handleJumpToMap}
-              accessibilityLabel={`View ${country.name} on map`}
-              accessibilityHint="Opens the world map focused on this country"
-            />
+          <>
+            {imageCount > 1 ? (
+              <Text
+                style={styles.imageCounter}
+                accessibilityLabel={`Image ${imageIndex + 1} of ${imageCount}`}
+              >
+                {imageIndex + 1}/{imageCount}
+              </Text>
+            ) : null}
+            <View style={styles.railHeader}>
+              <GlassIconButton
+                icon="globe-outline"
+                label="Map"
+                variant="compact"
+                onPress={handleJumpToMap}
+                accessibilityLabel={`View ${country.name} on map`}
+                accessibilityHint="Opens the world map focused on this country"
+              />
 
-            <RailIconDivider />
+              <GlassIconButton
+                icon={saved ? "bookmark" : "bookmark-outline"}
+                label="Save"
+                variant="compact"
+                active={saved}
+                haptic="medium"
+                onPress={handleToggleSaved}
+                accessibilityLabel={
+                  saved ? `Unsave ${country.name}` : `Save ${country.name}`
+                }
+                accessibilityHint={
+                  saved
+                    ? "Removes this country from your saved list"
+                    : "Adds this country to your saved list"
+                }
+              />
 
-            <GlassIconButton
-              icon={saved ? "bookmark" : "bookmark-outline"}
-              label="Save"
-              variant="compact"
-              active={saved}
-              haptic="medium"
-              onPress={handleToggleSaved}
-              accessibilityLabel={
-                saved ? `Unsave ${country.name}` : `Save ${country.name}`
-              }
-              accessibilityHint={
-                saved
-                  ? "Removes this country from your saved list"
-                  : "Adds this country to your saved list"
-              }
-            />
-
-            <RailIconDivider />
-
-            <GlassIconButton
-              icon="ellipsis-horizontal"
-              label="More"
-              variant="compact"
-              active={hasCustomSort}
-              onPress={handleOpenMoreMenu}
-              accessibilityLabel="More actions"
-              accessibilityHint="Opens share, sort, and other country actions"
-            />
-          </View>
+              <GlassIconButton
+                icon="ellipsis-horizontal"
+                label="More"
+                variant="compact"
+                active={hasCustomSort}
+                onPress={handleOpenMoreMenu}
+                accessibilityLabel="More actions"
+                accessibilityHint="Opens share, sort, and other country actions"
+              />
+            </View>
+          </>
         ) : (
-          <View style={[styles.railSurface, styles.railGroup]}>
+          <View style={styles.railGroup}>
             <GlassIconButton
               icon="globe-outline"
               label="Map"
@@ -635,44 +628,38 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   railHeaderStack: {
+    position: "relative",
     alignItems: "flex-end",
     justifyContent: "center",
+    minHeight: 28,
     flexShrink: 0,
     marginLeft: 8,
   },
   railHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 2,
-    paddingVertical: RAIL_HEADER_VERTICAL_PADDING / 2,
-    paddingHorizontal: 8,
-    borderRadius: RAIL_HEADER_BORDER_RADIUS,
-    overflow: "hidden",
+    gap: 4,
   },
-  railIconDividerVertical: {
-    width: StyleSheet.hairlineWidth,
-    height: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.14)",
-    flexShrink: 0,
-  },
-  railIconDividerHorizontal: {
-    width: 20,
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: "rgba(255, 255, 255, 0.14)",
-    flexShrink: 0,
-  },
-  railSurface: {
-    backgroundColor: "rgba(0, 0, 0, 0.32)",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.14)",
+  imageCounter: {
+    position: "absolute",
+    top: -26,
+    right: COMPACT_ICON_EDGE_INSET,
+    fontFamily: "Poppins-Regular",
+    fontSize: 11,
+    lineHeight: 14,
+    color: "rgba(255, 255, 255, 0.38)",
+    letterSpacing: 0.4,
+    textAlign: "right",
   },
   railGroup: {
     alignItems: "center",
     gap: 6,
     paddingVertical: 6,
     paddingHorizontal: 4,
-    borderRadius: (COMPACT_TOUCH_SIZE + 8) / 2,
-    overflow: "hidden",
+    borderRadius: 28,
+    backgroundColor: "rgba(0, 0, 0, 0.32)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
   },
   optionPressed: {
     opacity: 0.78,

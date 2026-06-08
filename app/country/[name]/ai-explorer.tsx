@@ -15,11 +15,8 @@ import { focusCountryOnMap } from "@/lib/open-country-on-map";
  * Route: app/country/[name]/ai-explorer.tsx (stack modal, tab bar hidden).
  */
 export default function AIContentExplorerScreen() {
-  const { country, loading, refreshing, wikipedia, landmarks } =
-    useAiExplorerCountry();
-  const overviewLoading = refreshing && !wikipedia?.extract?.trim();
+  const { country, loading, wikipedia, landmarks } = useAiExplorerCountry();
   const images = getCountryImages(country);
-  const showPageLoader = loading && !country.name;
 
   const handleShowMap = useCallback(() => {
     focusCountryOnMap(country, "explore");
@@ -35,7 +32,7 @@ export default function AIContentExplorerScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {showPageLoader ? (
+        {loading ? (
           <View style={styles.loadingWrap}>
             <ActivityIndicator size="large" color={AI_EXPLORER_THEME.primary} />
           </View>
@@ -45,7 +42,6 @@ export default function AIContentExplorerScreen() {
             images={images}
             wikipedia={wikipedia}
             landmarks={landmarks}
-            overviewLoading={overviewLoading}
             onBack={() => router.back()}
             onShowMap={handleShowMap}
           />

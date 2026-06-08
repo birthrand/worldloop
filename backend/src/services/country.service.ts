@@ -50,7 +50,8 @@ function normalizeCountry(raw: RestCountry): CountryBasic | null {
     flag: flagCdnUrlFromIso2(cca2),
     latlng: [lat, lng],
     subregion: raw.subregion?.trim() || undefined,
-    area: typeof raw.area === "number" && raw.area > 0 ? raw.area : undefined,
+    area:
+      typeof raw.area === "number" && raw.area > 0 ? raw.area : undefined,
     landlocked:
       typeof raw.landlocked === "boolean" ? raw.landlocked : undefined,
     timezones: raw.timezones
@@ -96,9 +97,7 @@ async function fetchCountryFromApi(name: string): Promise<CountryBasic> {
 }
 
 async function fetchAllCountriesFromApi(): Promise<CountryBasic[]> {
-  // REST Countries v3.1 allows at most 10 `fields` per request. Bulk list omits
-  // landlocked/timezones; getCountryByName() loads the full record for profiles.
-  const url = `${env.restCountriesBaseUrl}/all?fields=name,capital,region,subregion,population,cca2,latlng,area,languages`;
+  const url = `${env.restCountriesBaseUrl}/all?fields=name,capital,region,subregion,population,cca2,latlng,area,landlocked,timezones,languages`;
   const data = assertJsonArray<RestCountry>(
     await fetchJson<unknown>(url),
     "REST Countries API",

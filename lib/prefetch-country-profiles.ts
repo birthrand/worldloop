@@ -13,7 +13,6 @@ import type { Country } from "@/types/country";
 const PREFETCH_AHEAD = 2;
 const PREFETCH_BEHIND = 1;
 const FEED_INITIAL_PREFETCH = 4;
-const DEFAULT_READY_WAIT_MS = 450;
 
 const inFlight = new Map<string, Promise<void>>();
 
@@ -27,16 +26,13 @@ async function fetchAndCacheProfile(name: string): Promise<void> {
 
   await hydrateCountryProfileFromDisk(trimmed);
 
-  const cachedProfile = getCachedCountryProfile(trimmed);
-  if (isCountryProfileEnriched(cachedProfile)) {
+  if (isCountryProfileEnriched(getCachedCountryProfile(trimmed))) {
     return;
   }
 
   await staleWhileRevalidate({
     key: CLIENT_CACHE_KEYS.countryProfile(trimmed),
     ttlSeconds: CLIENT_CACHE_TTL.countryProfile,
-    // Bypass a "fresh" disk entry that lacks Wikipedia — always revalidate until enriched.
-    force: !isCountryProfileEnriched(cachedProfile),
     fetcher: async () => {
       const data = await fetchCountryProfile(trimmed);
       const profile: CachedCountryProfile = {
@@ -82,51 +78,6 @@ export function prefetchCountryProfile(name: string): Promise<void> {
   return task;
 }
 
-/** Touch / hover — hydrate disk and start fetch without blocking navigation. */
-export function warmCountryProfileOnInteraction(name: string): void {
-  const trimmed = name.trim();
-  if (!trimmed) return;
-
-  void hydrateCountryProfileFromDisk(trimmed);
-  void prefetchCountryProfile(trimmed);
-}
-
-/**
- * Wait briefly for overview + landmarks before opening the explorer.
- * Returns the best cached profile available (memory or disk).
- */
-export async function ensureCountryProfileReady(
-  name: string,
-  options?: { maxWaitMs?: number },
-): Promise<CachedCountryProfile | null> {
-  const trimmed = name.trim();
-  if (!trimmed) return null;
-
-  await hydrateCountryProfileFromDisk(trimmed);
-
-  let cached = getCachedCountryProfile(trimmed);
-  if (isCountryProfileEnriched(cached)) {
-    return cached ?? null;
-  }
-
-  const maxWaitMs = options?.maxWaitMs ?? DEFAULT_READY_WAIT_MS;
-  const prefetch = prefetchCountryProfile(trimmed);
-
-  if (maxWaitMs > 0) {
-    await Promise.race([
-      prefetch,
-      new Promise<void>((resolve) => {
-        setTimeout(resolve, maxWaitMs);
-      }),
-    ]);
-  } else {
-    void prefetch;
-  }
-
-  cached = getCachedCountryProfile(trimmed);
-  return cached ?? null;
-}
-
 function pickPrefetchTargets(
   countries: Country[],
   aroundIndex?: number,
@@ -150,11 +101,7 @@ function pickPrefetchTargets(
     }
   }
 
-  for (
-    let index = 0;
-    index < FEED_INITIAL_PREFETCH && index < countries.length;
-    index += 1
-  ) {
+  for (let index = 0; index < FEED_INITIAL_PREFETCH && index < countries.length; index += 1) {
     add(countries[index]);
   }
 

@@ -18,18 +18,14 @@ const CENTROID_FALLBACK_PADDING_DEGREES = 2;
 
 let cachedGeoIndex: GeoIndexedCountry[] | null = null;
 
-function wrapLongitude(lng: number): number {
-  return ((((lng + 180) % 360) + 360) % 360) - 180;
-}
-
 function bboxFromCentroid(
   lat: number,
   lng: number,
   paddingDegrees: number,
 ): BBox {
   return {
-    west: wrapLongitude(lng - paddingDegrees),
-    east: wrapLongitude(lng + paddingDegrees),
+    west: Math.max(-180, lng - paddingDegrees),
+    east: Math.min(180, lng + paddingDegrees),
     south: Math.max(-90, lat - paddingDegrees),
     north: Math.min(90, lat + paddingDegrees),
   };

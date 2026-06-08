@@ -1,339 +1,322 @@
 Read AGENTS.md first and follow it strictly.
 
-Reference: `assets/savedUI/` (frame captures of the implemented Saved Space UI), `AGENTS.md` (app structure, data model), `prompts/08-zustand.md`, `prompts/09-bottom-tab-nav.md`, `prompts/10a-explore-ui.md`
+Reference: `prompt_material/saved-screen-ui.png`, `AGENTS.md` (app structure, data model), `prompts/08-zustand.md`, `prompts/09-bottom-tab-nav.md`, `prompts/10a-explore-ui.md`, `prompts/10b-home-ui.md`
 
-This document describes **how the Saved tab is wired today** — a cosmic **Saved Space** map where each bookmarked country appears as an interactive planet. Use it when extending the screen, debugging layout, or teaching the feature.
+Implement the **Saved** tab UI on `app/(tabs)/saved.tsx` exactly as shown in the attached design. Use precise **8-point spacing** throughout (8, 16, 24, 32, …). Match layout, typography, colors, radii, and card treatments pixel-for-pixel — do not simplify the design.
 
-> **Note:** The original `prompt_material/saved-screen-ui.png` spec (category filter tabs, Favorites hero card, Want to Visit carousel, Recently Saved list) was replaced by the Saved Space design. The store fields (`categoryByName`, `savedAtByName`) remain and drive planet color accents.
+Use assets from `assets/` via the centralized `constants/images.ts` import (`import { images } from "@/constants/images"`). Add any new image assets there before using them in screens or components.
+
+@prompt_material/saved-screen-ui.png
 
 ## Goal
 
-The Saved tab (`app/(tabs)/saved.tsx`) is a **three-state bookmark library**:
+Replace the Saved placeholder with a **bookmark library** screen that groups saved countries into teachable sections:
 
-1. **Empty** — header + friendly empty state with Explore CTA
-2. **Map** — pannable cosmic field of planet nodes connected in save-order chain
-3. **Detail** — horizontal pager of selected country with sphere hero + “Explore in feed” CTA
+- Centered **WorldLoop** wordmark header
+- Page title **Saved** with subtitle and search / filter affordances
+- Horizontal **category filter tabs** (All, Favorites, Want to Visit, Recently Saved)
+- **Favorites** hero card (featured saved country with stats + exploration ring)
+- **Want to Visit** horizontal carousel of vertical destination cards
+- **Recently Saved** vertical list with thumbnails and relative timestamps
+- Bookmark toggles on every card (gold when saved)
+- Tap any country → open it in the Explore feed
 
-Saving and unsaving countries happens from **Explore**, **Home**, and **Map** via `toggleSaved` — the Saved screen is read/browse/navigation, not a bookmark editor.
+Wire UI to existing Zustand stores — **no new data libraries**.
 
 ## Prerequisites
 
-- `prompts/09-bottom-tab-nav.md` — `(tabs)` routes and custom `components/bottom-tab-bar.tsx`
-- `prompts/08-zustand.md` — `store/use-saved-countries-store.ts`, `store/use-country-feed-store.ts`, `types/country.ts`
-- `prompts/10a-explore-ui.md` — `lib/open-country-in-explore.ts` for opening a country in the Explore feed
-- `prompts/01-nativewind.md` and `prompts/02-design-theme.md` — theme tokens in `global.css`
-- Backend feed (`GET /feed/countries`) — used to enrich saved entries with full `Country` objects
+- `prompts/09-bottom-tab-nav.md` — `(tabs)` routes and custom `components/bottom-tab-bar.tsx` exist; Saved tab is reachable
+- `prompts/08-zustand.md` — `store/use-saved-countries-store.ts`, `store/use-country-feed-store.ts`, `lib/api.ts`, `types/country.ts`
+- `prompts/10a-explore-ui.md` — Explore feed + `openCountryInExplore` (or equivalent) so card taps land on the correct country
+- `prompts/10b-home-ui.md` — `store/use-discovery-progress-store.ts`, `lib/format-relative-time.ts`, `FlagBadge`, `formatPopulation`, `getCountryImages`, `getAiFact`
+- `prompts/01-nativewind.md` and `prompts/02-design-theme.md` — theme tokens in `global.css`, Poppins fonts loaded
+- Backend feed running (`GET /feed/countries`) with enriched countries (`images`, `ai.fact` when available) — used for seeding and enriching saved entries
 
 ## Dependencies
 
-Already installed and used by Saved Space:
+Use what is already installed:
 
-- `expo-router`, `expo-image`, `expo-blur`, `expo-status-bar`
+- `expo-router`, `expo-image`
 - `zustand`, `@react-native-async-storage/async-storage`
-- `react-native-reanimated`
+- `@expo/vector-icons`
 - `react-native-safe-area-context`
 
-No React Query, axios, or `react-native-svg` in this screen.
+Use `react-native-svg` **only if already installed** for circular progress rings; otherwise use a teachable workaround (partial border, static ring image) without adding new libraries unless the user approves.
+
+Do **not** add React Query, axios, or new navigation libraries without user approval.
 
 ## Route & files
 
-| Path                                           | Purpose                                                               |
-| ---------------------------------------------- | --------------------------------------------------------------------- |
-| `app/(tabs)/saved.tsx`                         | Screen orchestrator — hydration, feed enrichment, view state, sorting |
-| `components/saved/saved-space-background.tsx`  | Full-screen earth map + blur + nebula + procedural stars              |
-| `components/saved/saved-space-header.tsx`      | Centered **Saved** title; optional back button in detail view         |
-| `components/saved/saved-back-button.tsx`       | Outlined **back** pill — returns from detail to map                   |
-| `components/saved/saved-space-map.tsx`         | Nested horizontal/vertical `ScrollView` viewport + planet layout      |
-| `components/saved/saved-planet-node.tsx`       | Tappable planet on the map (sphere + country name, drift animation)   |
-| `components/saved/saved-planet-sphere.tsx`     | Layered sphere illusion with centered flag                            |
-| `components/saved/saved-space-connections.tsx` | Thin lines linking planets in save-order chain                        |
-| `components/saved/saved-space-legend.tsx`      | Color key: Favorites / Want to Visit / Recently Saved                 |
-| `components/saved/saved-planet-detail.tsx`     | Detail pager — sphere hero, description, Explore CTA                  |
-| `components/saved/saved-empty-state.tsx`       | Empty message + optional **Explore countries** button                 |
-| `lib/saved-space-layout.ts`                    | Layout engine — scatter, collision, palettes, scroll origin           |
-| `lib/saved-country-copy.ts`                    | AI fact / seed fallback descriptions for detail view                  |
-| `store/use-saved-countries-store.ts`           | Persisted bookmarks, timestamps, categories, seed data                |
-| `constants/images.ts`                          | `images.earthMap` background asset                                    |
+| Path                           | Purpose                                                                                                                                                   |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `app/(tabs)/saved.tsx`         | Saved screen — composes header, filter tabs, and section lists                                                                                            |
+| `components/saved/` (optional) | Extract when it keeps `saved.tsx` readable: e.g. `SavedHeader`, `SavedFilterTabs`, `SavedFavoriteHeroCard`, `SavedWantToVisitCard`, `SavedRecentListItem` |
 
-Unused helper (from prior design, kept for future use):
-
-| Path                            | Purpose                                                 |
-| ------------------------------- | ------------------------------------------------------- |
-| `lib/saved-explored-percent.ts` | Exploration % stubs — **not wired** into Saved Space UI |
-
-## Screen state machine
-
-`saved.tsx` owns local `selectedCountry: Country | null` and derives three mutually exclusive views:
-
-```
-hydrated + savedCountries.length === 0  →  EMPTY
-hydrated + savedCountries.length > 0
-  + selectedCountry == null             →  MAP
-  + selectedCountry != null             →  DETAIL
-```
-
-Transitions:
-
-| From   | Action                               | To                                                             |
-| ------ | ------------------------------------ | -------------------------------------------------------------- |
-| Map    | Tap planet node                      | Detail (sets `selectedCountry`)                                |
-| Detail | Tap **back**                         | Map (`setSelectedCountry(null)`)                               |
-| Detail | Swipe horizontal pager               | Detail (updates `selectedCountry` via `onSelectedIndexChange`) |
-| Any    | User unsaves all countries elsewhere | Empty                                                          |
-
-`FadeIn` / `FadeOut` reanimated transitions wrap each view shell.
+Keep business logic in stores/hooks; the screen orchestrates layout, filtering, and navigation.
 
 ## Data wiring
 
 ### Saved store (`useSavedCountriesStore`)
 
-Persisted key: `worldloop-saved-countries` (AsyncStorage).
+Extend the existing store to support the Saved screen sections. Keep `toggleSaved` / `isSaved` behavior compatible with Explore, Home, and Map.
 
-| Field            | Type                            | Purpose                                                               |
-| ---------------- | ------------------------------- | --------------------------------------------------------------------- |
-| `savedCountries` | `Country[]`                     | Bookmarked countries (unique by `name`)                               |
-| `savedAtByName`  | `Record<string, number>`        | Epoch ms when each country was saved                                  |
-| `categoryByName` | `Record<string, SavedCategory>` | `'favorites' \| 'want-to-visit'` per country                          |
-| `hasSeeded`      | `boolean`                       | Sentinel — prevents demo seed from re-running after intentional clear |
+Add fields:
 
-**Actions used by Saved screen:**
+| Field            | Purpose                                                                           |
+| ---------------- | --------------------------------------------------------------------------------- |
+| `savedAtByName`  | `Record<string, number>` — timestamp when each country was saved (ms since epoch) |
+| `categoryByName` | `Record<string, SavedCategory>` — `'favorites' \| 'want-to-visit'`                |
 
-| Action                          | When called           | Behavior                                                      |
-| ------------------------------- | --------------------- | ------------------------------------------------------------- |
-| `seedIfEmpty()`                 | After store hydration | Seeds 7 demo countries if list empty and never seeded         |
-| `enrichFromFeed(feedCountries)` | When feed loads       | Merges full feed `Country` objects into saved entries by name |
+Update `toggleSaved(country)`:
 
-**Actions used elsewhere (Explore / Home / Map):**
+- On **save**: set `savedAtByName[name] = Date.now()`; default `categoryByName[name]` to `'favorites'` when unset
+- On **unsave**: remove entries from both maps
 
-| Action                 | Behavior                                                                                          |
-| ---------------------- | ------------------------------------------------------------------------------------------------- |
-| `toggleSaved(country)` | Save: append country, set `savedAt`, default category `'favorites'`. Unsave: remove from all maps |
-| `isSaved(name)`        | Bookmark icon state in other tabs                                                                 |
+Add helpers:
 
-**Not used on Saved screen today:** `setCategory`, `getCountriesByCategory`, `clearSaved` (dev tools only).
+- `getSavedAt(name: string): number | null`
+- `setCategory(name: string, category: SavedCategory)` — for filter chip / long-press stretch; v1 can stay read-only after seed
+- `getCountriesByCategory(category: SavedCategory): Country[]` — filter `savedCountries` by `categoryByName`
 
-### Feed store (`useCountryFeedStore`)
-
-On mount, `saved.tsx`:
-
-1. Calls `loadInitialFeed()` when `feedStatus === "idle"` and feed is empty
-2. Passes `feedCountries` into `enrichFromFeed()` so saved planets get images, AI facts, etc.
-
-### Sorting (two orders)
-
-| Use          | Sort                                       | Reason                              |
-| ------------ | ------------------------------------------ | ----------------------------------- |
-| Map planets  | `savedAt` **ascending** (oldest → newest)  | Chain connections follow save order |
-| Detail pager | `savedAt` **descending** (newest → oldest) | Swipe starts on most recently saved |
-
-Implemented via local `sortBySavedAt()` in `saved.tsx`.
+Persist new maps with the existing AsyncStorage key (`worldloop-saved-countries`).
 
 ### Seed data (first launch)
 
-When `savedCountries` is empty after hydration and `hasSeeded` is false, `seedIfEmpty()` inserts:
+When `savedCountries` is empty after hydration, seed entries matching the design so the screen is never blank on first open:
 
-| Country     | Category        | Relative `savedAt` |
-| ----------- | --------------- | ------------------ |
-| Peru        | `favorites`     | 3 days ago         |
-| Japan       | `want-to-visit` | 1 week ago         |
-| Iceland     | `want-to-visit` | 5 days ago         |
-| New Zealand | `want-to-visit` | 2 days ago         |
-| Italy       | `favorites`     | 2 hours ago        |
-| Morocco     | `favorites`     | yesterday          |
-| Canada      | `want-to-visit` | 2 days ago         |
+| Country     | Category        | Relative time (for `savedAt`) |
+| ----------- | --------------- | ----------------------------- |
+| Peru        | `favorites`     | 3 days ago                    |
+| Japan       | `want-to-visit` | 1 week ago                    |
+| Iceland     | `want-to-visit` | 5 days ago                    |
+| New Zealand | `want-to-visit` | 2 days ago                    |
+| Italy       | `favorites`     | 2 hours ago                   |
+| Morocco     | `favorites`     | yesterday                     |
+| Canada      | `want-to-visit` | 2 days ago                    |
 
-Each seed includes minimal `Country` fields + inline `ai.fact` copy. Feed enrichment upgrades them when the backend responds.
+Resolve full `Country` objects from `useCountryFeedStore` when the feed is loaded; if the feed is not ready, store minimal seed objects (name, flag, capital, region, population, `images`) inline so the UI still renders, then merge when feed arrives.
 
-### Category → planet palette
+**Recently Saved** section: sort all saved countries by `savedAt` descending; show the 3 most recent (Italy, Morocco, Canada in the design).
 
-Defined in `lib/saved-space-layout.ts` (`getPlanetPalette`):
+**Favorites** hero: first country in `favorites` category (Peru in seed).
 
-| Signal                                  | Map appearance                    | Detail appearance                     |
-| --------------------------------------- | --------------------------------- | ------------------------------------- |
-| `favorites`                             | Orange core/band when accented    | Full category palette on large sphere |
-| `want-to-visit`                         | Teal core/band when accented      | Full category palette on large sphere |
-| **Recently saved** (top 1 by `savedAt`) | Pink glow + ring accent on map    | Pink glow + ring on detail sphere     |
-| No accent (map default)                 | Dark neutral sphere, no glow/ring | Category colors on detail only        |
+**Want to Visit** row: all `want-to-visit` countries in horizontal scroll (Japan, Iceland, New Zealand in seed).
 
-**Recently saved** = the single most recent entry (`RECENTLY_SAVED_LIMIT = 1`). On the map, that planet is swapped to the topmost anchor position and the viewport scrolls to center it on first layout.
+### Discovery progress (`useDiscoveryProgressStore`)
 
-Legend swatch colors (`SAVED_LEGEND_COLORS`):
+Per-country **Explored %** on cards:
 
-- Favorites — `#f4a261`
-- Want to Visit — `#7b9cff`
-- Recently Saved — `#f472b6`
+- If the country was visited (`isCountryVisited(country)`), show a non-zero percent
+- v1 mapping: use `worldProgressPercent` for the Favorites hero when it is the only visited country, or a simple per-country stub:
 
-### Country copy (detail view)
+```ts
+// Teachable v1 — deterministic mock from country name hash, or 0 when not visited
+function getCountryExploredPercent(country: Country, visited: boolean): number {
+  if (!visited) return 0;
+  // Match design: Peru 28%, Japan 10%, Iceland 15%, New Zealand 5%
+  const DESIGN_PERCENTS: Record<string, number> = {
+    Peru: 28,
+    Japan: 10,
+    Iceland: 15,
+    "New Zealand": 5,
+  };
+  return DESIGN_PERCENTS[country.name] ?? 12;
+}
+```
 
-`getSavedCountryDescription(country, maxLength)` in `lib/saved-country-copy.ts`:
+Prefer real visit data from `useDiscoveryProgressStore`; fall back to design percents for seeded countries so the reference layout matches on first launch.
 
-1. `getAiFact(country)` from feed-enriched data
-2. Seed-specific fallback copy when AI fact is still loading
-3. Generic fallback: `"Discover culture, landscapes, and stories worth saving."`
-4. Truncated with ellipsis when over `maxLength` (420 in detail)
+### Country fields (map design → data)
 
-## Layout engine (`lib/saved-space-layout.ts`)
+| UI element       | Source                                                                                |
+| ---------------- | ------------------------------------------------------------------------------------- |
+| Hero / thumbnail | `getCountryImages(country)[0]` — fallback: dark gradient + flag                       |
+| Flag + name      | `FlagBadge` + `country.name`                                                          |
+| Description      | `getAiFact(country)` — truncate ~1–2 lines; design fallback copy when AI text missing |
+| Population       | `formatPopulation(country.population)`                                                |
+| Capital          | `country.capital`                                                                     |
+| Region           | `country.region`                                                                      |
+| Timestamp        | `formatRelativeTime(savedAt)` from `lib/format-relative-time.ts`                      |
+| Bookmark state   | `isSaved(country.name)` — gold filled when saved                                      |
 
-`resolveSavedMapLayout(countries, categoryByName, savedAtByName, viewportWidth, viewportHeight)` returns `null` until the map viewport has non-zero dimensions.
+Never call OpenAI or expose API keys from the app.
 
-Pipeline:
+### Filter tabs
 
-1. **`generateCreativeSlots`** — golden-angle spiral scatter with seeded RNG (deterministic per country set)
-2. **`resolveSpreadScaleWithOverflow`** — scale slots until nodes don't overlap (`MIN_NODE_GAP = 16`)
-3. **Normalize anchors** — center cluster, add edge padding, expand canvas when pan is needed
-4. **Build `SavedPlanetNode[]`** — attach palette, anchor, center per country
-5. **`placeRecentlySavedAtTop`** — swap recent planet to topmost screen position
-6. **`buildSavedChainConnections`** — link index `i` → `i + 1` in save-order array
-7. **`computeInitialScrollToRecent`** — scroll map to center the recently saved planet
+| Tab                | v1 filter behavior                                                                 |
+| ------------------ | ---------------------------------------------------------------------------------- |
+| **All**            | Show all three sections (Favorites hero + Want to Visit row + Recently Saved list) |
+| **Favorites**      | Show only Favorites hero (or list if multiple favorites)                           |
+| **Want to Visit**  | Show only horizontal Want to Visit carousel                                        |
+| **Recently Saved** | Show only Recently Saved vertical list                                             |
 
-Map panning: nested `ScrollView` (horizontal outer, vertical inner). Scrolling enabled only when canvas exceeds viewport.
+Active tab: gold border + gold text. Inactive: muted gray text, no border.
 
-## UI breakdown
+## UI breakdown (match `saved-screen-ui.png`)
 
 ### Screen shell
 
-- **Background:** `SavedSpaceBackground` — `images.earthMap`, dark blur (`expo-blur`), scrim, nebula washes, 36 procedural stars
-- **Safe area:** `SafeAreaView` with `backgroundColor: #0b132b` (StyleSheet — not NativeWind)
-- **Tab bar clearance:** floating legend sits `TAB_BAR_CONTENT_HEIGHT + insets.bottom + 12` above bottom
-- Map view uses `paddingBottom: 0`; empty view uses `paddingBottom: 112`
+- **Background:** dark immersive (`bg-background` / midnight navy `#0b132b` family)
+- **ScrollView** with bottom padding (`pb-28` or safe area) so content clears the custom tab bar from `(tabs)/_layout.tsx`
+- **Do not rebuild** the bottom tab bar — it already lives in `components/bottom-tab-bar.tsx`
+- Saved tab icon in the tab bar is **active** (gold bookmark in glowing square) when this screen is focused — handled by existing tab layout
 
-### Header (`SavedSpaceHeader`)
+### Header
 
-- Centered **Saved** title (`18px`, semibold, white)
-- Map / empty: title only
-- Detail: **back** button left-aligned (`SavedBackButton`), title centered
+| Element  | Spec                                                                                                                             |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Logo     | Centered **WorldLoop** wordmark — reuse `images.worldloopIcon` or logo asset from `constants/images.ts` (same as Home / Explore) |
+| Title    | **Saved** — large white bold (`h2` or design-matched size)                                                                       |
+| Subtitle | `Your favorite places, all in one loop.` — muted gray (`body-md` / `text-white/60`)                                              |
+| Search   | Circular dark button, magnifying glass icon — v1: open shared search overlay (`prompts/10c-search-ui.md`) or stub `console.log`  |
+| Filter   | Circular dark button, filter/list icon — v1: no-op or `Alert` (“Filter coming soon”)                                             |
 
-### Map view
+Layout: title block left-aligned; search + filter aligned top-right on the same row as the title (or title row below logo per design proportions).
 
-- `SavedSpaceMap` fills remaining space
-- Each `SavedPlanetNode`: `SavedPlanetSphere` + country name (2 lines max)
-- Entrance stagger + gentle vertical drift (`react-native-reanimated`)
-- `SavedSpaceConnections` draws 1px semi-transparent lines between chained centers
-- Floating legend (`SavedSpaceLegend variant="floating"`) — blurred pill, bottom-left
+### Category filter tabs
 
-### Detail view
+- Horizontal `ScrollView` of pill chips below the header
+- Chips: **All**, **Favorites**, **Want to Visit**, **Recently Saved**
+- Active chip (`All` in design): gold border (`border-tab-active`), gold text, dark fill
+- Inactive chips: dark gray fill, muted white/gray text, no gold border
+- Gap between chips: 8–12px; horizontal padding on the row: 24px (`px-6`)
 
-- Header with back button
-- Inline legend (`SavedSpaceLegend`)
-- Swipe hint when multiple countries: `Swipe to browse · {n} / {total}`
-- `FlatList` horizontal pager (or single page when count === 1)
-- Per page: large sphere (248px), `FlagBadge` + name, description, gold **Explore in feed** button
+### Favorites section
 
-### Empty state
+- Section header row: `⭐ Favorites` (white semibold) + gold **View All >** on the right (v1: no-op)
+- **Hero card** (Peru in design):
+  - Full-width rounded card (`rounded-3xl`), min height ~200–240px
+  - Background: country hero image with dark gradient scrim
+  - Top-left: `FlagBadge` + large white **country name**
+  - Top-right: gold filled **bookmark** icon (tap → `toggleSaved`)
+  - Body: 1–2 line description (muted white)
+  - Bottom-left stats row (icons + labels):
+    - People icon + `{population} Population`
+    - Pin icon + `{capital} Capital`
+    - Globe icon + `{region} Region`
+  - Bottom-right: circular progress ring with `{percent}%` center + `Explored` label below (gold accent)
+- Tap card → `openCountryInExplore(country)`
 
-- Header + `SavedEmptyState`
-- Copy: `"No saved countries yet — explore the world and tap Save on places you love."`
-- CTA → `router.push("/(tabs)/explore")`
+Reuse patterns from `components/home/country-of-the-day-card.tsx` where it keeps the code teachable (hero image, overlay, stats row).
 
-## Navigation
+### Want to Visit section
 
-| Action                            | Behavior                                                                                         |
-| --------------------------------- | ------------------------------------------------------------------------------------------------ |
-| Tap planet on map                 | Open detail for that country                                                                     |
-| Tap **back** in detail            | Return to map                                                                                    |
-| Swipe detail pager                | Browse saved countries (newest-first order)                                                      |
-| Tap **Explore in feed**           | `openCountryInExplore(country)` — closes search, focuses country, navigates to `/(tabs)/explore` |
-| Tap **Explore countries** (empty) | `router.push("/(tabs)/explore")`                                                                 |
-| Save / unsave                     | **Not on Saved screen** — use Explore action rail, Home card, or Map preview                     |
+- Section header: `✈️ Want to Visit` + gold **View All >**
+- Horizontal `ScrollView` of **vertical cards** (~140–160px wide, ~220–260px tall)
+- Each card:
+  - Rounded corners (`rounded-2xl`), hero image background + scrim
+  - Top-right: gold bookmark icon
+  - Flag + **country name** (bold white)
+  - 1-line description (small muted text)
+  - Bottom: thin horizontal **progress bar** (gold fill on dark track) + `{percent}%` label
+- Cards in design: Japan (10%), Iceland (15%), New Zealand (5%)
+- Tap card → `openCountryInExplore(country)`
 
-## Styling rules
+### Recently Saved section
 
-- **NativeWind** `className` for typography on `Text`, `Pressable` where supported
-- **StyleSheet** for: `SafeAreaView`, absolute planet positioning, blur shells, shadows, animated transforms, nested `ScrollView` content sizes, gradient/scrim layers
-- Do **not** put `className` on `SafeAreaView`
+- Section header: `🕒 Recently Saved` + gold **View All >**
+- Vertical list of **row items** (not horizontal scroll)
+- Each row:
+  - Left: small rounded thumbnail (~56–64px square) from `getCountryImages`
+  - Center column: flag emoji/badge + **country name** (bold) + 1-line description (muted)
+  - Right column: relative time (`2h ago`, `Yesterday`, `2d ago`) + outline/filled bookmark icon
+- Row separator or gap: 12–16px between items
+- Tap row → `openCountryInExplore(country)`
 
-## Out of scope (current implementation)
+Reuse `formatRelativeTime` from `components/home/recently-viewed-section.tsx` patterns.
 
-- In-screen bookmark toggle / unsave
-- Category filter tabs or sectioned lists (Favorites / Want to Visit / Recently Saved as separate scroll regions)
-- Search and filter header buttons
-- Exploration % rings or progress bars on cards
-- `setCategory` UI (long-press to move between Favorites and Want to Visit)
-- Cloud sync / Clerk auth for bookmarks
-- Dedicated “View All” list routes
-- `getCountryExploredPercent` integration
+### Empty states
 
-## Acceptance criteria (current)
+When the user has unsaved everything (or a filtered section is empty):
 
-- Saved tab renders Saved Space map (not a placeholder) when countries are saved
-- Empty state shows when `savedCountries.length === 0`
-- Planets reflect category + recently-saved accent colors per legend
-- Map is pannable when layout exceeds viewport; initial scroll centers recently saved planet
-- Chain lines connect planets in save-order (oldest → newest)
-- Tapping a planet opens detail; back returns to map
-- Detail pager swipes through countries; **Explore in feed** opens Explore on the selected country
-- First launch seeds demo countries; feed enrichment upgrades them silently
-- Saved list, timestamps, and categories persist across app restarts
-- `npm run lint` and `npm run typecheck` pass
+| Section           | Copy                                                                                   |
+| ----------------- | -------------------------------------------------------------------------------------- |
+| Favorites         | `No favorites yet — tap Save on a country in Explore.`                                 |
+| Want to Visit     | `No destinations queued — save countries you want to visit.`                           |
+| Recently Saved    | `Nothing saved recently.`                                                              |
+| All (fully empty) | Centered illustration optional; primary CTA: **Explore countries** → `/(tabs)/explore` |
+
+Keep empty states friendly and short; do not crash when `savedCountries.length === 0`.
+
+### Spacing & typography
+
+- **8pt grid** for padding, gaps, and touch targets (minimum 44×44)
+- White primary text on dark surfaces; gold `text-tab-active` / `#fbbf24` for accents, active tabs, progress, and bookmarks
+- Reuse utilities from `global.css` (`h2`, `h3`, `h4`, `body-md`, `body-sm`, `caption`, etc.) where they match the design
+- Section vertical gap: 24–32px between Favorites, Want to Visit, and Recently Saved blocks
+
+### Styling rules
+
+- Prefer **NativeWind** `className` for static layout and typography
+- Use **StyleSheet** / inline styles for: circular progress rings, horizontal list `contentContainerStyle`, shadows, `Pressable` pressed states, gradient scrims, and `AGENTS.md` exceptions
+- Do **not** put `className` on `SafeAreaView` from `react-native-safe-area-context`
+
+## Images
+
+- Country heroes/thumbnails: remote URLs via `expo-image` with `contentFit="cover"`
+- Bundled assets (logo): `constants/images.ts` only
+- Do not `require()` images directly inside `saved.tsx` unless there is a strong reason
+
+## Navigation (v1)
+
+| Action                          | Behavior                                                                          |
+| ------------------------------- | --------------------------------------------------------------------------------- |
+| Tap any country card / row      | `openCountryInExplore(country)` — switch to Explore tab with that country focused |
+| Bookmark tap on card            | `toggleSaved(country)` — remove from list with animation or instant update        |
+| Search icon                     | Open shared search overlay (if implemented) or stub                               |
+| Filter icon                     | Stub                                                                              |
+| View All >                      | No-op or `console.log` until dedicated list routes exist                          |
+| Explore countries (empty state) | `router.push("/(tabs)/explore")`                                                  |
+
+## Out of scope
+
+- Full **Search** screen changes beyond reusing the existing overlay
+- **Map** tab UI changes
+- Backend endpoints for saved lists, sync across devices, or social sharing
+- Drag-and-drop reordering of saved countries
+- Multi-select bulk delete (single `toggleSaved` unsave is enough for v1)
+- Clerk auth / cloud sync of bookmarks
+- Real per-country exploration scoring API (use local discovery store + design stubs)
+- Separate routes for “View All” list screens
+
+## Acceptance criteria
+
+- Saved tab shows the full design layout from `saved-screen-ui.png` (not placeholder “Coming in a later lesson”)
+- Category filter tabs switch visible sections correctly
+- Favorites hero, Want to Visit carousel, and Recently Saved list render from `useSavedCountriesStore`
+- First launch seeds design-matching countries when the saved list is empty
+- Bookmark icons reflect saved state; tap unsaves and updates the UI
+- Exploration percent rings / bars render (visited countries or design seed values)
+- Tapping any country opens Explore focused on that country
+- Empty states render gracefully when all countries are unsaved
+- `npm run lint` passes (run `npm run typecheck` if available)
+- No new major dependencies without user approval
 
 ## Testing
 
 ```bash
-# Terminal 1 — backend + Redis
+# Terminal 1 — backend + Redis per prompts-worldloop
 # Terminal 2
 npx expo start
 ```
 
-1. Open **Saved** tab — cosmic map with seeded planets on first launch
-2. Confirm floating legend shows three color labels
-3. Pan map if many countries — scroll works, planets stay positioned
-4. Recently saved planet (Italy in seed) should be accented and near initial viewport center
-5. Tap a planet — detail opens with sphere, name, description, **Explore in feed**
-6. Tap **back** — returns to map
-7. Swipe detail pager — index hint updates (`1 / 7`, etc.)
-8. Tap **Explore in feed** — Explore tab opens on that country
-9. Save a new country from Explore — return to Saved — new planet appears; chain grows
-10. Unsave all from Explore — Saved shows empty state with CTA
-11. Restart app — saved list persists; `hasSeeded` prevents re-seeding after user cleared everything
-
-## Architecture diagram
-
-```mermaid
-flowchart TB
-  subgraph Screen["app/(tabs)/saved.tsx"]
-    Hydrate["seedIfEmpty on hydration"]
-    Feed["loadInitialFeed + enrichFromFeed"]
-    Sort["sortBySavedAt asc/desc"]
-    State["selectedCountry state"]
-  end
-
-  subgraph Store["useSavedCountriesStore"]
-    SC["savedCountries"]
-    SAT["savedAtByName"]
-    CAT["categoryByName"]
-  end
-
-  subgraph Views
-    Empty["SavedEmptyState"]
-    Map["SavedSpaceMap"]
-    Detail["SavedPlanetDetail"]
-  end
-
-  subgraph Layout["lib/saved-space-layout.ts"]
-    Resolve["resolveSavedMapLayout"]
-    Palette["getPlanetPalette"]
-    Recent["getRecentlySavedNames"]
-  end
-
-  Hydrate --> Store
-  Feed --> SC
-  SC --> Sort
-  Sort --> State
-  State -->|null + empty| Empty
-  State -->|null + data| Map
-  State -->|country| Detail
-  Map --> Resolve
-  Resolve --> Palette
-  Resolve --> Recent
-  Detail --> Recent
-  Detail -->|"openCountryInExplore"| Explore["/(tabs)/explore"]
-```
+1. Open **Saved** tab — full UI loads with seeded countries on first launch
+2. Confirm **All** tab shows Favorites hero, Want to Visit row, and Recently Saved list
+3. Tap **Favorites** filter — only Favorites section visible
+4. Tap **Want to Visit** filter — only horizontal carousel visible
+5. Tap **Recently Saved** filter — only vertical list visible
+6. Tap **Peru** hero card — Explore opens on Peru
+7. Tap bookmark on a card — country removes from saved list; counts update
+8. Save a country from Explore — return to Saved — it appears in Recently Saved with a fresh timestamp
+9. Unsave all countries — empty states appear without crash
+10. Restart app — saved list and categories persist from AsyncStorage
 
 ## Next steps
 
-1. In-screen unsave (bookmark on detail) with list animation
-2. `setCategory` UI — long-press or detail action to move Favorites ↔ Want to Visit
-3. Search / filter within saved collection
-4. Reintroduce exploration % on detail or map nodes via `lib/saved-explored-percent.ts` + `useDiscoveryProgressStore`
-5. Dedicated list view per category (“View All”)
-6. Cloud sync when Clerk auth is wired
+After this prompt:
+
+1. “View All” dedicated list screens per category
+2. Filter sheet (sort by date, region, exploration %)
+3. Long-press to move country between Favorites and Want to Visit
+4. Cloud sync of bookmarks when Clerk auth is wired
+5. Profile tab UI per its design reference

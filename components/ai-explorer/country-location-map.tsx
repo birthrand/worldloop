@@ -1,12 +1,6 @@
 import { Image } from "expo-image";
-import { useEffect, useMemo, useState } from "react";
-import {
-  LayoutChangeEvent,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { useEffect } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -18,15 +12,10 @@ import Animated, {
 import { AI_EXPLORER_THEME } from "@/constants/ai-explorer-theme";
 import { images } from "@/constants/images";
 import { formatCoordinates } from "@/lib/format-country";
-import {
-  getMapDisplayLatLng,
-  isValidLatLng,
-  latLngToEquirectangularCoverCenteredLayout,
-} from "@/lib/map-country";
+import { getMapDisplayLatLng, isValidLatLng } from "@/lib/map-country";
 import type { Country } from "@/types/country";
 
 const MODULE_HEIGHT = 132;
-const PIN_SIZE = 28;
 
 type CountryLocationMapProps = {
   country: Pick<Country, "name" | "latlng" | "flag" | "cca2">;
@@ -61,72 +50,26 @@ export function CountryLocationMap({
   country,
   onPress,
 }: CountryLocationMapProps) {
-  const [mapLayout, setMapLayout] = useState<{
-    width: number;
-    height: number;
-  } | null>(null);
-  const hasCoordinates = isValidLatLng(country.latlng);
-  const [latitude, longitude] = hasCoordinates
-    ? getMapDisplayLatLng(country)
-    : ([0, 0] as [number, number]);
-  const coordinatesLabel = hasCoordinates
-    ? formatCoordinates([latitude, longitude])
-    : "";
-  const mapLayoutMetrics = useMemo(() => {
-    if (!hasCoordinates || !mapLayout) return null;
-
-    return latLngToEquirectangularCoverCenteredLayout(
-      latitude,
-      longitude,
-      mapLayout.width,
-      mapLayout.height,
-    );
-  }, [hasCoordinates, latitude, longitude, mapLayout]);
-
-  const handleLayout = (event: LayoutChangeEvent) => {
-    const { width, height } = event.nativeEvent.layout;
-    setMapLayout((current) =>
-      current?.width === width && current?.height === height
-        ? current
-        : { width, height },
-    );
-  };
-
-  if (!hasCoordinates) {
+  if (!isValidLatLng(country.latlng)) {
     return null;
   }
+
+  const [latitude, longitude] = getMapDisplayLatLng(country);
+  const coordinatesLabel = formatCoordinates([latitude, longitude]);
 
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`Show ${country.name} on map`}
       onPress={onPress}
-      onLayout={handleLayout}
       style={({ pressed }) => [styles.wrap, pressed && styles.wrapPressed]}
     >
-      {mapLayoutMetrics ? (
-        <Image
-          source={images.earthMap}
-          style={[
-            styles.mapImage,
-            {
-              width: mapLayoutMetrics.imageWidth,
-              height: mapLayoutMetrics.imageHeight,
-              left: mapLayoutMetrics.imageLeft,
-              top: mapLayoutMetrics.imageTop,
-            },
-          ]}
-          contentFit="cover"
-          accessibilityLabel={`${country.name} region outline`}
-        />
-      ) : (
-        <Image
-          source={images.earthMap}
-          style={[styles.mapImage, styles.mapImageFallback]}
-          contentFit="cover"
-          accessibilityLabel={`${country.name} region outline`}
-        />
-      )}
+      <Image
+        source={images.earthMap}
+        style={styles.mapImage}
+        contentFit="cover"
+        accessibilityLabel={`${country.name} region outline`}
+      />
       <View style={styles.mapTint} pointerEvents="none" />
       <PulsingLocationPin />
       <View style={styles.captionRow} pointerEvents="none">
@@ -151,24 +94,19 @@ const styles = StyleSheet.create({
     opacity: 0.92,
   },
   mapImage: {
-    position: "absolute",
-    opacity: 0.7,
-  },
-  mapImageFallback: {
     ...StyleSheet.absoluteFillObject,
+    opacity: 0.55,
   },
   mapTint: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(15, 23, 42, 0.28)",
+    backgroundColor: "rgba(15, 23, 42, 0.42)",
   },
   pinAnchor: {
     position: "absolute",
-    top: "50%",
-    left: "50%",
-    width: PIN_SIZE,
-    height: PIN_SIZE,
-    marginTop: -(PIN_SIZE / 2),
-    marginLeft: -(PIN_SIZE / 2),
+    top: "34%",
+    left: "44%",
+    width: 28,
+    height: 28,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -176,8 +114,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: 26,
     height: 26,
-    top: (PIN_SIZE - 26) / 2,
-    left: (PIN_SIZE - 26) / 2,
     borderRadius: 13,
     borderWidth: 2,
     borderColor: AI_EXPLORER_THEME.accentMuted,

@@ -23,6 +23,5 @@ export function getSavedCountryDescription(
       : aiFact;
 
   if (raw.length <= maxLength) return raw;
-  if (maxLength <= 0) return "";
-  return `${raw.slice(0, maxLength - 1).trimEnd()}…`;
+  return `${raw.slice(0, maxLength).trimEnd()}…`;
 }

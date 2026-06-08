@@ -40,8 +40,7 @@
         }
       ],
       "expo-asset",
-      "expo-font",
-      "expo-video"
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true,
