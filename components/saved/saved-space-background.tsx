@@ -3,6 +3,11 @@ import { Image } from "expo-image";
 import { useMemo } from "react";
 import { Platform, StyleSheet, View, useWindowDimensions } from "react-native";
 
+import {
+  SPACE_BLUR_INTENSITY,
+  SPACE_DARK_SCRIM,
+  SPACE_WEB_BLUR_FALLBACK,
+} from "@/constants/space-theme";
 import { images } from "@/constants/images";
 
 const STAR_COUNT = 36;
@@ -50,7 +55,11 @@ export function SavedSpaceBackground() {
       {Platform.OS === "web" ? (
         <View style={styles.webBlurFallback} />
       ) : (
-        <BlurView intensity={96} tint="dark" style={StyleSheet.absoluteFill} />
+        <BlurView
+          intensity={SPACE_BLUR_INTENSITY}
+          tint="dark"
+          style={StyleSheet.absoluteFill}
+        />
       )}
 
       <View style={styles.darkScrim} />
@@ -79,11 +88,11 @@ export function SavedSpaceBackground() {
 const styles = StyleSheet.create({
   webBlurFallback: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(5, 10, 24, 0.82)",
+    backgroundColor: SPACE_WEB_BLUR_FALLBACK,
   },
   darkScrim: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(3, 6, 16, 0.78)",
+    backgroundColor: SPACE_DARK_SCRIM,
   },
   nebulaTop: {
     position: "absolute",

@@ -8,8 +8,8 @@ import {
   FlatList,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  Pressable,
   StyleSheet,
-  Text,
   View,
   useWindowDimensions,
 } from "react-native";
@@ -157,12 +157,34 @@ export function CountryHeroCarousel({
       <HeroBottomScrim />
 
       {slides.length > 1 ? (
-        <Text
-          style={styles.imageCounter}
+        <View
+          style={styles.paginationDots}
           accessibilityLabel={`Image ${activeIndex + 1} of ${slides.length}`}
         >
-          {activeIndex + 1}/{slides.length}
-        </Text>
+          {slides.map((_, index) => {
+            const isActive = index === activeIndex;
+            return (
+              <Pressable
+                key={`hero-dot-${index}`}
+                accessibilityRole="button"
+                accessibilityLabel={`Show image ${index + 1} of ${slides.length}`}
+                accessibilityState={{ selected: isActive }}
+                hitSlop={8}
+                onPress={() => {
+                  listRef.current?.scrollToIndex({ index, animated: true });
+                  setActiveIndex(index);
+                }}
+              >
+                <View
+                  style={[
+                    styles.dot,
+                    isActive ? styles.dotActive : styles.dotInactive,
+                  ]}
+                />
+              </Pressable>
+            );
+          })}
+        </View>
       ) : null}
     </View>
   );
@@ -203,15 +225,29 @@ const styles = StyleSheet.create({
     height: "55%",
     zIndex: 1,
   },
-  imageCounter: {
+  paginationDots: {
     position: "absolute",
     bottom: 48,
-    right: 16,
+    left: 0,
+    right: 0,
     zIndex: 2,
-    fontFamily: "Poppins-Regular",
-    fontSize: 11,
-    lineHeight: 14,
-    color: AI_EXPLORER_THEME.textFaint,
-    letterSpacing: 0.4,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  dotActive: {
+    backgroundColor: AI_EXPLORER_THEME.accent,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  dotInactive: {
+    backgroundColor: "rgba(255, 255, 255, 0.35)",
   },
 });

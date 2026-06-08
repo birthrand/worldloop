@@ -6,7 +6,7 @@ export function ExploreLoading() {
 
   return (
     <View
-      className="flex-1 items-center justify-center bg-midnight-navy gap-4"
+      className="flex-1 items-center justify-center gap-4"
       style={{ paddingTop: insets.top }}
     >
       <ActivityIndicator size="large" color="#fbbf24" />

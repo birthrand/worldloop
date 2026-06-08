@@ -1,10 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  InteractionManager,
   Modal,
   Pressable,
   ScrollView,
@@ -17,448 +17,316 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { FlagBadge } from "@/components/explore/flag-badge";
 import { FeedErrorBanner } from "@/components/home/feed-error-banner";
+import {
+  WORLDLOOP_HEADER_HORIZONTAL_PADDING,
+  WORLDLOOP_HEADER_TOP_PADDING,
+} from "@/components/worldloop-header";
+import {
+  MAP_CHROME_ACCENT,
+  MAP_CHROME_PLACEHOLDER,
+  MAP_CHROME_SURFACE,
+  MAP_CHROME_TEXT,
+  MAP_CIRCULAR_FAB,
+  MAP_SEARCH_BAR_HEIGHT,
+  MAP_SEARCH_PANEL_GAP,
+} from "@/constants/map-chrome-styles";
 import { CONTINENTS, continentDisplayLabel } from "@/constants/regions";
+import { SPACE_TAB_BAR_BG } from "@/constants/space-theme";
+import { useCountrySearch } from "@/hooks/use-country-search";
 import { getAiFact, getCountryImages } from "@/lib/format-country";
 import { openCountryInExplore } from "@/lib/open-country-in-explore";
-import { openCountryOnMap } from "@/lib/open-country-on-map";
-import {
-  getCachedSearchResults,
-  searchCountriesWithCache,
-} from "@/lib/search-countries";
 import { useSearchUiStore } from "@/store/use-search-ui-store";
 import type { Country } from "@/types/country";
 
-const DEBOUNCE_MS = 300;
-const RECENT_SEARCHES_KEY = "worldloop-recent-searches";
-const MAX_RECENT_SEARCHES = 8;
-
-type SearchStatus = "idle" | "loading" | "success" | "error";
+/** Matches map search dismiss control sizing. */
+const DISMISS_TOUCH_SIZE = 44;
+const DISMISS_ICON_SIZE = 20;
 
 export function SearchOverlay() {
   const insets = useSafeAreaInsets();
   const isOpen = useSearchUiStore((s) => s.isOpen);
   const context = useSearchUiStore((s) => s.context);
+  const focusToken = useSearchUiStore((s) => s.focusToken);
   const closeSearch = useSearchUiStore((s) => s.closeSearch);
-  const isMapMode = context === "map";
 
-  const [query, setQuery] = useState("");
-  const [region, setRegion] = useState<string | null>(null);
-  const [results, setResults] = useState<Country[]>([]);
-  const [status, setStatus] = useState<SearchStatus>("idle");
-  const [error, setError] = useState<string | null>(null);
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const enabled = isOpen && context !== "map";
+  const {
+    query,
+    setQuery,
+    region,
+    results,
+    status,
+    error,
+    recentSearches,
+    handleRetry,
+    toggleRegion,
+    handleSubmit,
+    handleRecentTap,
+    showIdle,
+    showEmpty,
+  } = useCountrySearch(enabled);
 
   const inputRef = useRef<TextInput>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastRequestRef = useRef({ query: "", region: "" });
-  const searchRequestIdRef = useRef(0);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-  const loadRecentSearches = useCallback(async () => {
-    try {
-      const raw = await AsyncStorage.getItem(RECENT_SEARCHES_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as string[];
-        if (Array.isArray(parsed)) {
-          setRecentSearches(parsed.slice(0, MAX_RECENT_SEARCHES));
-        }
-      }
-    } catch {
-      // ignore corrupt storage
+  useEffect(() => {
+    if (!enabled) {
+      setIsFilterOpen(false);
+      return;
     }
-  }, []);
 
-  const saveRecentSearch = useCallback(async (term: string) => {
-    const trimmed = term.trim();
-    if (!trimmed) return;
-    setRecentSearches((prev) => {
-      const next = [
-        trimmed,
-        ...prev.filter((s) => s.toLowerCase() !== trimmed.toLowerCase()),
-      ].slice(0, MAX_RECENT_SEARCHES);
-      void AsyncStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(next));
-      return next;
-    });
-  }, []);
+    let cancelled = false;
+    let focusTimer: ReturnType<typeof setTimeout> | null = null;
 
-  const runSearch = useCallback(
-    async (searchQuery: string, searchRegion: string | null) => {
-      const q = searchQuery.trim();
-      const r = searchRegion?.trim() ?? "";
-
-      if (!q && !r) {
-        setResults([]);
-        setStatus("idle");
-        setError(null);
-        return;
-      }
-
-      lastRequestRef.current = { query: q, region: r };
-      const requestId = ++searchRequestIdRef.current;
-      setError(null);
-
-      const cached = await getCachedSearchResults(q, r);
-      if (requestId !== searchRequestIdRef.current) return;
-
-      let showedCached = false;
-      if (cached) {
-        showedCached = true;
-        setResults(cached);
-        setStatus("success");
-      } else {
-        setStatus("loading");
-      }
-
-      try {
-        await searchCountriesWithCache(q, r, {
-          onCached: (data) => {
-            if (requestId !== searchRequestIdRef.current) return;
-            showedCached = true;
-            setResults(data);
-            setStatus("success");
-          },
-          onFetched: (data) => {
-            if (requestId !== searchRequestIdRef.current) return;
-            setResults(data);
-            setStatus("success");
-          },
-        });
-
-        if (requestId !== searchRequestIdRef.current) return;
-        if (q) void saveRecentSearch(q);
-      } catch (err) {
-        if (requestId !== searchRequestIdRef.current) return;
-        if (!showedCached) {
-          setResults([]);
-          setStatus("error");
-          setError(
-            err instanceof Error ? err.message : "Search failed. Try again.",
-          );
+    const interaction = InteractionManager.runAfterInteractions(() => {
+      if (cancelled) return;
+      focusTimer = setTimeout(() => {
+        if (!cancelled) {
+          inputRef.current?.focus();
         }
-      }
-    },
-    [saveRecentSearch],
-  );
+      }, 120);
+    });
 
-  const scheduleSearch = useCallback(
-    (searchQuery: string, searchRegion: string | null, immediate = false) => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-        debounceRef.current = null;
-      }
-
-      const q = searchQuery.trim();
-      const r = searchRegion?.trim() ?? "";
-      if (!q && !r) {
-        setResults([]);
-        setStatus("idle");
-        setError(null);
-        return;
-      }
-
-      if (immediate) {
-        void runSearch(searchQuery, searchRegion);
-        return;
-      }
-
-      debounceRef.current = setTimeout(() => {
-        void runSearch(searchQuery, searchRegion);
-      }, DEBOUNCE_MS);
-    },
-    [runSearch],
-  );
-
-  const handleRetry = useCallback(() => {
-    const { query: q, region: r } = lastRequestRef.current;
-    void runSearch(q, r || null);
-  }, [runSearch]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    void loadRecentSearches();
-    const focusTimer = setTimeout(() => inputRef.current?.focus(), 100);
-    return () => clearTimeout(focusTimer);
-  }, [isOpen, loadRecentSearches]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    scheduleSearch(query, region);
     return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
+      cancelled = true;
+      interaction.cancel();
+      if (focusTimer) clearTimeout(focusTimer);
     };
-  }, [query, region, isOpen, scheduleSearch]);
+  }, [enabled, focusToken]);
 
   const handleClose = useCallback(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
+    setIsFilterOpen(false);
     closeSearch();
   }, [closeSearch]);
 
-  const toggleRegion = useCallback((next: string) => {
-    setRegion((current) => (current === next ? null : next));
-  }, []);
-
-  const handleSubmit = useCallback(() => {
-    scheduleSearch(query, region, true);
-  }, [query, region, scheduleSearch]);
-
-  const handleRecentTap = useCallback(
-    (term: string) => {
-      setQuery(term);
-      scheduleSearch(term, region, true);
-    },
-    [region, scheduleSearch],
-  );
-
-  const showIdle =
-    status === "idle" && results.length === 0 && !query.trim() && !region;
-  const showEmpty =
-    status === "success" &&
-    results.length === 0 &&
-    (!!query.trim() || !!region);
-
-  const handleResultPress = isMapMode ? openCountryOnMap : openCountryInExplore;
-
-  const searchInput = (
-    <>
-      <Ionicons name="search" size={20} color="#94a3b8" />
-      <TextInput
-        ref={inputRef}
-        value={query}
-        onChangeText={setQuery}
-        placeholder="Search countries, regions, cultures…"
-        placeholderTextColor="rgba(255,255,255,0.4)"
-        autoCorrect={false}
-        autoCapitalize="none"
-        returnKeyType="search"
-        onSubmitEditing={handleSubmit}
-        selectionColor="rgba(251, 191, 36, 0.5)"
-        cursorColor="#ffffff"
-        underlineColorAndroid="transparent"
-        style={styles.input}
-      />
-      {query.length > 0 ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Clear search text"
-          onPress={() => setQuery("")}
-          hitSlop={8}
-        >
-          <Ionicons name="close-circle" size={20} color="#94a3b8" />
-        </Pressable>
-      ) : null}
-    </>
-  );
-
-  const searchField = (
-    <View className="px-4 pb-4">
-      <View
-        className={`h-12 flex-row items-center gap-3 rounded-2xl px-4 ${
-          isMapMode ? "bg-white/15" : "bg-white/8"
-        }`}
-      >
-        {searchInput}
-      </View>
-    </View>
-  );
-
-  const regionChips = (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="on-drag"
-      style={styles.chipsScroll}
-      contentContainerStyle={styles.chipsRow}
-      className="pb-4"
-    >
-      {CONTINENTS.map((name) => {
-        const selected = region === name;
-        return (
-          <Pressable
-            key={name}
-            accessibilityRole="button"
-            accessibilityState={{ selected }}
-            accessibilityLabel={
-              selected ? `Clear ${name} region filter` : `Filter by ${name}`
-            }
-            onPress={() => toggleRegion(name)}
-            hitSlop={4}
-            style={({ pressed }) => [
-              styles.chip,
-              selected && styles.chipSelected,
-              pressed && { opacity: 0.85 },
-            ]}
-          >
-            <Text
-              className={`font-medium text-sm ${
-                selected ? "text-tab-active" : "text-white/70"
-              }`}
-            >
-              {continentDisplayLabel(name)}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </ScrollView>
-  );
-
-  const searchBody = (
-    <>
-      {status === "error" && error ? (
-        <View className="px-4 pb-4">
-          <FeedErrorBanner message={error} onRetry={handleRetry} />
-        </View>
-      ) : null}
-
-      {showIdle ? (
-        <ScrollView
-          style={styles.idleScroll}
-          contentContainerStyle={styles.idleScrollContent}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          showsVerticalScrollIndicator={false}
-        >
-          {recentSearches.length > 0 ? (
-            <View className="gap-3">
-              <Text className="font-semibold text-sm text-white/80">
-                Recent searches
-              </Text>
-              <View className="flex-row flex-wrap gap-2">
-                {recentSearches.map((term) => (
-                  <Pressable
-                    key={term}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Search for ${term}`}
-                    onPress={() => handleRecentTap(term)}
-                    style={({ pressed }) => [
-                      styles.recentChip,
-                      pressed && { opacity: 0.85 },
-                    ]}
-                  >
-                    <Ionicons name="time-outline" size={14} color="#94a3b8" />
-                    <Text className="body-sm text-white/80">{term}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-          ) : null}
-        </ScrollView>
-      ) : status === "loading" ? (
-        <ScrollView
-          style={styles.centeredScroll}
-          contentContainerStyle={styles.centeredScrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <ActivityIndicator size="large" color="#fbbf24" />
-        </ScrollView>
-      ) : showEmpty ? (
-        <ScrollView
-          style={styles.centeredScroll}
-          contentContainerStyle={styles.centeredScrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <Text className="font-semibold text-lg text-white">
-            No countries found
-          </Text>
-          <Text className="mt-2 text-center body-md text-white/50">
-            Try another spelling or pick a different region.
-          </Text>
-        </ScrollView>
-      ) : (
-        <View className="min-h-0 flex-1">
-          <FlatList
-            data={results}
-            keyExtractor={(item) => item.name}
-            renderItem={({ item }) => (
-              <SearchResultRow
-                country={item}
-                onPress={() => handleResultPress(item)}
-              />
-            )}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="on-drag"
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-            style={styles.resultsList}
-          />
-        </View>
-      )}
-    </>
-  );
+  if (!enabled) return null;
 
   return (
     <Modal
       visible={isOpen}
-      transparent
       animationType="fade"
+      presentationStyle="fullScreen"
       onRequestClose={handleClose}
     >
-      {isMapMode ? (
-        <View style={styles.root}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Dismiss search"
-            style={styles.scrim}
-            onPress={handleClose}
-          />
+      <View
+        className="flex-1"
+        style={{
+          backgroundColor: SPACE_TAB_BAR_BG,
+          paddingTop: insets.top + WORLDLOOP_HEADER_TOP_PADDING,
+          paddingBottom: insets.bottom + 16,
+        }}
+      >
+        <View style={styles.searchSection}>
+          <View style={styles.searchRow}>
+            <View style={styles.searchBar}>
+              <Ionicons
+                name="search"
+                size={20}
+                color={MAP_CHROME_PLACEHOLDER}
+              />
+              <TextInput
+                ref={inputRef}
+                value={query}
+                onChangeText={setQuery}
+                placeholder="Search countries, regions, cultures…"
+                placeholderTextColor={MAP_CHROME_PLACEHOLDER}
+                autoCorrect={false}
+                autoCapitalize="none"
+                autoFocus={isOpen}
+                returnKeyType="search"
+                onSubmitEditing={handleSubmit}
+                selectionColor="rgba(251, 191, 36, 0.5)"
+                cursorColor="#ffffff"
+                underlineColorAndroid="transparent"
+                style={styles.input}
+              />
+              {query.length > 0 ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear search text"
+                  onPress={() => setQuery("")}
+                  hitSlop={8}
+                  style={({ pressed }) => [
+                    styles.clearButton,
+                    pressed && styles.clearButtonPressed,
+                  ]}
+                >
+                  <Ionicons
+                    name="close-circle"
+                    size={20}
+                    color={MAP_CHROME_PLACEHOLDER}
+                  />
+                </Pressable>
+              ) : null}
 
-          <View
-            className="bg-midnight-navy"
-            style={[
-              styles.mapTopPanel,
-              {
-                paddingTop: insets.top + 8,
-                paddingBottom: insets.bottom + 16,
-              },
-            ]}
-          >
-            {searchField}
-            {regionChips}
-            <View style={styles.mapSearchBody}>{searchBody}</View>
-          </View>
-        </View>
-      ) : (
-        <View style={styles.root}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Dismiss search"
-            style={styles.scrim}
-            onPress={handleClose}
-          />
-
-          <View
-            className="flex-1 bg-midnight-navy"
-            style={[
-              styles.panel,
-              {
-                paddingTop: insets.top + 8,
-                paddingBottom: insets.bottom + 16,
-              },
-            ]}
-          >
-            <View className="flex-row items-center gap-3 px-4 pb-4">
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Cancel search"
-                onPress={handleClose}
-                hitSlop={8}
-                className="h-11 w-11 items-center justify-center"
+                accessibilityLabel="Region filter"
+                accessibilityHint={
+                  region
+                    ? `Filtered by ${region}. Tap to change region filter.`
+                    : "Opens continent filters"
+                }
+                accessibilityState={{
+                  expanded: isFilterOpen,
+                  selected: !!region,
+                }}
+                onPress={() => setIsFilterOpen((open) => !open)}
+                hitSlop={4}
+                style={({ pressed }) => [
+                  styles.clearButton,
+                  !!region && styles.filterButtonActive,
+                  pressed && styles.clearButtonPressed,
+                ]}
               >
-                <Ionicons name="close" size={24} color="#fff" />
+                <Ionicons
+                  name="options-outline"
+                  size={20}
+                  color={region ? MAP_CHROME_ACCENT : MAP_CHROME_PLACEHOLDER}
+                />
               </Pressable>
-              <Text className="flex-1 text-center font-semibold text-lg text-white">
-                Search
-              </Text>
-              <View className="h-11 w-11" />
             </View>
 
-            {searchField}
-            {regionChips}
-            {searchBody}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Cancel search"
+              accessibilityHint="Closes search"
+              onPress={handleClose}
+              hitSlop={4}
+              style={({ pressed }) => [
+                styles.dismissButton,
+                pressed && styles.dismissButtonPressed,
+              ]}
+            >
+              <Ionicons name="close" size={DISMISS_ICON_SIZE} color="#ffffff" />
+            </Pressable>
           </View>
+
+          {isFilterOpen ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              style={styles.chipsScroll}
+              contentContainerStyle={styles.chipsRow}
+            >
+              {CONTINENTS.map((name) => {
+                const selected = region === name;
+                return (
+                  <Pressable
+                    key={name}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    accessibilityLabel={
+                      selected
+                        ? `Clear ${name} region filter`
+                        : `Filter by ${name}`
+                    }
+                    onPress={() => toggleRegion(name)}
+                    hitSlop={4}
+                    style={({ pressed }) => [
+                      styles.chip,
+                      selected && styles.chipSelected,
+                      pressed && { opacity: 0.85 },
+                    ]}
+                  >
+                    <Text
+                      className={`font-medium text-sm ${
+                        selected ? "text-tab-active" : "text-white/70"
+                      }`}
+                    >
+                      {continentDisplayLabel(name)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          ) : null}
         </View>
-      )}
+
+        {status === "error" && error ? (
+          <View className="px-4 pb-4">
+            <FeedErrorBanner message={error} onRetry={handleRetry} />
+          </View>
+        ) : null}
+
+        {showIdle ? (
+          <ScrollView
+            style={styles.idleScroll}
+            contentContainerStyle={styles.idleScrollContent}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            showsVerticalScrollIndicator={false}
+          >
+            {recentSearches.length > 0 ? (
+              <View className="gap-3">
+                <Text className="font-semibold text-sm text-white/80">
+                  Recent searches
+                </Text>
+                <View className="flex-row flex-wrap gap-2">
+                  {recentSearches.map((term) => (
+                    <Pressable
+                      key={term}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Search for ${term}`}
+                      onPress={() => handleRecentTap(term)}
+                      style={({ pressed }) => [
+                        styles.recentChip,
+                        pressed && { opacity: 0.85 },
+                      ]}
+                    >
+                      <Ionicons name="time-outline" size={14} color="#94a3b8" />
+                      <Text className="body-sm text-white/80">{term}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            ) : null}
+          </ScrollView>
+        ) : status === "loading" ? (
+          <ScrollView
+            style={styles.centeredScroll}
+            contentContainerStyle={styles.centeredScrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <ActivityIndicator size="large" color="#fbbf24" />
+          </ScrollView>
+        ) : showEmpty ? (
+          <ScrollView
+            style={styles.centeredScroll}
+            contentContainerStyle={styles.centeredScrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <Text className="font-semibold text-lg text-white">
+              No countries found
+            </Text>
+            <Text className="mt-2 text-center body-md text-white/50">
+              Try another spelling or pick a different region.
+            </Text>
+          </ScrollView>
+        ) : (
+          <View className="min-h-0 flex-1">
+            <FlatList
+              data={results}
+              keyExtractor={(item) => item.name}
+              renderItem={({ item }) => (
+                <SearchResultRow
+                  country={item}
+                  onPress={() => openCountryInExplore(item)}
+                />
+              )}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+              style={styles.resultsList}
+            />
+          </View>
+        )}
+      </View>
     </Modal>
   );
 }
@@ -524,51 +392,79 @@ function SearchResultRow({ country, onPress }: SearchResultRowProps) {
   );
 }
 
+/** Matches map search results `body.paddingTop`. */
+const SEARCH_BODY_TOP_PADDING = 6;
+
 const styles = StyleSheet.create({
-  root: {
+  searchSection: {
+    paddingHorizontal: WORLDLOOP_HEADER_HORIZONTAL_PADDING,
+    paddingBottom: MAP_SEARCH_PANEL_GAP,
+    gap: MAP_SEARCH_PANEL_GAP,
+  },
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  searchBar: {
+    minWidth: 0,
     flex: 1,
-  },
-  mapTopPanel: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: "50%",
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    overflow: "hidden",
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-  },
-  mapSearchBody: {
-    flex: 1,
-    minHeight: 160,
-  },
-  scrim: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
-  },
-  panel: {
-    marginTop: "8%",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    height: MAP_SEARCH_BAR_HEIGHT,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingLeft: 16,
+    paddingRight: 12,
+    borderRadius: MAP_SEARCH_BAR_HEIGHT / 2,
+    backgroundColor: MAP_CHROME_SURFACE,
+    borderWidth: 1,
+    borderColor: "rgba(251, 191, 36, 0.45)",
     overflow: "hidden",
   },
   input: {
+    minWidth: 0,
     flex: 1,
     fontSize: 14,
+    lineHeight: 20,
     fontFamily: "Poppins-Regular",
-    color: "#ffffff",
+    color: MAP_CHROME_TEXT,
     backgroundColor: "transparent",
     paddingVertical: 0,
+  },
+  clearButton: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  clearButtonPressed: {
+    opacity: 0.82,
+  },
+  filterButtonActive: {
+    borderRadius: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+  },
+  dismissButton: {
+    width: DISMISS_TOUCH_SIZE,
+    height: DISMISS_TOUCH_SIZE,
+    borderRadius: DISMISS_TOUCH_SIZE / 2,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: MAP_CIRCULAR_FAB.controlBackgroundColor,
+    borderWidth: 1,
+    borderColor: MAP_CIRCULAR_FAB.controlBorderColor,
+  },
+  dismissButtonPressed: {
+    backgroundColor: MAP_CIRCULAR_FAB.controlPressedBackgroundColor,
   },
   chipsScroll: {
     flexGrow: 0,
     flexShrink: 0,
   },
   chipsRow: {
-    paddingHorizontal: 16,
     alignItems: "center",
     gap: 8,
+    paddingRight: 4,
   },
   chip: {
     flexDirection: "row",
@@ -581,9 +477,6 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255, 255, 255, 0.2)",
     justifyContent: "center",
   },
-  chipClearIcon: {
-    marginLeft: 2,
-  },
   chipSelected: {
     borderColor: "#fbbf24",
   },
@@ -591,8 +484,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   idleScrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: WORLDLOOP_HEADER_HORIZONTAL_PADDING,
+    paddingTop: SEARCH_BODY_TOP_PADDING,
+    paddingBottom: 16,
   },
   centeredScroll: {
     flex: 1,
@@ -616,7 +510,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   listContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: WORLDLOOP_HEADER_HORIZONTAL_PADDING,
+    paddingTop: SEARCH_BODY_TOP_PADDING,
     paddingBottom: 24,
     gap: 8,
   },

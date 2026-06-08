@@ -11,7 +11,7 @@ export function ExploreError({ message, onRetry }: ExploreErrorProps) {
 
   return (
     <View
-      className="flex-1 items-center justify-center bg-midnight-navy gap-4 px-8"
+      className="flex-1 items-center justify-center gap-4 px-8"
       style={{ paddingTop: insets.top }}
     >
       <Text className="text-center font-semibold text-lg text-white">
