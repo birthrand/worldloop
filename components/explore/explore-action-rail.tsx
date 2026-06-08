@@ -17,10 +17,7 @@ import {
   EXPLORE_FLOATING_CHROME_OFFSET,
   TAB_BAR_CONTENT_HEIGHT,
 } from "@/components/bottom-tab-bar";
-import {
-  COMPACT_TOUCH_SIZE,
-  GlassIconButton,
-} from "@/components/explore/glass-icon-button";
+import { GlassIconButton } from "@/components/explore/glass-icon-button";
 import { focusCountryOnMap } from "@/lib/open-country-on-map";
 import {
   DEFAULT_FEED_SORT_FIELD,
@@ -42,10 +39,6 @@ const SHEET_ENTER = SlideInDown.springify()
   .damping(20)
   .stiffness(150)
   .mass(0.85);
-
-/** Header rail: compact touch target + vertical padding (4 + 4). */
-const RAIL_HEADER_VERTICAL_PADDING = 8;
-const RAIL_HEADER_BORDER_RADIUS = 12;
 
 function RailIconDivider({ vertical = true }: { vertical?: boolean }) {
   return (
@@ -644,14 +637,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 2,
-    paddingVertical: RAIL_HEADER_VERTICAL_PADDING / 2,
+    paddingVertical: 4,
     paddingHorizontal: 8,
-    borderRadius: RAIL_HEADER_BORDER_RADIUS,
-    overflow: "hidden",
+    borderRadius: 20,
   },
   railIconDividerVertical: {
     width: StyleSheet.hairlineWidth,
-    height: 20,
+    height: 16,
     backgroundColor: "rgba(255, 255, 255, 0.14)",
     flexShrink: 0,
   },
@@ -671,8 +663,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 6,
     paddingHorizontal: 4,
-    borderRadius: (COMPACT_TOUCH_SIZE + 8) / 2,
-    overflow: "hidden",
+    borderRadius: 28,
   },
   optionPressed: {
     opacity: 0.78,

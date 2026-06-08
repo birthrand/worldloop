@@ -9,6 +9,7 @@ import {
   type LayoutChangeEvent,
   type ViewToken,
 } from "react-native";
+
 import { CountryFeedPage } from "@/components/explore/country-feed-page";
 import { ExploreTopBar } from "@/components/explore/explore-top-bar";
 import { prefetchCountryProfiles } from "@/lib/prefetch-country-profiles";
@@ -117,102 +118,105 @@ export function ExploreFeed() {
   const keyExtractor = useCallback((item: Country) => item.name, []);
 
   return (
-    <View style={styles.feed}>
-      <ExploreTopBar />
-      <View className="flex-1" onLayout={onFeedLayout}>
-        {pageHeight > 0 ? (
-          <FlatList
-            key={feedListKey}
-            ref={listRef}
-            style={styles.list}
-            data={countries}
-            keyExtractor={keyExtractor}
-            renderItem={renderItem}
-            extraData={pageHeight}
-            initialScrollIndex={
-              currentIndex > 0 && currentIndex < countries.length
-                ? currentIndex
-                : undefined
-            }
-            pagingEnabled
-            showsVerticalScrollIndicator={false}
-            decelerationRate="fast"
-            onViewableItemsChanged={onViewableItemsChanged}
-            viewabilityConfig={viewabilityConfig}
-            getItemLayout={(_, index) => ({
-              length: pageHeight,
-              offset: pageHeight * index,
-              index,
-            })}
-            initialNumToRender={2}
-            maxToRenderPerBatch={2}
-            windowSize={3}
-            removeClippedSubviews
-            onScrollToIndexFailed={(info) => {
-              const retry = () => {
-                listRef.current?.scrollToIndex({
-                  index: info.index,
-                  animated: false,
-                });
-              };
-              requestAnimationFrame(retry);
-            }}
-          />
-        ) : null}
+    <View className="flex-1 bg-midnight-navy" onLayout={onFeedLayout}>
+      <View pointerEvents="box-none" style={styles.topBarOverlay}>
+        <ExploreTopBar />
+      </View>
+      {pageHeight > 0 ? (
+        <FlatList
+          key={feedListKey}
+          ref={listRef}
+          style={styles.list}
+          data={countries}
+          keyExtractor={keyExtractor}
+          renderItem={renderItem}
+          extraData={pageHeight}
+          initialScrollIndex={
+            currentIndex > 0 && currentIndex < countries.length
+              ? currentIndex
+              : undefined
+          }
+          pagingEnabled
+          showsVerticalScrollIndicator={false}
+          decelerationRate="fast"
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig}
+          getItemLayout={(_, index) => ({
+            length: pageHeight,
+            offset: pageHeight * index,
+            index,
+          })}
+          initialNumToRender={2}
+          maxToRenderPerBatch={2}
+          windowSize={3}
+          removeClippedSubviews
+          onScrollToIndexFailed={(info) => {
+            const retry = () => {
+              listRef.current?.scrollToIndex({
+                index: info.index,
+                animated: false,
+              });
+            };
+            requestAnimationFrame(retry);
+          }}
+        />
+      ) : null}
 
-        {status === "loading" && countries.length === 0 && (
-          <View style={styles.loadingOverlay} pointerEvents="none">
-            <ActivityIndicator size="large" color="#fbbf24" />
+      {status === "loading" && countries.length === 0 && (
+        <View style={styles.loadingOverlay} pointerEvents="none">
+          <ActivityIndicator size="large" color="#fbbf24" />
+        </View>
+      )}
+
+      {status === "error" &&
+        countries.length === 0 &&
+        (selectedRegion !== null || discoveryMode === "here") && (
+          <View style={styles.errorOverlay}>
+            <Text style={styles.errorTitle}>
+              {discoveryMode === "here"
+                ? "Couldn't load this map area"
+                : `Couldn't load ${selectedRegion}`}
+            </Text>
+            <Text style={styles.errorMessage}>
+              {error ?? "Check that the backend is running and try again."}
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={
+                discoveryMode === "here"
+                  ? "Retry loading map area countries"
+                  : `Retry loading ${selectedRegion}`
+              }
+              onPress={() => {
+                if (discoveryMode === "here") {
+                  void loadHereFeed(viewportCountries);
+                  return;
+                }
+                void setRegionFilter(selectedRegion);
+              }}
+              style={({ pressed }) => [
+                styles.retryButton,
+                pressed && styles.retryPressed,
+              ]}
+            >
+              <Text style={styles.retryText}>Retry</Text>
+            </Pressable>
           </View>
         )}
-
-        {status === "error" &&
-          countries.length === 0 &&
-          (selectedRegion !== null || discoveryMode === "here") && (
-            <View style={styles.errorOverlay}>
-              <Text style={styles.errorTitle}>
-                {discoveryMode === "here"
-                  ? "Couldn't load this map area"
-                  : `Couldn't load ${selectedRegion}`}
-              </Text>
-              <Text style={styles.errorMessage}>
-                {error ?? "Check that the backend is running and try again."}
-              </Text>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={
-                  discoveryMode === "here"
-                    ? "Retry loading map area countries"
-                    : `Retry loading ${selectedRegion}`
-                }
-                onPress={() => {
-                  if (discoveryMode === "here") {
-                    void loadHereFeed(viewportCountries);
-                    return;
-                  }
-                  void setRegionFilter(selectedRegion);
-                }}
-                style={({ pressed }) => [
-                  styles.retryButton,
-                  pressed && styles.retryPressed,
-                ]}
-              >
-                <Text style={styles.retryText}>Retry</Text>
-              </Pressable>
-            </View>
-          )}
-      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  feed: {
-    flex: 1,
-  },
   list: {
     flex: 1,
-    backgroundColor: "transparent",
+  },
+  topBarOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 20,
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,

@@ -20,13 +20,3 @@ declare module "*.ttf" {
   const value: number;
   export default value;
 }
-
-declare module "*.json" {
-  const value: Record<string, unknown>;
-  export default value;
-}
-
-declare module "*.mp4" {
-  const value: number;
-  export default value;
-}

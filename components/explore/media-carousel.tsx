@@ -4,12 +4,15 @@ type MediaCarouselProps = {
   images: string[];
   activeIndex: number;
   onImageIndexChange: (index: number) => void;
+  /** Tighter layout for the explore country card (no extra bottom padding). */
+  compact?: boolean;
 };
 
 export function MediaCarousel({
   images,
   activeIndex,
   onImageIndexChange,
+  compact = false,
 }: MediaCarouselProps) {
   const slideCount = Math.max(images.length, 1);
 
@@ -18,7 +21,13 @@ export function MediaCarousel({
   }
 
   return (
-    <View className="flex-row items-center justify-center gap-2">
+    <View
+      className={
+        compact
+          ? "flex-row items-center justify-center gap-2 pb-2"
+          : "flex-row items-center justify-center gap-2 pb-4"
+      }
+    >
       {Array.from({ length: slideCount }, (_, index) => {
         const isActive = index === activeIndex;
         return (
@@ -50,7 +59,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   dotActive: {
-    backgroundColor: "#fbbf24",
+    backgroundColor: "#ffffff",
     width: 8,
     height: 8,
     borderRadius: 4,

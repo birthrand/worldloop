@@ -34,7 +34,6 @@ export default function RootLayout() {
         }}
       >
         <Stack.Screen name="index" />
-        <Stack.Screen name="onboarding" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="country" options={{ headerShown: false }} />
         {__DEV__ ? <Stack.Screen name="dev" /> : null}
