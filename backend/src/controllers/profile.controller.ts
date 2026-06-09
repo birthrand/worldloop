@@ -5,6 +5,7 @@ import { enrichCountryWithAi } from "../services/ai.service.js";
 import { getCountryByName } from "../services/country.service.js";
 import { enrichCountryWithImages } from "../services/image.service.js";
 import { getLandmarksForCountry } from "../services/landmarks.service.js";
+import { enrichCountryWithVideos } from "../services/video.service.js";
 import { getWikipediaForCountry } from "../services/wikipedia.service.js";
 
 /** Country profile for AI explorer — images + Wikipedia, no news. */
@@ -18,7 +19,8 @@ export async function getCountryProfile(
 
     const country = await getCountryByName(name);
     const withImages = await enrichCountryWithImages(country);
-    const withAi = await enrichCountryWithAi(withImages);
+    const withVideos = await enrichCountryWithVideos(withImages);
+    const withAi = await enrichCountryWithAi(withVideos);
     const [wikipedia, landmarks] = await Promise.all([
       getWikipediaForCountry(withAi.name),
       getLandmarksForCountry(withAi.name, withAi.images ?? [], {

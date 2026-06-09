@@ -39,6 +39,108 @@ type PexelsSearchResponse = {
   photos?: unknown;
 };
 
+type PexelsVideoSearchResponse = {
+  videos?: unknown;
+};
+
+type PexelsVideoFileCandidate = {
+  link?: unknown;
+  file_type?: unknown;
+  width?: unknown;
+};
+
+type PexelsVideoCandidate = {
+  image?: unknown;
+  duration?: unknown;
+  video_files?: unknown;
+};
+
+export type PexelsVideoHit = {
+  url: string;
+  poster?: string;
+  duration?: number;
+  /** Selected MP4 width in pixels (used to rank clips). */
+  width?: number;
+};
+
+function isValidHttpsMp4Url(value: string): boolean {
+  try {
+    const url = new URL(value.trim());
+    if (url.protocol !== "https:") return false;
+    return (
+      url.pathname.endsWith(".mp4") ||
+      url.hostname.toLowerCase().includes("pexels.com")
+    );
+  } catch {
+    return false;
+  }
+}
+
+const PREFERRED_MAX_VIDEO_WIDTH = 1920;
+const MIN_FALLBACK_VIDEO_WIDTH = 720;
+const MIN_ACCEPTABLE_VIDEO_WIDTH = 640;
+
+function selectBestMp4File(
+  files: PexelsVideoFileCandidate[],
+): { link: string; width: number } | null {
+  const mp4Files = files
+    .map((file) => ({
+      link: typeof file.link === "string" ? file.link.trim() : "",
+      fileType: typeof file.file_type === "string" ? file.file_type.trim() : "",
+      width: typeof file.width === "number" ? file.width : 0,
+    }))
+    .filter(
+      (file) =>
+        file.fileType === "video/mp4" &&
+        file.link &&
+        isValidHttpsMp4Url(file.link),
+    );
+
+  if (mp4Files.length === 0) return null;
+
+  const byWidthDesc = [...mp4Files].sort((a, b) => b.width - a.width);
+
+  const upTo1080p = byWidthDesc.filter(
+    (file) => file.width <= PREFERRED_MAX_VIDEO_WIDTH,
+  );
+  if (upTo1080p.length > 0) {
+    return { link: upTo1080p[0].link, width: upTo1080p[0].width };
+  }
+
+  const above1080p = [...mp4Files]
+    .filter((file) => file.width > PREFERRED_MAX_VIDEO_WIDTH)
+    .sort((a, b) => a.width - b.width);
+  if (above1080p.length > 0) {
+    return { link: above1080p[0].link, width: above1080p[0].width };
+  }
+
+  const above720 = byWidthDesc.filter(
+    (file) => file.width >= MIN_FALLBACK_VIDEO_WIDTH,
+  );
+  if (above720.length > 0) {
+    return { link: above720[0].link, width: above720[0].width };
+  }
+
+  const above640 = byWidthDesc.filter(
+    (file) => file.width >= MIN_ACCEPTABLE_VIDEO_WIDTH,
+  );
+  if (above640.length > 0) {
+    return { link: above640[0].link, width: above640[0].width };
+  }
+
+  return null;
+}
+
+export function pickBestPexelsVideoHit(
+  hits: PexelsVideoHit[],
+): PexelsVideoHit | null {
+  if (hits.length === 0) return null;
+
+  return hits.reduce((best, hit) =>
+    (hit.width ?? 0) > (best.width ?? 0) ? hit : best,
+  );
+}
+
 export function parseUnsplashResults(data: unknown): string[] {
   if (!data || typeof data !== "object") {
     throw new HttpError("Invalid Unsplash response", 502, "UPSTREAM_INVALID");
@@ -56,6 +158,48 @@ export function parseUnsplashResults(data: unknown): string[] {
       return typeof url === "string" ? url : null;
     })
     .filter((url): url is string => Boolean(url));
+}
+
+export function parsePexelsVideoResults(data: unknown): PexelsVideoHit[] {
+  if (!data || typeof data !== "object") {
+    throw new HttpError("Invalid Pexels response", 502, "UPSTREAM_INVALID");
+  }
+
+  const videos = (data as PexelsVideoSearchResponse).videos;
+  if (videos !== undefined && !Array.isArray(videos)) {
+    throw new HttpError("Invalid Pexels response", 502, "UPSTREAM_INVALID");
+  }
+
+  const hits: PexelsVideoHit[] = [];
+
+  for (const item of videos ?? []) {
+    if (!item || typeof item !== "object") continue;
+
+    const video = item as PexelsVideoCandidate;
+    const files = Array.isArray(video.video_files)
+      ? (video.video_files as PexelsVideoFileCandidate[])
+      : [];
+    const selected = selectBestMp4File(files);
+    if (!selected) continue;
+
+    const poster =
+      typeof video.image === "string" && video.image.trim()
+        ? video.image.trim()
+        : undefined;
+    const duration =
+      typeof video.duration === "number" && video.duration > 0
+        ? Math.round(video.duration)
+        : undefined;
+
+    hits.push({
+      url: selected.link,
+      poster,
+      duration,
+      width: selected.width,
+    });
+  }
+
+  return hits;
 }
 
 export function parsePexelsResults(data: unknown): string[] {

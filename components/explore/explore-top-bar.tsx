@@ -12,6 +12,11 @@ import {
   WorldLoopHeader,
 } from "@/components/worldloop-header";
 import {
+  CULTURE_CHROME_ICON_SIZE,
+  CULTURE_CHROME_TITLE_SIZE,
+  CULTURE_CHROME_TOUCH_SIZE,
+} from "@/constants/culture-chrome";
+import {
   EXPLORE_HEADER_OVERLAY_BOTTOM_PADDING,
   getExploreHeaderChromeHeight,
 } from "@/constants/explore-feed-layout";
@@ -87,6 +92,11 @@ export function ExploreTopBar({
           onSearchPress={() => openSearch()}
           searchActive={isSearchOpen}
           inactiveColor={EXPLORE_HEADER_INACTIVE_COLOR}
+          rowHeight={CULTURE_CHROME_TOUCH_SIZE}
+          sideSlotWidth={CULTURE_CHROME_TOUCH_SIZE}
+          brandFontSize={CULTURE_CHROME_TITLE_SIZE}
+          iconSize={CULTURE_CHROME_ICON_SIZE}
+          searchIconSize={CULTURE_CHROME_ICON_SIZE}
         />
 
         {discoveryMode === "here" ? (

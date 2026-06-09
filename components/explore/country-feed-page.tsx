@@ -84,12 +84,7 @@ export function CountryFeedPage({
     <View style={{ height: pageHeight, width: "100%" }}>
       <View style={[styles.pageContent, { paddingTop: headerContentInset }]}>
         <View style={styles.feedColumn}>
-          <View
-            style={[
-              styles.feedUnit,
-              { borderRadius: EXPLORE_FEED_SURFACE_RADIUS },
-            ]}
-          >
+          <View style={styles.feedUnit}>
             <View style={styles.heroRegion}>
               <View
                 style={styles.heroShell}
@@ -164,6 +159,10 @@ const styles = StyleSheet.create({
     flex: 1,
     width: "100%",
     overflow: "hidden",
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    borderBottomLeftRadius: EXPLORE_FEED_SURFACE_RADIUS,
+    borderBottomRightRadius: EXPLORE_FEED_SURFACE_RADIUS,
     ...Platform.select({
       ios: {
         shadowColor: "#000000",

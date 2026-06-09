@@ -38,6 +38,12 @@ const TAB_ITEMS: TabItem[] = [
     iconFocused: "compass",
   },
   {
+    routeName: "culture",
+    label: "Culture",
+    icon: "film-outline",
+    iconFocused: "film",
+  },
+  {
     routeName: "map",
     label: "Map",
     icon: "globe-outline",

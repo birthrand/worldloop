@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type SearchUiContext = "default" | "map";
+export type SearchUiContext = "default" | "map" | "culture";
 
 type SearchUiState = {
   isOpen: boolean;

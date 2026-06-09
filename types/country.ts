@@ -1,3 +1,11 @@
+/** Direct MP4 (or HLS) URL from backend — never a page link. */
+export type CountryVideo = {
+  url: string;
+  poster?: string;
+  provider?: string;
+  duration?: number;
+};
+
 /** Lightweight country shape from GET /map/countries. */
 export type MapCountry = {
   name: string;
@@ -27,6 +35,7 @@ export type Country = {
   /** Official language names (REST Countries). */
   languages?: string[];
   images?: string[];
+  videos?: CountryVideo[];
   ai?: {
     /** Primary fact (same as `facts[0]`). */
     fact: string;

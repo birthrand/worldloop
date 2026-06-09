@@ -72,6 +72,19 @@ Results are **cached per country** in Redis (`images:{country}`, 30-day TTL). Re
 
 Consumers should mirror the same provider fallback order and country-level caching so image behavior stays consistent with the backend.
 
+## Video API (Feature 15)
+
+Configure `PEXELS_API_KEY` in `backend/.env` only (same key as images). When unset or when Pexels returns no match, endpoints return `videos: []` with HTTP 200.
+
+- **Provider:** Pexels Video Search API (`{country} landscape`, fallback `{country} travel`)
+- **Cache:** Redis key `videos:{country}` (30-day TTL)
+- **Shape:** At most one `CountryVideo` per country — HTTPS MP4 `url`, optional `poster`, `provider`, `duration`
+
+```bash
+curl -s "http://localhost:3001/country/Japan/profile" | jq '.data.country.videos'
+curl -s "http://localhost:3001/feed/countries?limit=3" | jq '.data[] | {name, videos: .videos | length}'
+```
+
 ## Endpoints
 
 | Method | Path              | Description                                            |

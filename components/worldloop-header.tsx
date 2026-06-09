@@ -26,6 +26,13 @@ type WorldLoopHeaderProps = {
   onSearchPress: () => void;
   searchActive?: boolean;
   inactiveColor?: string;
+  brandFontFamily?: string;
+  /** Row height — use 48+ on immersive overlays for 44pt touch targets. */
+  rowHeight?: number;
+  sideSlotWidth?: number;
+  brandFontSize?: number;
+  iconSize?: number;
+  searchIconSize?: number;
   menuAccessibilityLabel?: string;
   menuAccessibilityHint?: string;
   searchAccessibilityLabel?: string;
@@ -38,26 +45,37 @@ export function WorldLoopHeader({
   onSearchPress,
   searchActive = false,
   inactiveColor = WORLDLOOP_HEADER_MUTED_COLOR,
+  brandFontFamily = "Poppins-Medium",
+  rowHeight = WORLDLOOP_HEADER_ROW_HEIGHT,
+  sideSlotWidth = WORLDLOOP_HEADER_SIDE_SLOT_WIDTH,
+  brandFontSize = 16,
+  iconSize = WORLDLOOP_HEADER_ICON_SIZE,
+  searchIconSize = WORLDLOOP_HEADER_SEARCH_ICON_SIZE,
   menuAccessibilityLabel = "Browse feed filters",
   menuAccessibilityHint = "Opens For You, Here, and continent filters",
   searchAccessibilityLabel = "Search countries",
   searchAccessibilityHint = "Opens country search",
 }: WorldLoopHeaderProps) {
   return (
-    <View style={styles.headerRow}>
+    <View style={[styles.headerRow, { height: rowHeight }]}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={menuAccessibilityLabel}
         accessibilityHint={menuAccessibilityHint}
         hitSlop={8}
         onPress={onMenuPress}
-        style={styles.sideSlot}
+        style={[styles.sideSlot, { width: sideSlotWidth, height: rowHeight }]}
       >
         {({ pressed }) => (
-          <View style={styles.headerIconBox}>
+          <View
+            style={[
+              styles.headerIconBox,
+              { width: iconSize, height: iconSize },
+            ]}
+          >
             <Ionicons
               name="reorder-three-outline"
-              size={WORLDLOOP_HEADER_ICON_SIZE}
+              size={iconSize}
               color={
                 pressed || menuActive
                   ? WORLDLOOP_HEADER_ACCENT_COLOR
@@ -69,7 +87,17 @@ export function WorldLoopHeader({
       </Pressable>
 
       <Text
-        style={[styles.brandTitle, { color: inactiveColor }]}
+        style={[
+          styles.brandTitle,
+          {
+            color: inactiveColor,
+            fontFamily: brandFontFamily,
+            fontSize: brandFontSize,
+            lineHeight: rowHeight,
+            left: WORLDLOOP_HEADER_HORIZONTAL_PADDING + sideSlotWidth,
+            right: WORLDLOOP_HEADER_HORIZONTAL_PADDING + sideSlotWidth,
+          },
+        ]}
         pointerEvents="none"
       >
         WorldLoop
@@ -81,12 +109,21 @@ export function WorldLoopHeader({
         accessibilityHint={searchAccessibilityHint}
         hitSlop={8}
         onPress={onSearchPress}
-        style={({ pressed }) => [styles.sideSlot, pressed && styles.pressed]}
+        style={({ pressed }) => [
+          styles.sideSlot,
+          { width: sideSlotWidth, height: rowHeight },
+          pressed && styles.pressed,
+        ]}
       >
-        <View style={styles.searchIconBox}>
+        <View
+          style={[
+            styles.searchIconBox,
+            { width: searchIconSize, height: searchIconSize },
+          ]}
+        >
           <Ionicons
             name="search-outline"
-            size={WORLDLOOP_HEADER_SEARCH_ICON_SIZE}
+            size={searchIconSize}
             color={searchActive ? WORLDLOOP_HEADER_ACCENT_COLOR : inactiveColor}
           />
         </View>
@@ -101,36 +138,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    height: WORLDLOOP_HEADER_ROW_HEIGHT,
     paddingHorizontal: WORLDLOOP_HEADER_HORIZONTAL_PADDING,
   },
   sideSlot: {
-    width: WORLDLOOP_HEADER_SIDE_SLOT_WIDTH,
-    height: WORLDLOOP_HEADER_ROW_HEIGHT,
     alignItems: "center",
     justifyContent: "center",
   },
   headerIconBox: {
-    width: WORLDLOOP_HEADER_ICON_SIZE,
-    height: WORLDLOOP_HEADER_ICON_SIZE,
     alignItems: "center",
     justifyContent: "center",
   },
   searchIconBox: {
-    width: WORLDLOOP_HEADER_SEARCH_ICON_SIZE,
-    height: WORLDLOOP_HEADER_SEARCH_ICON_SIZE,
     alignItems: "center",
     justifyContent: "center",
   },
   brandTitle: {
     position: "absolute",
-    left:
-      WORLDLOOP_HEADER_HORIZONTAL_PADDING + WORLDLOOP_HEADER_SIDE_SLOT_WIDTH,
-    right:
-      WORLDLOOP_HEADER_HORIZONTAL_PADDING + WORLDLOOP_HEADER_SIDE_SLOT_WIDTH,
     fontFamily: "Poppins-Medium",
-    fontSize: 16,
-    lineHeight: WORLDLOOP_HEADER_ROW_HEIGHT,
     letterSpacing: 0.2,
     textAlign: "center",
     includeFontPadding: false,

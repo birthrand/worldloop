@@ -1,7 +1,5 @@
-import {
-  WORLDLOOP_HEADER_ROW_HEIGHT,
-  WORLDLOOP_HEADER_TOP_PADDING,
-} from "@/components/worldloop-header";
+import { WORLDLOOP_HEADER_TOP_PADDING } from "@/components/worldloop-header";
+import { CULTURE_CHROME_TOUCH_SIZE } from "@/constants/culture-chrome";
 
 /** Outer radius for the stacked hero + info card unit. */
 export const EXPLORE_FEED_SURFACE_RADIUS = 14;
@@ -23,7 +21,7 @@ export function getExploreHeaderContentHeight(
   return (
     safeAreaTop +
     WORLDLOOP_HEADER_TOP_PADDING +
-    WORLDLOOP_HEADER_ROW_HEIGHT +
+    CULTURE_CHROME_TOUCH_SIZE +
     EXPLORE_HEADER_OVERLAY_BOTTOM_PADDING +
     (options?.hereMode ? EXPLORE_HERE_SUBTITLE_HEIGHT : 0)
   );
