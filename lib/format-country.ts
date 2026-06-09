@@ -2,6 +2,7 @@ import {
   normalizeImageUrls,
   stripUrlsFromText,
 } from "@/lib/normalize-image-url";
+import type { Country, CountryVideo } from "@/types/country";
 
 /** Ensure landmark copy always starts with a capital letter. */
 export function formatLandmarkDescription(description: string): string {
@@ -110,6 +111,68 @@ export function formatClimateZone(latlng: [number, number]): string {
 export function getCountryImages(country: { images?: string[] }): string[] {
   if (!country.images?.length) return [];
   return normalizeImageUrls(country.images);
+}
+
+function isValidVideoUrl(url: string | undefined): boolean {
+  if (!url?.trim()) return false;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+/** Normalized, deduped video list for a country. */
+export function getCountryVideos(country: {
+  name?: string;
+  videos?: CountryVideo[];
+  images?: string[];
+}): CountryVideo[] {
+  const seen = new Set<string>();
+  const result: CountryVideo[] = [];
+
+  for (const item of country.videos ?? []) {
+    if (!isValidVideoUrl(item.url) || seen.has(item.url)) continue;
+    seen.add(item.url);
+    result.push({
+      url: item.url,
+      ...(item.poster ? { poster: item.poster } : {}),
+      ...(item.provider ? { provider: item.provider } : {}),
+      ...(item.duration !== undefined ? { duration: item.duration } : {}),
+    });
+  }
+
+  if (result.length === 0 && __DEV__) {
+    const images = getCountryImages(country);
+    const poster = images[0] ?? undefined;
+    return [
+      {
+        url: "demo://onboarding-hero",
+        poster,
+        provider: "demo",
+      },
+    ];
+  }
+
+  return result;
+}
+
+/** Primary culture clip for the Culture tab (first valid video). */
+export function getCultureVideo(country: Country): CountryVideo | null {
+  return getCountryVideos(country)[0] ?? null;
+}
+
+export function hasCultureVideo(country: Country): boolean {
+  return getCultureVideo(country) !== null;
+}
+
+/** Poster / still for Culture top-bar blur and loading state. */
+export function getCulturePosterUri(country: Country): string | undefined {
+  const video = getCultureVideo(country);
+  if (video?.poster) return video.poster;
+  const images = getCountryImages(country);
+  return images[0] ?? country.flag;
 }
 
 function cleanAiLine(raw: string | undefined): string {

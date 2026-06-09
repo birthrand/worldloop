@@ -12,7 +12,10 @@ import { useMapStore } from "@/store/use-map-store";
 import type { Country, MapCountry } from "@/types/country";
 
 let diskCatalogSnapshot: Country[] = [];
-let diskCatalogHydratePromise: Promise<void> | null = null;
+let baseDiskHydrated = false;
+let baseDiskHydratePromise: Promise<void> | null = null;
+const hydratedDiskRegions = new Set<string>();
+const regionDiskHydratePromises = new Map<string, Promise<void>>();
 
 function countryRichness(country: Country): number {
   let score = 0;
@@ -131,20 +134,64 @@ export function getSyncLocalSearchResults(
   return filterLocalCatalog(catalog, query, region);
 }
 
-async function hydrateDiskCatalog(region: string): Promise<void> {
-  if (diskCatalogHydratePromise) {
-    await diskCatalogHydratePromise;
+async function hydrateBaseDiskCatalog(): Promise<void> {
+  if (baseDiskHydrated) return;
+
+  if (baseDiskHydratePromise) {
+    await baseDiskHydratePromise;
     return;
   }
 
-  diskCatalogHydratePromise = (async () => {
-    const diskCatalog = await loadDiskCatalog(region);
+  baseDiskHydratePromise = (async () => {
+    const diskCatalog = await loadDiskCatalog("");
     if (diskCatalog.length > 0) {
       diskCatalogSnapshot = mergeCatalog([diskCatalogSnapshot, diskCatalog]);
     }
-  })();
+    baseDiskHydrated = true;
+  })().catch((err) => {
+    baseDiskHydratePromise = null;
+    throw err;
+  });
 
-  await diskCatalogHydratePromise;
+  await baseDiskHydratePromise;
+}
+
+async function hydrateRegionDiskCatalog(region: string): Promise<void> {
+  const trimmedRegion = region.trim();
+  if (!trimmedRegion || hydratedDiskRegions.has(trimmedRegion)) return;
+
+  const inFlight = regionDiskHydratePromises.get(trimmedRegion);
+  if (inFlight) {
+    await inFlight;
+    return;
+  }
+
+  const promise = (async () => {
+    await hydrateBaseDiskCatalog();
+
+    const regionDisk = await getClientCache<Country[]>(
+      CLIENT_CACHE_KEYS.feedRegion(trimmedRegion),
+    );
+    if (regionDisk.data && regionDisk.data.length > 0) {
+      diskCatalogSnapshot = mergeCatalog([
+        diskCatalogSnapshot,
+        regionDisk.data,
+      ]);
+    }
+
+    hydratedDiskRegions.add(trimmedRegion);
+  })().catch((err) => {
+    regionDiskHydratePromises.delete(trimmedRegion);
+    throw err;
+  });
+
+  regionDiskHydratePromises.set(trimmedRegion, promise);
+  await promise;
+}
+
+async function hydrateDiskCatalog(region: string): Promise<void> {
+  await hydrateBaseDiskCatalog();
+  await hydrateRegionDiskCatalog(region.trim());
 }
 
 /** Warm map/feed disk caches so progressive typing can filter without network. */

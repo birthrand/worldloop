@@ -83,9 +83,7 @@ function isLoading(status: FeedStatus): boolean {
 }
 
 function isFeedGenerationStale(regionGen: number, hereGen: number): boolean {
-  return (
-    regionGen !== regionFilterGeneration || hereGen !== hereFeedGeneration
-  );
+  return regionGen !== regionFilterGeneration || hereGen !== hereFeedGeneration;
 }
 
 function shuffleCountries<T>(items: T[]): T[] {
@@ -259,8 +257,7 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
 
     const guard = options?.feedGenerationGuard;
     const isStale = () =>
-      guard != null &&
-      isFeedGenerationStale(guard.regionGen, guard.hereGen);
+      guard != null && isFeedGenerationStale(guard.regionGen, guard.hereGen);
 
     const cacheKey = CLIENT_CACHE_KEYS.feedFirstPage;
     let hydratedFromDisk = false;

@@ -1,3 +1,14 @@
+export type CountryVideo = {
+  /** Direct HTTPS MP4 URL (not a Pexels watch page). */
+  url: string;
+  /** Still frame for loading / header blur backdrop. */
+  poster?: string;
+  /** Upstream label, e.g. "pexels". */
+  provider?: string;
+  /** Duration in whole seconds when known. */
+  duration?: number;
+};
+
 /** Full country shape (images + ai added in later prompts). */
 export type Country = {
   name: string;
@@ -19,6 +30,7 @@ export type Country = {
   /** Official / national language names from REST Countries. */
   languages: string[];
   images?: string[];
+  videos?: CountryVideo[];
   ai?: {
     /** Primary fact (same as `facts[0]`). */
     fact: string;

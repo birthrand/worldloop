@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
   cardContent: {
     paddingHorizontal: EXPLORE_FEED_CARD_HORIZONTAL_PADDING,
     paddingTop: 14,
-    paddingBottom: 14,
+    paddingBottom: 18,
     gap: 14,
   },
   countryInfoSection: {

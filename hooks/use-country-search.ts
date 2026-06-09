@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   getCachedSearchResults,
   getSyncLocalSearchResults,
-  hasLocalSearchCatalog,
   prefetchLocalSearchCatalog,
   searchCountriesWithCache,
 } from "@/lib/search-countries";
@@ -77,8 +76,7 @@ export function useCountrySearch(enabled: boolean) {
       setError(null);
 
       const localPreview = getSyncLocalSearchResults(q, r);
-      const hasLocalPreview =
-        localPreview.length > 0 || (hasLocalSearchCatalog() && (!!q || !!r));
+      const hasLocalPreview = localPreview.length > 0;
 
       const cached = await getCachedSearchResults(q, r);
       if (requestId !== searchRequestIdRef.current) return;
@@ -89,6 +87,7 @@ export function useCountrySearch(enabled: boolean) {
         setResults(cached);
         setStatus("success");
       } else if (!hasLocalPreview) {
+        setResults([]);
         setStatus("loading");
       }
 
@@ -172,11 +171,10 @@ export function useCountrySearch(enabled: boolean) {
       return;
     }
 
-    if (hasLocalSearchCatalog()) {
-      setResults([]);
-      setStatus("success");
-      setError(null);
-    }
+    // Partial local catalog may miss matches the server still has — wait for network.
+    setResults([]);
+    setStatus("loading");
+    setError(null);
   }, [enabled, query, region]);
 
   useEffect(() => {

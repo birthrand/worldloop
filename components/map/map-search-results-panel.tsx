@@ -18,6 +18,7 @@ import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 
 import { FlagBadge } from "@/components/explore/flag-badge";
 import { FeedErrorBanner } from "@/components/home/feed-error-banner";
+import { WORLDLOOP_HEADER_HORIZONTAL_PADDING } from "@/components/worldloop-header";
 import {
   MAP_SEARCH_BLUR_INTENSITY,
   MAP_SEARCH_OVERLAY_PANEL,
@@ -335,7 +336,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "flex-start",
-    paddingHorizontal: 24,
+    paddingHorizontal: WORLDLOOP_HEADER_HORIZONTAL_PADDING,
     paddingTop: 100,
   },
   recentRow: {

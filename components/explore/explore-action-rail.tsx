@@ -26,6 +26,10 @@ import {
   GlassIconButton,
 } from "@/components/explore/glass-icon-button";
 import {
+  CULTURE_CHROME_ICON_SIZE,
+  CULTURE_CHROME_RAIL_GAP,
+} from "@/constants/culture-chrome";
+import {
   EXPLORE_FEED_RAIL_HORIZONTAL_PADDING,
   EXPLORE_FEED_SURFACE_RADIUS,
 } from "@/constants/explore-feed-layout";
@@ -37,13 +41,16 @@ import {
   type FeedSortField,
   type FeedSortOrder,
 } from "@/store/use-country-feed-store";
+import { useCultureFeedStore } from "@/store/use-culture-feed-store";
 import { useSavedCountriesStore } from "@/store/use-saved-countries-store";
 import type { Country } from "@/types/country";
 
 type ExploreActionRailProps = {
   country: Country;
   /** `header` = horizontal icons beside the country name. */
-  variant?: "header" | "overlay";
+  variant?: "header" | "overlay" | "culture";
+  /** Clearance above the tab bar when `variant` is `overlay` or `culture`. */
+  floatingChromeOffset?: number;
 };
 
 const SHEET_ENTER = SlideInDown.springify()
@@ -306,16 +313,32 @@ function MoreMenuRow({
 export function ExploreActionRail({
   country,
   variant = "overlay",
+  floatingChromeOffset = EXPLORE_FLOATING_CHROME_OFFSET,
 }: ExploreActionRailProps) {
   const insets = useSafeAreaInsets();
   const toggleSaved = useSavedCountriesStore((s) => s.toggleSaved);
   const isSaved = useSavedCountriesStore((s) => s.isSaved(country.name));
-  const sortField = useCountryFeedStore((s) => s.sortField);
-  const sortOrder = useCountryFeedStore((s) => s.sortOrder);
-  const setSort = useCountryFeedStore((s) => s.setSort);
+  const exploreSortField = useCountryFeedStore((s) => s.sortField);
+  const exploreSortOrder = useCountryFeedStore((s) => s.sortOrder);
+  const setExploreSort = useCountryFeedStore((s) => s.setSort);
+  const cultureSortField = useCultureFeedStore((s) => s.sortField);
+  const cultureSortOrder = useCultureFeedStore((s) => s.sortOrder);
+  const setCultureSort = useCultureFeedStore((s) => s.setSort);
+  const cultureIsMuted = useCultureFeedStore((s) => s.isMuted);
+  const toggleCultureMuted = useCultureFeedStore((s) => s.toggleMuted);
+  const cultureSortSheetOpen = useCultureFeedStore((s) => s.isSortSheetOpen);
+  const openCultureSortSheet = useCultureFeedStore((s) => s.openSortSheet);
+  const closeCultureSortSheet = useCultureFeedStore((s) => s.closeSortSheet);
+  const usesCultureFeed = variant === "culture";
+  const sortField = usesCultureFeed ? cultureSortField : exploreSortField;
+  const sortOrder = usesCultureFeed ? cultureSortOrder : exploreSortOrder;
+  const setSort = usesCultureFeed ? setCultureSort : setExploreSort;
   const saved = isSaved;
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
-  const [isSortModalOpen, setIsSortModalOpen] = useState(false);
+  const [isExploreSortModalOpen, setIsExploreSortModalOpen] = useState(false);
+  const isSortModalOpen = usesCultureFeed
+    ? cultureSortSheetOpen
+    : isExploreSortModalOpen;
   const [draftRandom, setDraftRandom] = useState(false);
   const [draftField, setDraftField] = useState<FeedSortField>(
     sortField ?? DEFAULT_FEED_SORT_FIELD,
@@ -360,16 +383,28 @@ export function ExploreActionRail({
     setDraftRandom(random);
     setDraftOrder(random ? "asc" : currentOrder);
     setIsMoreMenuOpen(false);
-    setIsSortModalOpen(true);
+    if (usesCultureFeed) {
+      openCultureSortSheet();
+      return;
+    }
+    setIsExploreSortModalOpen(true);
   };
 
   const handleCloseSortModal = () => {
-    setIsSortModalOpen(false);
+    if (usesCultureFeed) {
+      closeCultureSortSheet();
+      return;
+    }
+    setIsExploreSortModalOpen(false);
   };
 
   const handleApplySort = () => {
     setSort(draftField, draftRandom ? "random" : draftOrder);
-    setIsSortModalOpen(false);
+    if (usesCultureFeed) {
+      closeCultureSortSheet();
+      return;
+    }
+    setIsExploreSortModalOpen(false);
   };
 
   const handleJumpToMap = () => {
@@ -394,12 +429,14 @@ export function ExploreActionRail({
           variant === "header"
             ? styles.railHeaderStack
             : [
-                styles.railOverlay,
+                variant === "culture"
+                  ? styles.railCultureOverlay
+                  : styles.railOverlay,
                 {
                   bottom:
                     insets.bottom +
                     TAB_BAR_CONTENT_HEIGHT +
-                    EXPLORE_FLOATING_CHROME_OFFSET,
+                    floatingChromeOffset,
                 },
               ]
         }
@@ -451,6 +488,79 @@ export function ExploreActionRail({
               accessibilityHint="Opens share, sort, and other country actions"
             />
           </RailFrostedSurface>
+        ) : variant === "culture" ? (
+          <View style={styles.railCultureStack}>
+            <GlassIconButton
+              icon="globe-outline"
+              label="Map"
+              variant="plain"
+              iconTone="bright"
+              iconSize={CULTURE_CHROME_ICON_SIZE}
+              onPress={handleJumpToMap}
+              accessibilityLabel={`View ${country.name} on map`}
+              accessibilityHint="Opens the world map focused on this country"
+            />
+
+            <GlassIconButton
+              icon={saved ? "bookmark" : "bookmark-outline"}
+              label="Save"
+              variant="plain"
+              iconTone="bright"
+              iconSize={CULTURE_CHROME_ICON_SIZE}
+              active={saved}
+              haptic="medium"
+              onPress={handleToggleSaved}
+              accessibilityLabel={
+                saved ? `Unsave ${country.name}` : `Save ${country.name}`
+              }
+              accessibilityHint={
+                saved
+                  ? "Removes this country from your saved list"
+                  : "Adds this country to your saved list"
+              }
+            />
+
+            <GlassIconButton
+              icon="share-social-outline"
+              label="Share"
+              variant="plain"
+              iconTone="bright"
+              iconSize={CULTURE_CHROME_ICON_SIZE}
+              onPress={() => {
+                void handleShare();
+              }}
+              accessibilityLabel={`Share ${country.name}`}
+              accessibilityHint="Opens the system share sheet"
+            />
+
+            <GlassIconButton
+              icon="swap-vertical-outline"
+              label="Sort"
+              variant="plain"
+              iconTone="bright"
+              iconSize={CULTURE_CHROME_ICON_SIZE}
+              active={hasCustomSort}
+              onPress={handleOpenSortModal}
+              accessibilityLabel="Sort culture feed"
+              accessibilityHint="Opens sort options for the culture feed"
+            />
+
+            <GlassIconButton
+              icon={
+                cultureIsMuted ? "volume-mute-outline" : "volume-high-outline"
+              }
+              label={cultureIsMuted ? "Muted" : "Sound"}
+              variant="plain"
+              iconTone="bright"
+              iconSize={CULTURE_CHROME_ICON_SIZE}
+              active={!cultureIsMuted}
+              onPress={toggleCultureMuted}
+              accessibilityLabel={
+                cultureIsMuted ? "Unmute culture videos" : "Mute culture videos"
+              }
+              accessibilityHint="Toggles sound on the culture video feed"
+            />
+          </View>
         ) : (
           <RailFrostedSurface style={styles.railGroup}>
             <GlassIconButton
@@ -492,71 +602,73 @@ export function ExploreActionRail({
         )}
       </View>
 
-      <Modal
-        visible={isMoreMenuOpen}
-        animationType="fade"
-        transparent
-        onRequestClose={handleCloseMoreMenu}
-      >
-        <View style={styles.modalOverlay}>
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            accessibilityRole="button"
-            accessibilityLabel="Close more actions"
-            onPress={handleCloseMoreMenu}
-          />
-          <Animated.View
-            entering={SHEET_ENTER}
-            style={[styles.sheet, { paddingBottom: insets.bottom + 12 }]}
-            accessibilityViewIsModal
-          >
-            <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>More actions</Text>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Close more actions"
-                hitSlop={10}
-                onPress={handleCloseMoreMenu}
-                style={({ pressed }) => [
-                  styles.closeButton,
-                  pressed && styles.optionPressed,
-                ]}
-              >
-                <Ionicons
-                  name="close"
-                  size={20}
-                  color="rgba(255, 255, 255, 0.45)"
-                />
-              </Pressable>
-            </View>
+      {variant !== "culture" ? (
+        <Modal
+          visible={isMoreMenuOpen}
+          animationType="fade"
+          transparent
+          onRequestClose={handleCloseMoreMenu}
+        >
+          <View style={styles.modalOverlay}>
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              accessibilityRole="button"
+              accessibilityLabel="Close more actions"
+              onPress={handleCloseMoreMenu}
+            />
+            <Animated.View
+              entering={SHEET_ENTER}
+              style={[styles.sheet, { paddingBottom: insets.bottom + 12 }]}
+              accessibilityViewIsModal
+            >
+              <View style={styles.sheetHeader}>
+                <Text style={styles.sheetTitle}>More actions</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Close more actions"
+                  hitSlop={10}
+                  onPress={handleCloseMoreMenu}
+                  style={({ pressed }) => [
+                    styles.closeButton,
+                    pressed && styles.optionPressed,
+                  ]}
+                >
+                  <Ionicons
+                    name="close"
+                    size={20}
+                    color="rgba(255, 255, 255, 0.45)"
+                  />
+                </Pressable>
+              </View>
 
-            <View style={styles.menuPanel}>
-              <MoreMenuRow
-                icon="share-social-outline"
-                label="Share"
-                subtitle={`Share ${country.name} with friends`}
-                onPress={handleShareFromMenu}
-              />
-              <View style={styles.menuDivider} />
-              <MoreMenuRow
-                icon="swap-vertical-outline"
-                label="Sort feed"
-                subtitle={currentSortSummary ?? "Shuffled order"}
-                active={hasCustomSort}
-                onPress={handleOpenSortModal}
-              />
-              <View style={styles.menuDivider} />
-              <MoreMenuRow
-                icon="volume-medium-outline"
-                label="Listen"
-                subtitle="Narration coming soon"
-                disabled
-                onPress={() => {}}
-              />
-            </View>
-          </Animated.View>
-        </View>
-      </Modal>
+              <View style={styles.menuPanel}>
+                <MoreMenuRow
+                  icon="share-social-outline"
+                  label="Share"
+                  subtitle={`Share ${country.name} with friends`}
+                  onPress={handleShareFromMenu}
+                />
+                <View style={styles.menuDivider} />
+                <MoreMenuRow
+                  icon="swap-vertical-outline"
+                  label="Sort feed"
+                  subtitle={currentSortSummary ?? "Shuffled order"}
+                  active={hasCustomSort}
+                  onPress={handleOpenSortModal}
+                />
+                <View style={styles.menuDivider} />
+                <MoreMenuRow
+                  icon="volume-medium-outline"
+                  label="Listen"
+                  subtitle="Narration coming soon"
+                  disabled
+                  onPress={() => {}}
+                />
+              </View>
+            </Animated.View>
+          </View>
+        </Modal>
+      ) : null}
 
       <Modal
         visible={isSortModalOpen}
@@ -703,6 +815,16 @@ const styles = StyleSheet.create({
     right: 10,
     alignItems: "center",
     zIndex: 10,
+  },
+  railCultureOverlay: {
+    position: "absolute",
+    right: 12,
+    alignItems: "center",
+    zIndex: 10,
+  },
+  railCultureStack: {
+    alignItems: "center",
+    gap: CULTURE_CHROME_RAIL_GAP,
   },
   railHeaderStack: {
     alignItems: "flex-end",

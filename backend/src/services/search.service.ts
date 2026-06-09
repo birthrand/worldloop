@@ -5,6 +5,7 @@ import { enrichCountryWithAi } from "./ai.service.js";
 import { CACHE_TTL, cacheKeys, getOrSet } from "./cache.service.js";
 import { getFeedCountries } from "./country.service.js";
 import { enrichCountryWithImages } from "./image.service.js";
+import { enrichCountryWithVideos } from "./video.service.js";
 
 export type SearchResponse = {
   data: Country[];
@@ -17,7 +18,8 @@ export type SearchResponse = {
 
 async function enrichCountry(country: CountryBasic): Promise<Country> {
   const withImages = await enrichCountryWithImages(country);
-  return enrichCountryWithAi(withImages);
+  const withVideos = await enrichCountryWithVideos(withImages);
+  return enrichCountryWithAi(withVideos);
 }
 
 const SUBSTRING_MIN_LEN = 3;

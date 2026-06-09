@@ -37,6 +37,8 @@ type GlassIconButtonProps = {
   iconOnly?: boolean;
   /** Compact variant only — smaller icon and touch target. */
   compactSize?: "default" | "small";
+  /** Override icon pixel size for plain / compact variants. */
+  iconSize?: number;
 };
 
 function triggerHaptic(style: HapticStyle) {
@@ -62,14 +64,16 @@ export function GlassIconButton({
   iconTone = "muted",
   iconOnly = false,
   compactSize = "default",
+  iconSize: iconSizeOverride,
 }: GlassIconButtonProps) {
   const isSmallCompact = variant === "compact" && compactSize === "small";
-  const compactIconSize = isSmallCompact
-    ? COMPACT_ICON_SIZE_SMALL
-    : COMPACT_ICON_SIZE;
+  const compactIconSize =
+    iconSizeOverride ??
+    (isSmallCompact ? COMPACT_ICON_SIZE_SMALL : COMPACT_ICON_SIZE);
   const compactTouchSize = isSmallCompact
     ? COMPACT_TOUCH_SIZE_SMALL
     : COMPACT_TOUCH_SIZE;
+  const plainTouchSize = iconSizeOverride != null ? 44 : GLASS_TOUCH_SIZE;
 
   const compactIconColor =
     iconTone === "bright" ? COMPACT_ICON_BRIGHT_COLOR : COMPACT_ICON_COLOR;
@@ -80,7 +84,9 @@ export function GlassIconButton({
       ? activeColor
       : variant === "glass"
         ? "#ffffff"
-        : compactIconColor;
+        : iconTone === "bright"
+          ? "#ffffff"
+          : compactIconColor;
 
   const handlePress = () => {
     if (disabled) return;
@@ -100,10 +106,15 @@ export function GlassIconButton({
       style={({ pressed }) => [
         variant === "glass"
           ? styles.hitArea
-          : [
-              styles.hitAreaCompact,
-              { minWidth: compactTouchSize, minHeight: compactTouchSize },
-            ],
+          : variant === "plain"
+            ? [
+                styles.hitAreaPlain,
+                { minWidth: plainTouchSize, minHeight: plainTouchSize },
+              ]
+            : [
+                styles.hitAreaCompact,
+                { minWidth: compactTouchSize, minHeight: compactTouchSize },
+              ],
         disabled && styles.hitAreaDisabled,
         pressed && !disabled && styles.pressed,
       ]}
@@ -121,7 +132,11 @@ export function GlassIconButton({
       ) : (
         <Ionicons
           name={icon}
-          size={variant === "compact" ? compactIconSize : GLASS_ICON_SIZE}
+          size={
+            variant === "compact" || variant === "plain"
+              ? compactIconSize
+              : GLASS_ICON_SIZE
+          }
           color={iconColor}
         />
       )}
@@ -152,6 +167,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     minWidth: COMPACT_TOUCH_SIZE,
     minHeight: COMPACT_TOUCH_SIZE,
+  },
+  hitAreaPlain: {
+    alignItems: "center",
+    justifyContent: "center",
   },
   hitAreaDisabled: {
     opacity: 0.72,
