@@ -20,6 +20,17 @@ async function enrichCountry(country: CountryBasic): Promise<Country> {
   return enrichCountryWithAi(withImages);
 }
 
+const SUBSTRING_MIN_LEN = 3;
+
+function rankSearchMatch(name: string, query: string): number | null {
+  const normalizedName = name.toLowerCase();
+  const q = query.trim().toLowerCase();
+  if (!q) return 0;
+  if (normalizedName.startsWith(q)) return 0;
+  if (q.length >= SUBSTRING_MIN_LEN && normalizedName.includes(q)) return 1;
+  return null;
+}
+
 function filterCountries(
   countries: CountryBasic[],
   query: string,
@@ -32,11 +43,26 @@ function filterCountries(
   }
 
   if (query) {
-    const queryLower = query.toLowerCase();
-    matches = matches.filter((c) => c.name.toLowerCase().includes(queryLower));
+    const queryLower = query.trim().toLowerCase();
+    matches = matches
+      .map((country) => ({
+        country,
+        rank: rankSearchMatch(country.name, queryLower),
+      }))
+      .filter(
+        (entry): entry is { country: CountryBasic; rank: number } =>
+          entry.rank !== null,
+      )
+      .sort((a, b) => {
+        if (a.rank !== b.rank) return a.rank - b.rank;
+        return a.country.name.localeCompare(b.country.name);
+      })
+      .map((entry) => entry.country);
+  } else {
+    matches = matches.sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  return matches.sort((a, b) => a.name.localeCompare(b.name));
+  return matches;
 }
 
 async function executeSearch(

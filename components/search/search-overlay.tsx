@@ -295,8 +295,8 @@ export function SearchOverlay() {
           </ScrollView>
         ) : showEmpty ? (
           <ScrollView
-            style={styles.centeredScroll}
-            contentContainerStyle={styles.centeredScrollContent}
+            style={styles.idleScroll}
+            contentContainerStyle={styles.emptyScrollContent}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
@@ -487,6 +487,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: WORLDLOOP_HEADER_HORIZONTAL_PADDING,
     paddingTop: SEARCH_BODY_TOP_PADDING,
     paddingBottom: 16,
+  },
+  emptyScrollContent: {
+    flexGrow: 1,
+    alignItems: "center",
+    justifyContent: "flex-start",
+    paddingHorizontal: WORLDLOOP_HEADER_HORIZONTAL_PADDING,
+    paddingTop: 100,
   },
   centeredScroll: {
     flex: 1,

@@ -6,12 +6,192 @@ import {
 } from "@/lib/app-region";
 import { getClientCache, staleWhileRevalidate } from "@/lib/client-cache";
 import { fetchExploreRegionCountries } from "@/lib/explore-region-countries";
-import type { Country } from "@/types/country";
+import { mapCountryToCountry } from "@/lib/map-country";
+import { useCountryFeedStore } from "@/store/use-country-feed-store";
+import { useMapStore } from "@/store/use-map-store";
+import type { Country, MapCountry } from "@/types/country";
 
-function filterByQuery(countries: Country[], query: string): Country[] {
+let diskCatalogSnapshot: Country[] = [];
+let diskCatalogHydratePromise: Promise<void> | null = null;
+
+function countryRichness(country: Country): number {
+  let score = 0;
+  if (country.ai) score += 4;
+  if (country.images?.length) score += 2;
+  if (country.subregion) score += 1;
+  return score;
+}
+
+function mergeCatalog(sources: Country[][]): Country[] {
+  const byName = new Map<string, Country>();
+
+  for (const list of sources) {
+    for (const country of list) {
+      const key = country.name.toLowerCase();
+      const existing = byName.get(key);
+      if (!existing || countryRichness(country) > countryRichness(existing)) {
+        byName.set(key, country);
+      }
+    }
+  }
+
+  return [...byName.values()];
+}
+
+function getMemoryCatalog(): Country[] {
+  const sources: Country[][] = [];
+
+  const mapCountries = useMapStore.getState().countries;
+  if (mapCountries.length > 0) {
+    sources.push(mapCountries.map((country) => mapCountryToCountry(country)));
+  }
+
+  const feedState = useCountryFeedStore.getState();
+  if (feedState.countries.length > 0) {
+    sources.push(feedState.countries);
+  }
+
+  for (const regionCountries of Object.values(feedState.regionCache)) {
+    if (regionCountries.length > 0) {
+      sources.push(regionCountries);
+    }
+  }
+
+  return mergeCatalog(sources);
+}
+
+async function loadDiskCatalog(region: string): Promise<Country[]> {
+  const [mapDisk, feedDisk, regionDisk] = await Promise.all([
+    getClientCache<MapCountry[]>(CLIENT_CACHE_KEYS.mapCountries),
+    getClientCache<{ countries: Country[]; nextCursor: string | null }>(
+      CLIENT_CACHE_KEYS.feedFirstPage,
+    ),
+    region
+      ? getClientCache<Country[]>(CLIENT_CACHE_KEYS.feedRegion(region))
+      : Promise.resolve({
+          data: null,
+          isFresh: false,
+          isStale: false,
+          savedAt: null,
+        }),
+  ]);
+
+  const sources: Country[][] = [];
+
+  if (mapDisk.data && mapDisk.data.length > 0) {
+    sources.push(mapDisk.data.map((country) => mapCountryToCountry(country)));
+  }
+
+  if (feedDisk.data?.countries && feedDisk.data.countries.length > 0) {
+    sources.push(feedDisk.data.countries);
+  }
+
+  if (regionDisk.data && regionDisk.data.length > 0) {
+    sources.push(regionDisk.data);
+  }
+
+  return mergeCatalog(sources);
+}
+
+function getMergedLocalCatalog(): Country[] {
+  return mergeCatalog([getMemoryCatalog(), diskCatalogSnapshot]);
+}
+
+function filterLocalCatalog(
+  catalog: Country[],
+  query: string,
+  region: string,
+): Country[] {
+  const q = query.trim();
+  const r = region.trim();
+
+  let matches = catalog;
+  if (r) {
+    matches = filterCountriesForExploreRegion(matches, r);
+  }
+  if (q) {
+    return filterByQuery(matches, q);
+  }
+
+  return sortByName(matches);
+}
+
+/** True when feed/map/region data is available for instant local name filtering. */
+export function hasLocalSearchCatalog(): boolean {
+  return getMergedLocalCatalog().length > 0;
+}
+
+/** Synchronous filter against in-memory + hydrated disk catalog (no network). */
+export function getSyncLocalSearchResults(
+  query: string,
+  region: string,
+): Country[] {
+  const catalog = getMergedLocalCatalog();
+  if (catalog.length === 0) return [];
+  return filterLocalCatalog(catalog, query, region);
+}
+
+async function hydrateDiskCatalog(region: string): Promise<void> {
+  if (diskCatalogHydratePromise) {
+    await diskCatalogHydratePromise;
+    return;
+  }
+
+  diskCatalogHydratePromise = (async () => {
+    const diskCatalog = await loadDiskCatalog(region);
+    if (diskCatalog.length > 0) {
+      diskCatalogSnapshot = mergeCatalog([diskCatalogSnapshot, diskCatalog]);
+    }
+  })();
+
+  await diskCatalogHydratePromise;
+}
+
+/** Warm map/feed disk caches so progressive typing can filter without network. */
+export function prefetchLocalSearchCatalog(region = ""): void {
+  void hydrateDiskCatalog(region.trim());
+}
+
+async function getLocalSearchResults(
+  query: string,
+  region: string,
+): Promise<Country[] | null> {
+  await hydrateDiskCatalog(region.trim());
+  const results = getSyncLocalSearchResults(query, region);
+  return results.length > 0 ? results : null;
+}
+
+const SUBSTRING_MIN_LEN = 3;
+
+function rankSearchMatch(name: string, query: string): number | null {
+  const normalizedName = name.toLowerCase();
+  const q = query.trim().toLowerCase();
+  if (!q) return 0;
+  if (normalizedName.startsWith(q)) return 0;
+  if (q.length >= SUBSTRING_MIN_LEN && normalizedName.includes(q)) return 1;
+  return null;
+}
+
+function filterByQuery<T extends { name: string }>(
+  countries: T[],
+  query: string,
+): T[] {
   const q = query.trim().toLowerCase();
   if (!q) return countries;
-  return countries.filter((c) => c.name.toLowerCase().includes(q));
+
+  return countries
+    .map((country) => ({
+      country,
+      rank: rankSearchMatch(country.name, q),
+    }))
+    .filter(
+      (entry): entry is { country: T; rank: number } => entry.rank !== null,
+    )
+    .sort((a, b) => {
+      if (a.rank !== b.rank) return a.rank - b.rank;
+      return a.country.name.localeCompare(b.country.name);
+    })
+    .map((entry) => entry.country);
 }
 
 function sortByName(countries: Country[]): Country[] {
@@ -44,14 +224,14 @@ export async function fetchSearchCountriesResolved(
 
   if (isSplitAmericasRegion(r)) {
     const regionCountries = await fetchExploreRegionCountries(r);
-    return sortByName(filterByQuery(regionCountries, q));
+    return filterByQuery(regionCountries, q);
   }
 
   const { data } = await fetchSearchCountries(q, r);
   if (data.length > 0) return data;
 
   const regionCountries = await fetchExploreRegionCountries(r);
-  return sortByName(filterByQuery(regionCountries, q));
+  return filterByQuery(regionCountries, q);
 }
 
 /** Disk cache for a search query — includes feed region cache for region-only filters. */
@@ -83,6 +263,9 @@ async function readHydratedSearchCache(
       if (filtered.length > 0) return filtered;
     }
   }
+
+  const local = await getLocalSearchResults(query, region);
+  if (local) return local;
 
   return null;
 }

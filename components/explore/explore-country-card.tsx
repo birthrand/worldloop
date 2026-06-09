@@ -3,12 +3,12 @@ import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ExploreActionRail } from "@/components/explore/explore-action-rail";
 import { FlagBadge } from "@/components/explore/flag-badge";
+import { COMPACT_TOUCH_SIZE } from "@/components/explore/glass-icon-button";
 import {
   EXPLORE_FEED_CARD_HORIZONTAL_PADDING,
   EXPLORE_FEED_CARD_SURFACE,
 } from "@/constants/explore-feed-layout";
 import { continentDisplayLabel } from "@/constants/regions";
-import { formatPopulation } from "@/lib/format-country";
 import type { Country } from "@/types/country";
 
 const STAT_VALUE_LINE_HEIGHT = 16;
@@ -18,64 +18,24 @@ const STAT_SINGLE_LINE_HEIGHT =
   STAT_LABEL_LINE_HEIGHT + STAT_ITEM_GAP + STAT_VALUE_LINE_HEIGHT;
 const FLAG_STATS_EXTRA_GAP = 4;
 const STATS_ROW_GAP = 10;
-const LONG_CAPITAL_CHAR_THRESHOLD = 12;
+const STATS_ROW_GAP_COMPACT = 20;
+const LONG_STAT_VALUE_CHAR_THRESHOLD = 12;
 const FLAG_ASPECT_RATIO = 1.5;
-const FLAG_ASPECT_RATIO_MULTILINE = 1.28;
+/** Matches header rail pill: compact touch target + vertical padding. */
+const ACTION_RAIL_BLOCK_HEIGHT = COMPACT_TOUCH_SIZE + 8;
 
-function getStatsBlockHeight(capitalValueLines: 1 | 2): number {
-  return capitalValueLines === 2
-    ? STAT_LABEL_LINE_HEIGHT + STAT_ITEM_GAP + STAT_VALUE_LINE_HEIGHT * 2
-    : STAT_SINGLE_LINE_HEIGHT;
+function getInfoFlagSize() {
+  const height = STAT_SINGLE_LINE_HEIGHT;
+  return { height, width: Math.round(height * FLAG_ASPECT_RATIO) };
 }
 
-function getInfoFlagSize(capitalValueLines: 1 | 2) {
-  const height = getStatsBlockHeight(capitalValueLines);
-  const aspectRatio =
-    capitalValueLines === 2 ? FLAG_ASPECT_RATIO_MULTILINE : FLAG_ASPECT_RATIO;
-
-  return {
-    height,
-    width: Math.round(height * aspectRatio),
-  };
+function usesExpandedStatsLayout(regionDisplay: string, capital: string) {
+  return (
+    regionDisplay.length >= LONG_STAT_VALUE_CHAR_THRESHOLD ||
+    capital.length >= LONG_STAT_VALUE_CHAR_THRESHOLD
+  );
 }
 
-/** Ensures uppercase stat labels (especially "Population") are not truncated. */
-function getLabelMinFlex(label: string): number {
-  return label.length / 9;
-}
-
-function getValueMinFlex(
-  value: string,
-  options?: { wrapped?: boolean },
-): number {
-  const divisor = options?.wrapped ? 14 : 8;
-  return value.length / divisor;
-}
-
-function getStatsColumnFlex(
-  region: string,
-  population: string,
-  capital: string,
-  capitalValueLines: 1 | 2,
-) {
-  const regionDisplay = continentDisplayLabel(region);
-
-  return {
-    region: Math.max(getValueMinFlex(regionDisplay), getLabelMinFlex("Region")),
-    population: Math.max(
-      getValueMinFlex(population),
-      getLabelMinFlex("Population"),
-    ),
-    capital: Math.max(
-      getValueMinFlex(capital, { wrapped: capitalValueLines === 2 }),
-      getLabelMinFlex("Capital"),
-    ),
-  };
-}
-
-function getCapitalValueLines(capital: string): 1 | 2 {
-  return capital.length > LONG_CAPITAL_CHAR_THRESHOLD ? 2 : 1;
-}
 const FACT_LINE_HEIGHT = 17;
 const FACT_MAX_LINES = 3;
 const FACT_HEADER_BG = "rgba(255, 255, 255, 0.085)";
@@ -95,36 +55,37 @@ type StatItemProps = {
   label: string;
   value: string;
   emphasis?: "primary" | "secondary";
-  flex?: number;
-  valueLines?: 1 | 2;
+  layout?: "even" | "content" | "expand";
 };
 
 function StatItem({
   label,
   value,
   emphasis = "secondary",
-  flex = 1,
-  valueLines = 1,
+  layout = "even",
 }: StatItemProps) {
   const isPrimary = emphasis === "primary";
 
   return (
-    <View style={[styles.statItem, { flex }]}>
+    <View
+      style={[
+        styles.statItem,
+        layout === "content"
+          ? styles.statItemContent
+          : layout === "expand"
+            ? styles.statItemExpand
+            : styles.statItemEven,
+      ]}
+    >
       <Text
         style={[styles.statLabel, isPrimary ? styles.statLabelPrimary : null]}
         numberOfLines={1}
-        ellipsizeMode="tail"
       >
         {label}
       </Text>
       <Text
-        style={[
-          styles.statValue,
-          isPrimary ? styles.statValuePrimary : null,
-          valueLines === 2 ? styles.statValueMultiline : null,
-        ]}
-        numberOfLines={valueLines}
-        ellipsizeMode="tail"
+        style={[styles.statValue, isPrimary ? styles.statValuePrimary : null]}
+        numberOfLines={1}
       >
         {value}
       </Text>
@@ -141,16 +102,9 @@ export function ExploreCountryCard({
   const capital = country.capital?.trim() || "—";
   const region = country.region?.trim() || "—";
   const regionDisplay = continentDisplayLabel(region);
-  const population = formatPopulation(country.population);
   const openDetails = onPress;
-  const capitalValueLines = getCapitalValueLines(capital);
-  const statFlex = getStatsColumnFlex(
-    region,
-    population,
-    capital,
-    capitalValueLines,
-  );
-  const flagSize = getInfoFlagSize(capitalValueLines);
+  const flagSize = getInfoFlagSize();
+  const isExpandedStats = usesExpandedStatsLayout(regionDisplay, capital);
 
   return (
     <View style={styles.pressable}>
@@ -179,25 +133,19 @@ export function ExploreCountryCard({
                 <View
                   style={[
                     styles.statsRow,
-                    capitalValueLines === 2 ? styles.statsRowTop : null,
+                    !isExpandedStats ? styles.statsRowCompact : null,
                   ]}
                 >
                   <StatItem
                     value={regionDisplay}
                     label="Region"
-                    flex={statFlex.region}
-                  />
-                  <StatItem
-                    value={population}
-                    label="Population"
-                    emphasis="primary"
-                    flex={statFlex.population}
+                    layout="content"
                   />
                   <StatItem
                     value={capital}
                     label="Capital"
-                    flex={statFlex.capital}
-                    valueLines={capitalValueLines}
+                    emphasis="primary"
+                    layout={isExpandedStats ? "expand" : "content"}
                   />
                 </View>
 
@@ -214,49 +162,33 @@ export function ExploreCountryCard({
               onPress={openDetails}
               onPressIn={onPressIn}
               disabled={!openDetails}
-              style={styles.factSection}
+              style={({ pressed }) => [
+                styles.factSection,
+                pressed && openDetails ? styles.factSectionPressed : null,
+              ]}
             >
-              {({ pressed }) => (
-                <>
-                  <View
-                    style={[
-                      styles.factHeaderBand,
-                      pressed && openDetails
-                        ? styles.factHeaderBandPressed
-                        : null,
-                    ]}
-                  >
-                    <View style={styles.factLabelGroup}>
-                      <Ionicons
-                        name="bulb-outline"
-                        size={12}
-                        color={FACT_ICON_COLOR}
-                      />
-                      <Text style={styles.factLabel}>DID YOU KNOW?</Text>
-                    </View>
-                    {openDetails ? (
-                      <Ionicons
-                        name="chevron-forward"
-                        size={14}
-                        color={FACT_CHEVRON_COLOR}
-                      />
-                    ) : null}
-                  </View>
-                  <View
-                    style={[
-                      styles.factBody,
-                      pressed && openDetails ? styles.factBodyPressed : null,
-                    ]}
-                  >
-                    <Text
-                      style={styles.factText}
-                      numberOfLines={FACT_MAX_LINES}
-                    >
-                      {fact}
-                    </Text>
-                  </View>
-                </>
-              )}
+              <View style={styles.factHeaderBand}>
+                <View style={styles.factLabelGroup}>
+                  <Ionicons
+                    name="bulb-outline"
+                    size={12}
+                    color={FACT_ICON_COLOR}
+                  />
+                  <Text style={styles.factLabel}>DID YOU KNOW?</Text>
+                </View>
+                {openDetails ? (
+                  <Ionicons
+                    name="chevron-forward"
+                    size={14}
+                    color={FACT_CHEVRON_COLOR}
+                  />
+                ) : null}
+              </View>
+              <View style={styles.factBody}>
+                <Text style={styles.factText} numberOfLines={FACT_MAX_LINES}>
+                  {fact}
+                </Text>
+              </View>
             </Pressable>
           </View>
         </View>
@@ -297,33 +229,48 @@ const styles = StyleSheet.create({
   },
   countryInfoRow: {
     flexDirection: "row",
-    alignItems: "stretch",
+    alignItems: "center",
     gap: 6,
   },
   flagCell: {
     flexShrink: 0,
-    alignSelf: "stretch",
-    justifyContent: "center",
+    alignSelf: "center",
     marginRight: FLAG_STATS_EXTRA_GAP,
   },
   railCell: {
-    alignSelf: "center",
     flexShrink: 0,
+    alignSelf: "center",
   },
   statsRow: {
     flex: 1,
     minWidth: 0,
+    minHeight: ACTION_RAIL_BLOCK_HEIGHT,
     flexDirection: "row",
+    flexWrap: "nowrap",
     alignItems: "center",
     gap: STATS_ROW_GAP,
   },
-  statsRowTop: {
-    alignItems: "flex-start",
+  statsRowCompact: {
+    gap: STATS_ROW_GAP_COMPACT,
+    justifyContent: "flex-start",
   },
   statItem: {
-    minWidth: 0,
     gap: STAT_ITEM_GAP,
     justifyContent: "center",
+  },
+  statItemEven: {
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
+  },
+  statItemContent: {
+    flexGrow: 0,
+    flexShrink: 0,
+  },
+  statItemExpand: {
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
   },
   statLabel: {
     fontFamily: "Poppins-Medium",
@@ -348,9 +295,6 @@ const styles = StyleSheet.create({
     lineHeight: STAT_VALUE_LINE_HEIGHT,
     color: "#ffffff",
   },
-  statValueMultiline: {
-    minHeight: STAT_VALUE_LINE_HEIGHT * 2,
-  },
   factSection: {
     alignSelf: "stretch",
     overflow: "hidden",
@@ -369,6 +313,9 @@ const styles = StyleSheet.create({
       default: {},
     }),
   },
+  factSectionPressed: {
+    opacity: 0.72,
+  },
   factHeaderBand: {
     flexDirection: "row",
     alignItems: "center",
@@ -378,17 +325,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     backgroundColor: FACT_HEADER_BG,
   },
-  factHeaderBandPressed: {
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-  },
   factBody: {
     paddingHorizontal: 12,
     paddingTop: 9,
     paddingBottom: 11,
     backgroundColor: FACT_BODY_BG,
-  },
-  factBodyPressed: {
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
   },
   factLabelGroup: {
     flexDirection: "row",
