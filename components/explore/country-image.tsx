@@ -1,4 +1,9 @@
-import { Image, type ImageContentFit, type ImageStyle } from "expo-image";
+import {
+  Image,
+  type ImageContentFit,
+  type ImageContentPosition,
+  type ImageStyle,
+} from "expo-image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, View, type StyleProp } from "react-native";
 
@@ -57,6 +62,7 @@ type CountryImageProps = {
   iso2?: string;
   style?: StyleProp<ImageStyle>;
   contentFit?: ImageContentFit;
+  contentPosition?: ImageContentPosition;
   flagSize?: { width: number; height: number };
 };
 
@@ -66,6 +72,7 @@ export function CountryImage({
   iso2,
   style,
   contentFit = "cover",
+  contentPosition = "center",
   flagSize = { width: 56, height: 38 },
 }: CountryImageProps) {
   const normalizedUri = useMemo(
@@ -131,6 +138,7 @@ export function CountryImage({
           source={imageSource(shownUri)}
           style={StyleSheet.absoluteFill}
           contentFit={contentFit}
+          contentPosition={contentPosition}
           recyclingKey={shownUri}
           cachePolicy="memory-disk"
           transition={{ duration: 200, effect: "cross-dissolve" }}

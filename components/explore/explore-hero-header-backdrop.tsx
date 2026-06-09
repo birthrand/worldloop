@@ -37,6 +37,7 @@ export function ExploreHeroHeaderBackdrop({
         iso2={iso2}
         style={styles.image}
         contentFit="cover"
+        contentPosition="top"
       />
       {Platform.OS === "web" ? (
         <View style={styles.webFallback} />

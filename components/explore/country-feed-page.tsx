@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from "react";
 import { Platform, StyleSheet, View } from "react-native";
 
 import { prefetchCountryImage } from "@/components/explore/country-image";
@@ -48,7 +54,7 @@ export function CountryFeedPage({
     setHeroIndex(0);
   }, [country.name]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isActive) return;
     onActiveHeroIndexChange?.(heroIndex);
   }, [heroIndex, isActive, onActiveHeroIndexChange]);

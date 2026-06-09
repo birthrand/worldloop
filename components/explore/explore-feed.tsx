@@ -50,10 +50,12 @@ export function ExploreFeed() {
     () => (currentCountry ? getCountryImages(currentCountry) : []),
     [currentCountry],
   );
-
-  useEffect(() => {
-    setActiveHeroIndex(0);
-  }, [currentIndex, currentCountry?.name]);
+  const backdropImageUri =
+    currentHeroImages.length > 0
+      ? currentHeroImages[
+          Math.min(activeHeroIndex, currentHeroImages.length - 1)
+        ]
+      : undefined;
 
   const scrollToCurrentIndex = useCallback(
     (animated: boolean) => {
@@ -226,7 +228,7 @@ export function ExploreFeed() {
       </View>
       <ExploreTopBar
         overlay
-        backdropImageUri={currentHeroImages[activeHeroIndex]}
+        backdropImageUri={backdropImageUri}
         backdropFlag={currentCountry?.flag}
         backdropIso2={currentCountry?.cca2}
       />
