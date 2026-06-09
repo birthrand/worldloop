@@ -2,6 +2,8 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { WORLDLOOP_HEADER_MUTED_COLOR } from "@/components/worldloop-header";
+
 type HapticStyle = "light" | "medium" | "none";
 
 const GLASS_ICON_SIZE = 24;
@@ -9,8 +11,13 @@ const GLASS_TOUCH_SIZE = 48;
 /** Compact header rail — icon only, no glass circle. */
 export const COMPACT_ICON_SIZE = 24;
 export const COMPACT_TOUCH_SIZE = 32;
+export const COMPACT_ICON_SIZE_SMALL = 18;
+export const COMPACT_TOUCH_SIZE_SMALL = 26;
 export const COMPACT_ICON_EDGE_INSET =
   (COMPACT_TOUCH_SIZE - COMPACT_ICON_SIZE) / 2;
+
+const COMPACT_ICON_COLOR = WORLDLOOP_HEADER_MUTED_COLOR;
+const COMPACT_ICON_BRIGHT_COLOR = "rgba(255, 255, 255, 0.9)";
 
 type GlassIconButtonProps = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -24,6 +31,12 @@ type GlassIconButtonProps = {
   haptic?: HapticStyle;
   /** `plain` | `compact` = icon only; `glass` = icon in glass circle + label. */
   variant?: "glass" | "plain" | "compact";
+  /** Slightly brighter icons for compact controls on dark toolbars. */
+  iconTone?: "muted" | "bright";
+  /** Glass variant only — hide caption under the circle. */
+  iconOnly?: boolean;
+  /** Compact variant only — smaller icon and touch target. */
+  compactSize?: "default" | "small";
 };
 
 function triggerHaptic(style: HapticStyle) {
@@ -46,12 +59,28 @@ export function GlassIconButton({
   accessibilityHint,
   haptic = "light",
   variant = "glass",
+  iconTone = "muted",
+  iconOnly = false,
+  compactSize = "default",
 }: GlassIconButtonProps) {
+  const isSmallCompact = variant === "compact" && compactSize === "small";
+  const compactIconSize = isSmallCompact
+    ? COMPACT_ICON_SIZE_SMALL
+    : COMPACT_ICON_SIZE;
+  const compactTouchSize = isSmallCompact
+    ? COMPACT_TOUCH_SIZE_SMALL
+    : COMPACT_TOUCH_SIZE;
+
+  const compactIconColor =
+    iconTone === "bright" ? COMPACT_ICON_BRIGHT_COLOR : COMPACT_ICON_COLOR;
+
   const iconColor = disabled
     ? "rgba(255, 255, 255, 0.4)"
     : active
       ? activeColor
-      : "#ffffff";
+      : variant === "glass"
+        ? "#ffffff"
+        : compactIconColor;
 
   const handlePress = () => {
     if (disabled) return;
@@ -69,7 +98,12 @@ export function GlassIconButton({
       hitSlop={8}
       onPress={handlePress}
       style={({ pressed }) => [
-        variant === "glass" ? styles.hitArea : styles.hitAreaCompact,
+        variant === "glass"
+          ? styles.hitArea
+          : [
+              styles.hitAreaCompact,
+              { minWidth: compactTouchSize, minHeight: compactTouchSize },
+            ],
         disabled && styles.hitAreaDisabled,
         pressed && !disabled && styles.pressed,
       ]}
@@ -87,11 +121,11 @@ export function GlassIconButton({
       ) : (
         <Ionicons
           name={icon}
-          size={variant === "compact" ? COMPACT_ICON_SIZE : GLASS_ICON_SIZE}
+          size={variant === "compact" ? compactIconSize : GLASS_ICON_SIZE}
           color={iconColor}
         />
       )}
-      {variant === "glass" ? (
+      {variant === "glass" && !iconOnly ? (
         <Text
           style={[
             styles.label,

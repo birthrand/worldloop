@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { StyleSheet, useWindowDimensions, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 
 import { prefetchCountryImage } from "@/components/explore/country-image";
 import { ExploreCountryCard } from "@/components/explore/explore-country-card";
 import { HeroImagePager } from "@/components/explore/hero-image-pager";
+import { HeroSaveButton } from "@/components/explore/hero-save-button";
 import { MediaCarousel } from "@/components/explore/media-carousel";
+import {
+  EXPLORE_FEED_BOTTOM_INSET,
+  EXPLORE_FEED_SURFACE_RADIUS,
+} from "@/constants/explore-feed-layout";
 import { getAiFactByIndex, getCountryImages } from "@/lib/format-country";
 import {
   openCountryAiExplorer,
@@ -13,24 +18,27 @@ import {
 import { prefetchCountryProfile } from "@/lib/prefetch-country-profiles";
 import type { Country } from "@/types/country";
 
-const HERO_HORIZONTAL_INSET = 8;
-const HERO_BORDER_RADIUS = 12;
-const DOTS_BOTTOM_INSET = 10;
-/** Even vertical rhythm between hero and country card. */
-const SECTION_GAP = 10;
+const DOTS_BOTTOM_INSET = 5;
 
 type CountryFeedPageProps = {
   country: Country;
   pageHeight: number;
+  headerContentInset: number;
+  isActive?: boolean;
+  onActiveHeroIndexChange?: (index: number) => void;
 };
 
-export function CountryFeedPage({ country, pageHeight }: CountryFeedPageProps) {
-  const { width: screenWidth } = useWindowDimensions();
+export function CountryFeedPage({
+  country,
+  pageHeight,
+  headerContentInset,
+  isActive = false,
+  onActiveHeroIndexChange,
+}: CountryFeedPageProps) {
   const images = useMemo(() => getCountryImages(country), [country.name]);
   const [heroIndex, setHeroIndex] = useState(0);
   const [heroLayout, setHeroLayout] = useState({ width: 0, height: 0 });
 
-  const heroWidth = screenWidth - HERO_HORIZONTAL_INSET * 2;
   const heroSlides = useMemo(
     () => Array.from({ length: images.length }, (_, index) => `${index}`),
     [images.length],
@@ -39,6 +47,11 @@ export function CountryFeedPage({ country, pageHeight }: CountryFeedPageProps) {
   useEffect(() => {
     setHeroIndex(0);
   }, [country.name]);
+
+  useEffect(() => {
+    if (!isActive) return;
+    onActiveHeroIndexChange?.(heroIndex);
+  }, [heroIndex, isActive, onActiveHeroIndexChange]);
 
   useEffect(() => {
     for (const imageUri of images) {
@@ -64,62 +77,74 @@ export function CountryFeedPage({ country, pageHeight }: CountryFeedPageProps) {
 
   return (
     <View style={{ height: pageHeight, width: "100%" }}>
-      <View style={styles.pageContent}>
-        <View style={styles.heroRegion}>
+      <View style={[styles.pageContent, { paddingTop: headerContentInset }]}>
+        <View style={styles.feedColumn}>
           <View
             style={[
-              styles.heroShell,
-              {
-                width: heroWidth,
-                borderRadius: HERO_BORDER_RADIUS,
-              },
+              styles.feedUnit,
+              { borderRadius: EXPLORE_FEED_SURFACE_RADIUS },
             ]}
-            onLayout={(event) => {
-              const { width, height } = event.nativeEvent.layout;
-              const next = {
-                width: Math.round(width),
-                height: Math.round(height),
-              };
-              if (
-                next.width !== heroLayout.width ||
-                next.height !== heroLayout.height
-              ) {
-                setHeroLayout(next);
-              }
-            }}
           >
-            {heroLayout.width > 0 && heroLayout.height > 0 ? (
-              <HeroImagePager
-                images={images}
-                flag={country.flag}
-                iso2={country.cca2}
-                heroWidth={heroLayout.width}
-                heroHeight={heroLayout.height}
-                activeIndex={heroIndex}
-                onIndexChange={onImageIndexChange}
-                onImagePress={openAiExplorer}
-                onImagePressIn={warmAiExplorer}
-              />
-            ) : null}
+            <View style={styles.heroRegion}>
+              <View
+                style={styles.heroShell}
+                onLayout={(event) => {
+                  const { width, height } = event.nativeEvent.layout;
+                  const next = {
+                    width: Math.round(width),
+                    height: Math.round(height),
+                  };
+                  if (
+                    next.width !== heroLayout.width ||
+                    next.height !== heroLayout.height
+                  ) {
+                    setHeroLayout(next);
+                  }
+                }}
+              >
+                {heroLayout.width > 0 && heroLayout.height > 0 ? (
+                  <HeroImagePager
+                    images={images}
+                    flag={country.flag}
+                    iso2={country.cca2}
+                    heroWidth={heroLayout.width}
+                    heroHeight={heroLayout.height}
+                    activeIndex={heroIndex}
+                    onIndexChange={onImageIndexChange}
+                    onImagePress={openAiExplorer}
+                    onImagePressIn={warmAiExplorer}
+                  />
+                ) : null}
 
-            {images.length > 1 ? (
-              <View style={styles.dotsOverlay} pointerEvents="box-none">
-                <MediaCarousel
-                  images={heroSlides}
-                  activeIndex={heroIndex}
-                  onImageIndexChange={onImageIndexChange}
-                />
+                <HeroSaveButton country={country} />
+
+                {images.length > 1 ? (
+                  <View style={styles.dotsOverlay} pointerEvents="box-none">
+                    <MediaCarousel
+                      images={heroSlides}
+                      activeIndex={heroIndex}
+                      onImageIndexChange={onImageIndexChange}
+                    />
+                  </View>
+                ) : null}
               </View>
-            ) : null}
+            </View>
+
+            <View
+              style={[
+                styles.cardRegion,
+                { paddingBottom: EXPLORE_FEED_BOTTOM_INSET },
+              ]}
+            >
+              <ExploreCountryCard
+                country={country}
+                fact={getAiFactByIndex(country, heroIndex)}
+                onPress={openAiExplorer}
+                onPressIn={warmAiExplorer}
+              />
+            </View>
           </View>
         </View>
-
-        <ExploreCountryCard
-          country={country}
-          fact={getAiFactByIndex(country, heroIndex)}
-          onPress={openAiExplorer}
-          onPressIn={warmAiExplorer}
-        />
       </View>
     </View>
   );
@@ -128,18 +153,41 @@ export function CountryFeedPage({ country, pageHeight }: CountryFeedPageProps) {
 const styles = StyleSheet.create({
   pageContent: {
     flex: 1,
-    gap: SECTION_GAP,
+  },
+  feedColumn: {
+    flex: 1,
+  },
+  feedUnit: {
+    flex: 1,
+    width: "100%",
+    overflow: "hidden",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000000",
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.2,
+        shadowRadius: 14,
+      },
+      android: {
+        elevation: 5,
+      },
+      default: {},
+    }),
   },
   heroRegion: {
     flex: 1,
-    alignItems: "center",
+    width: "100%",
     minHeight: 0,
   },
   heroShell: {
     flex: 1,
-    alignSelf: "center",
+    width: "100%",
     overflow: "hidden",
     backgroundColor: "#0b132b",
+  },
+  cardRegion: {
+    flexShrink: 0,
+    width: "100%",
   },
   dotsOverlay: {
     position: "absolute",

@@ -11,7 +11,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SPACE_TAB_BAR_BG } from "@/constants/space-theme";
 
 const TAB_ACTIVE = "#fbbf24";
-const TAB_INACTIVE = "#94a3b8";
+const TAB_INACTIVE = "rgba(148, 163, 184, 0.82)";
+const TAB_ACTIVE_ICON_SIZE = 26;
+const TAB_INACTIVE_ICON_SIZE = 24;
 
 /** Bar chrome only — add safe-area bottom inset for full tab bar height. */
 export const TAB_BAR_CONTENT_HEIGHT = 54;
@@ -102,10 +104,18 @@ export function BottomTabBar({ state, navigation }: BottomTabBarProps) {
             >
               <Ionicons
                 name={isFocused ? item.iconFocused : item.icon}
-                size={24}
+                size={isFocused ? TAB_ACTIVE_ICON_SIZE : TAB_INACTIVE_ICON_SIZE}
                 color={color}
               />
-              <Text style={[styles.label, { color }]}>{item.label}</Text>
+              <Text
+                style={[
+                  styles.label,
+                  isFocused ? styles.labelActive : styles.labelInactive,
+                  { color },
+                ]}
+              >
+                {item.label}
+              </Text>
             </Pressable>
           );
         })}
@@ -136,11 +146,18 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    gap: 2,
+    gap: 3,
     minHeight: 44,
   },
   label: {
     fontSize: 11,
+    lineHeight: 13,
+  },
+  labelActive: {
+    fontFamily: "Poppins-SemiBold",
+    fontSize: 11,
+  },
+  labelInactive: {
     fontFamily: "Poppins-Medium",
   },
 });

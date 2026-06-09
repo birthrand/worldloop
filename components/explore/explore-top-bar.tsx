@@ -3,21 +3,38 @@ import { StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ExploreFeedMenuSheet } from "@/components/explore/explore-feed-menu-sheet";
+import { ExploreHeroHeaderBackdrop } from "@/components/explore/explore-hero-header-backdrop";
+import { ExploreTopChromeScrim } from "@/components/explore/explore-top-chrome-scrim";
 import {
   WORLDLOOP_HEADER_BOTTOM_PADDING,
   WORLDLOOP_HEADER_HORIZONTAL_PADDING,
   WORLDLOOP_HEADER_TOP_PADDING,
   WorldLoopHeader,
 } from "@/components/worldloop-header";
+import {
+  EXPLORE_HEADER_OVERLAY_BOTTOM_PADDING,
+  getExploreHeaderChromeHeight,
+} from "@/constants/explore-feed-layout";
 import { continentDisplayLabel } from "@/constants/regions";
 import { useCountryFeedStore } from "@/store/use-country-feed-store";
 import { useSearchUiStore } from "@/store/use-search-ui-store";
 import { useSpatialContextStore } from "@/store/use-spatial-context-store";
 
-/** Extra breathing room between the header and the hero image. */
-const EXPLORE_HEADER_CONTENT_GAP = 10;
+const EXPLORE_HEADER_INACTIVE_COLOR = "#ffffff";
 
-export function ExploreTopBar() {
+type ExploreTopBarProps = {
+  overlay?: boolean;
+  backdropImageUri?: string;
+  backdropFlag?: string;
+  backdropIso2?: string;
+};
+
+export function ExploreTopBar({
+  overlay = false,
+  backdropImageUri,
+  backdropFlag,
+  backdropIso2,
+}: ExploreTopBarProps) {
   const insets = useSafeAreaInsets();
   const openSearch = useSearchUiStore((s) => s.openSearch);
   const isSearchOpen = useSearchUiStore((s) => s.isOpen && s.context !== "map");
@@ -33,42 +50,73 @@ export function ExploreTopBar() {
     ? continentDisplayLabel(focusedRegion)
     : "Map area";
 
+  const chromeHeight = overlay
+    ? getExploreHeaderChromeHeight(insets.top, {
+        hereMode: discoveryMode === "here",
+      })
+    : 0;
+  const hasHeroBackdrop = overlay && backdropFlag != null;
+
   return (
     <View
-      style={{
-        paddingTop: insets.top + WORLDLOOP_HEADER_TOP_PADDING,
-        paddingBottom:
-          WORLDLOOP_HEADER_BOTTOM_PADDING + EXPLORE_HEADER_CONTENT_GAP,
-      }}
+      style={overlay ? styles.overlayRoot : undefined}
+      pointerEvents={overlay ? "box-none" : undefined}
     >
-      <WorldLoopHeader
-        onMenuPress={() => setIsFeedMenuOpen(true)}
-        menuActive={isFeedMenuOpen}
-        onSearchPress={() => openSearch()}
-        searchActive={isSearchOpen}
-      />
-
-      {discoveryMode === "here" ? (
-        <Text style={styles.hereSubtitle}>
-          Here · {hereScopeLabel} · {countryCount} countries
-        </Text>
+      {hasHeroBackdrop ? (
+        <ExploreHeroHeaderBackdrop
+          height={chromeHeight}
+          imageUri={backdropImageUri}
+          flag={backdropFlag}
+          iso2={backdropIso2}
+        />
+      ) : overlay ? (
+        <ExploreTopChromeScrim height={chromeHeight} />
       ) : null}
 
-      <ExploreFeedMenuSheet
-        visible={isFeedMenuOpen}
-        onClose={() => setIsFeedMenuOpen(false)}
-      />
+      <View
+        style={{
+          paddingTop: insets.top + WORLDLOOP_HEADER_TOP_PADDING,
+          paddingBottom: overlay
+            ? EXPLORE_HEADER_OVERLAY_BOTTOM_PADDING
+            : WORLDLOOP_HEADER_BOTTOM_PADDING,
+        }}
+      >
+        <WorldLoopHeader
+          onMenuPress={() => setIsFeedMenuOpen(true)}
+          menuActive={isFeedMenuOpen}
+          onSearchPress={() => openSearch()}
+          searchActive={isSearchOpen}
+          inactiveColor={EXPLORE_HEADER_INACTIVE_COLOR}
+        />
+
+        {discoveryMode === "here" ? (
+          <Text style={styles.hereSubtitle}>
+            Here · {hereScopeLabel} · {countryCount} countries
+          </Text>
+        ) : null}
+
+        <ExploreFeedMenuSheet
+          visible={isFeedMenuOpen}
+          onClose={() => setIsFeedMenuOpen(false)}
+        />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  overlayRoot: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
   hereSubtitle: {
-    marginTop: 2,
     paddingHorizontal: WORLDLOOP_HEADER_HORIZONTAL_PADDING,
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 11,
+    lineHeight: 14,
     fontFamily: "Poppins-Regular",
-    color: "rgba(255, 255, 255, 0.55)",
+    color: "rgba(255, 255, 255, 0.82)",
   },
 });

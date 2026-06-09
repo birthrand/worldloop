@@ -18,7 +18,7 @@ export function MediaCarousel({
   }
 
   return (
-    <View className="flex-row items-center justify-center gap-2">
+    <View style={styles.pillTrack}>
       {Array.from({ length: slideCount }, (_, index) => {
         const isActive = index === activeIndex;
         return (
@@ -32,8 +32,8 @@ export function MediaCarousel({
           >
             <View
               style={[
-                styles.dot,
-                isActive ? styles.dotActive : styles.dotInactive,
+                styles.indicator,
+                isActive ? styles.indicatorActive : styles.indicatorInactive,
               ]}
             />
           </Pressable>
@@ -44,18 +44,28 @@ export function MediaCarousel({
 }
 
 const styles = StyleSheet.create({
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+  pillTrack: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: "rgba(0, 0, 0, 0.26)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255, 255, 255, 0.1)",
   },
-  dotActive: {
-    backgroundColor: "#fbbf24",
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+  indicator: {
+    borderRadius: 999,
   },
-  dotInactive: {
-    backgroundColor: "rgba(255, 255, 255, 0.35)",
+  indicatorActive: {
+    width: 18,
+    height: 5,
+    backgroundColor: "rgba(255, 255, 255, 0.88)",
+  },
+  indicatorInactive: {
+    width: 5,
+    height: 5,
+    backgroundColor: "rgba(255, 255, 255, 0.22)",
   },
 });

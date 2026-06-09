@@ -2,13 +2,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 export const WORLDLOOP_HEADER_HORIZONTAL_PADDING = 16;
-export const WORLDLOOP_HEADER_ROW_HEIGHT = 44;
-export const WORLDLOOP_HEADER_SIDE_SLOT_WIDTH = 44;
-export const WORLDLOOP_HEADER_ICON_SIZE = 24;
-export const WORLDLOOP_HEADER_SEARCH_ICON_SIZE = 22;
+export const WORLDLOOP_HEADER_ROW_HEIGHT = 40;
+export const WORLDLOOP_HEADER_SIDE_SLOT_WIDTH = 40;
+export const WORLDLOOP_HEADER_ICON_SIZE = 22;
+export const WORLDLOOP_HEADER_SEARCH_ICON_SIZE = 20;
 export const WORLDLOOP_HEADER_ACCENT_COLOR = "#fbbf24";
-export const WORLDLOOP_HEADER_TOP_PADDING = 4;
-export const WORLDLOOP_HEADER_BOTTOM_PADDING = 2;
+export const WORLDLOOP_HEADER_MUTED_COLOR = "rgba(255, 255, 255, 0.75)";
+export const WORLDLOOP_HEADER_TOP_PADDING = 2;
+export const WORLDLOOP_HEADER_BOTTOM_PADDING = 0;
 
 export function getWorldLoopHeaderHeight(safeAreaTop: number) {
   return (
@@ -24,6 +25,7 @@ type WorldLoopHeaderProps = {
   menuActive?: boolean;
   onSearchPress: () => void;
   searchActive?: boolean;
+  inactiveColor?: string;
   menuAccessibilityLabel?: string;
   menuAccessibilityHint?: string;
   searchAccessibilityLabel?: string;
@@ -35,6 +37,7 @@ export function WorldLoopHeader({
   menuActive = false,
   onSearchPress,
   searchActive = false,
+  inactiveColor = WORLDLOOP_HEADER_MUTED_COLOR,
   menuAccessibilityLabel = "Browse feed filters",
   menuAccessibilityHint = "Opens For You, Here, and continent filters",
   searchAccessibilityLabel = "Search countries",
@@ -58,14 +61,17 @@ export function WorldLoopHeader({
               color={
                 pressed || menuActive
                   ? WORLDLOOP_HEADER_ACCENT_COLOR
-                  : "#ffffff"
+                  : inactiveColor
               }
             />
           </View>
         )}
       </Pressable>
 
-      <Text style={styles.brandTitle} pointerEvents="none">
+      <Text
+        style={[styles.brandTitle, { color: inactiveColor }]}
+        pointerEvents="none"
+      >
         WorldLoop
       </Text>
 
@@ -81,7 +87,7 @@ export function WorldLoopHeader({
           <Ionicons
             name="search-outline"
             size={WORLDLOOP_HEADER_SEARCH_ICON_SIZE}
-            color={searchActive ? WORLDLOOP_HEADER_ACCENT_COLOR : "#ffffff"}
+            color={searchActive ? WORLDLOOP_HEADER_ACCENT_COLOR : inactiveColor}
           />
         </View>
       </Pressable>
@@ -123,9 +129,8 @@ const styles = StyleSheet.create({
     right:
       WORLDLOOP_HEADER_HORIZONTAL_PADDING + WORLDLOOP_HEADER_SIDE_SLOT_WIDTH,
     fontFamily: "Poppins-Medium",
-    fontSize: 17,
+    fontSize: 16,
     lineHeight: WORLDLOOP_HEADER_ROW_HEIGHT,
-    color: "#ffffff",
     letterSpacing: 0.2,
     textAlign: "center",
     includeFontPadding: false,

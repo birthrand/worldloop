@@ -1,4 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { CountryFeedPage } from "@/components/explore/country-feed-page";
+import { ExploreTopBar } from "@/components/explore/explore-top-bar";
+import { getExploreHeaderContentHeight } from "@/constants/explore-feed-layout";
+import { getCountryImages } from "@/lib/format-country";
+import { prefetchCountryProfiles } from "@/lib/prefetch-country-profiles";
+import { useCountryFeedStore } from "@/store/use-country-feed-store";
+import { useDiscoveryProgressStore } from "@/store/use-discovery-progress-store";
+import { useSpatialContextStore } from "@/store/use-spatial-context-store";
+import type { Country } from "@/types/country";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -9,16 +18,12 @@ import {
   type LayoutChangeEvent,
   type ViewToken,
 } from "react-native";
-import { CountryFeedPage } from "@/components/explore/country-feed-page";
-import { ExploreTopBar } from "@/components/explore/explore-top-bar";
-import { prefetchCountryProfiles } from "@/lib/prefetch-country-profiles";
-import { useCountryFeedStore } from "@/store/use-country-feed-store";
-import { useDiscoveryProgressStore } from "@/store/use-discovery-progress-store";
-import { useSpatialContextStore } from "@/store/use-spatial-context-store";
-import type { Country } from "@/types/country";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export function ExploreFeed() {
+  const insets = useSafeAreaInsets();
   const [pageHeight, setPageHeight] = useState(0);
+  const [activeHeroIndex, setActiveHeroIndex] = useState(0);
   const pageHeightRef = useRef(0);
   const listRef = useRef<FlatList<Country>>(null);
   const skipProgrammaticScrollRef = useRef(false);
@@ -37,6 +42,18 @@ export function ExploreFeed() {
   const error = useCountryFeedStore((s) => s.error);
 
   const feedListKey = `${discoveryMode}-${selectedRegion ?? "for-you"}-${focusEpoch}`;
+  const headerContentInset = getExploreHeaderContentHeight(insets.top, {
+    hereMode: discoveryMode === "here",
+  });
+  const currentCountry = countries[currentIndex];
+  const currentHeroImages = useMemo(
+    () => (currentCountry ? getCountryImages(currentCountry) : []),
+    [currentCountry],
+  );
+
+  useEffect(() => {
+    setActiveHeroIndex(0);
+  }, [currentIndex, currentCountry?.name]);
 
   const scrollToCurrentIndex = useCallback(
     (animated: boolean) => {
@@ -108,18 +125,23 @@ export function ExploreFeed() {
   }, []);
 
   const renderItem = useCallback(
-    ({ item }: { item: Country }) => (
-      <CountryFeedPage country={item} pageHeight={pageHeight} />
+    ({ item, index }: { item: Country; index: number }) => (
+      <CountryFeedPage
+        country={item}
+        pageHeight={pageHeight}
+        headerContentInset={headerContentInset}
+        isActive={index === currentIndex}
+        onActiveHeroIndexChange={setActiveHeroIndex}
+      />
     ),
-    [pageHeight],
+    [currentIndex, headerContentInset, pageHeight],
   );
 
   const keyExtractor = useCallback((item: Country) => item.name, []);
 
   return (
     <View style={styles.feed}>
-      <ExploreTopBar />
-      <View className="flex-1" onLayout={onFeedLayout}>
+      <View style={styles.feedBody} onLayout={onFeedLayout}>
         {pageHeight > 0 ? (
           <FlatList
             key={feedListKey}
@@ -202,6 +224,12 @@ export function ExploreFeed() {
             </View>
           )}
       </View>
+      <ExploreTopBar
+        overlay
+        backdropImageUri={currentHeroImages[activeHeroIndex]}
+        backdropFlag={currentCountry?.flag}
+        backdropIso2={currentCountry?.cca2}
+      />
     </View>
   );
 }
@@ -209,6 +237,10 @@ export function ExploreFeed() {
 const styles = StyleSheet.create({
   feed: {
     flex: 1,
+  },
+  feedBody: {
+    flex: 1,
+    backgroundColor: "#0b132b",
   },
   list: {
     flex: 1,

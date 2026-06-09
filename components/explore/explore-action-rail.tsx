@@ -1,14 +1,18 @@
 import { Ionicons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   Alert,
   Modal,
+  Platform,
   Pressable,
   Share,
   StyleSheet,
   Text,
   View,
+  type StyleProp,
+  type ViewStyle,
 } from "react-native";
 import Animated, { SlideInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -21,13 +25,17 @@ import {
   COMPACT_TOUCH_SIZE,
   GlassIconButton,
 } from "@/components/explore/glass-icon-button";
+import {
+  EXPLORE_FEED_RAIL_HORIZONTAL_PADDING,
+  EXPLORE_FEED_SURFACE_RADIUS,
+} from "@/constants/explore-feed-layout";
 import { focusCountryOnMap } from "@/lib/open-country-on-map";
 import {
   DEFAULT_FEED_SORT_FIELD,
   DEFAULT_FEED_SORT_ORDER,
+  useCountryFeedStore,
   type FeedSortField,
   type FeedSortOrder,
-  useCountryFeedStore,
 } from "@/store/use-country-feed-store";
 import { useSavedCountriesStore } from "@/store/use-saved-countries-store";
 import type { Country } from "@/types/country";
@@ -45,16 +53,75 @@ const SHEET_ENTER = SlideInDown.springify()
 
 /** Header rail: compact touch target + vertical padding (4 + 4). */
 const RAIL_HEADER_VERTICAL_PADDING = 8;
-const RAIL_HEADER_BORDER_RADIUS = 12;
+const RAIL_HEADER_BORDER_RADIUS = EXPLORE_FEED_SURFACE_RADIUS;
+const RAIL_SURFACE_BLUR_INTENSITY = 32;
+const RAIL_SURFACE_TINT = "rgba(11, 19, 43, 0.38)";
+const RAIL_SURFACE_WEB_FALLBACK = "rgba(5, 10, 24, 0.68)";
+const RAIL_TOOLBAR_FILL = "rgba(255, 255, 255, 0.065)";
+const RAIL_TOOLBAR_HIGHLIGHT = "rgba(255, 255, 255, 0.09)";
+const RAIL_DIVIDER_COLOR = "rgba(255, 255, 255, 0.1)";
+const RAIL_TOOLBAR_DIVIDER_COLOR = "rgba(255, 255, 255, 0.14)";
 
-function RailIconDivider({ vertical = true }: { vertical?: boolean }) {
+type RailFrostedSurfaceProps = {
+  children: ReactNode;
+  style?: StyleProp<ViewStyle>;
+  /** `toolbar` = raised control strip on the opaque info card; `frosted` = hero overlay pill. */
+  surface?: "frosted" | "toolbar";
+};
+
+function RailFrostedSurface({
+  children,
+  style,
+  surface = "frosted",
+}: RailFrostedSurfaceProps) {
+  const isToolbar = surface === "toolbar";
+
   return (
     <View
-      style={
+      style={[
+        styles.railFrostedShell,
+        isToolbar ? styles.railToolbarShell : null,
+        style,
+      ]}
+    >
+      {isToolbar ? (
+        <>
+          <View style={styles.railToolbarFill} />
+          <View style={styles.railToolbarHighlight} />
+        </>
+      ) : Platform.OS === "web" ? (
+        <View style={styles.railFrostedWebFallback} />
+      ) : (
+        <BlurView
+          intensity={RAIL_SURFACE_BLUR_INTENSITY}
+          tint="dark"
+          style={StyleSheet.absoluteFill}
+        />
+      )}
+      {!isToolbar ? <View style={styles.railFrostedTint} /> : null}
+      {children}
+    </View>
+  );
+}
+
+function RailIconDivider({
+  vertical = true,
+  tone = "frosted",
+}: {
+  vertical?: boolean;
+  tone?: "frosted" | "toolbar";
+}) {
+  const dividerColor =
+    tone === "toolbar" ? RAIL_TOOLBAR_DIVIDER_COLOR : RAIL_DIVIDER_COLOR;
+
+  return (
+    <View
+      style={[
         vertical
           ? styles.railIconDividerVertical
-          : styles.railIconDividerHorizontal
-      }
+          : styles.railIconDividerHorizontal,
+        { backgroundColor: dividerColor },
+      ]}
       accessibilityElementsHidden
     />
   );
@@ -340,49 +407,32 @@ export function ExploreActionRail({
         accessibilityLabel="Country actions"
       >
         {variant === "header" ? (
-          <View style={[styles.railSurface, styles.railHeader]}>
+          <RailFrostedSurface surface="toolbar" style={styles.railHeader}>
             <GlassIconButton
               icon="globe-outline"
               label="Map"
               variant="compact"
+              iconTone="bright"
               onPress={handleJumpToMap}
               accessibilityLabel={`View ${country.name} on map`}
               accessibilityHint="Opens the world map focused on this country"
             />
 
-            <RailIconDivider />
-
-            <GlassIconButton
-              icon={saved ? "bookmark" : "bookmark-outline"}
-              label="Save"
-              variant="compact"
-              active={saved}
-              haptic="medium"
-              onPress={handleToggleSaved}
-              accessibilityLabel={
-                saved ? `Unsave ${country.name}` : `Save ${country.name}`
-              }
-              accessibilityHint={
-                saved
-                  ? "Removes this country from your saved list"
-                  : "Adds this country to your saved list"
-              }
-            />
-
-            <RailIconDivider />
+            <RailIconDivider tone="toolbar" />
 
             <GlassIconButton
               icon="ellipsis-horizontal"
               label="More"
               variant="compact"
+              iconTone="bright"
               active={hasCustomSort}
               onPress={handleOpenMoreMenu}
               accessibilityLabel="More actions"
               accessibilityHint="Opens share, sort, and other country actions"
             />
-          </View>
+          </RailFrostedSurface>
         ) : (
-          <View style={[styles.railSurface, styles.railGroup]}>
+          <RailFrostedSurface style={styles.railGroup}>
             <GlassIconButton
               icon="globe-outline"
               label="Map"
@@ -418,7 +468,7 @@ export function ExploreActionRail({
               accessibilityLabel="More actions"
               accessibilityHint="Opens share, sort, and other country actions"
             />
-          </View>
+          </RailFrostedSurface>
         )}
       </View>
 
@@ -638,33 +688,77 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
     justifyContent: "center",
     flexShrink: 0,
-    marginLeft: 8,
+    marginLeft: 4,
   },
   railHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 2,
     paddingVertical: RAIL_HEADER_VERTICAL_PADDING / 2,
-    paddingHorizontal: 8,
+    paddingHorizontal: EXPLORE_FEED_RAIL_HORIZONTAL_PADDING,
     borderRadius: RAIL_HEADER_BORDER_RADIUS,
     overflow: "hidden",
+  },
+  railFrostedShell: {
+    overflow: "hidden",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.18,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 3,
+      },
+      default: {},
+    }),
+  },
+  railToolbarShell: {
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.42,
+        shadowRadius: 5,
+      },
+      android: {
+        elevation: 4,
+      },
+      default: {},
+    }),
+  },
+  railToolbarFill: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: RAIL_TOOLBAR_FILL,
+  },
+  railToolbarHighlight: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: RAIL_TOOLBAR_HIGHLIGHT,
+  },
+  railFrostedWebFallback: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: RAIL_SURFACE_WEB_FALLBACK,
+  },
+  railFrostedTint: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: RAIL_SURFACE_TINT,
   },
   railIconDividerVertical: {
     width: StyleSheet.hairlineWidth,
     height: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.14)",
+    backgroundColor: RAIL_DIVIDER_COLOR,
     flexShrink: 0,
   },
   railIconDividerHorizontal: {
     width: 20,
     height: StyleSheet.hairlineWidth,
-    backgroundColor: "rgba(255, 255, 255, 0.14)",
+    backgroundColor: RAIL_DIVIDER_COLOR,
     flexShrink: 0,
-  },
-  railSurface: {
-    backgroundColor: "rgba(0, 0, 0, 0.32)",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.14)",
   },
   railGroup: {
     alignItems: "center",
