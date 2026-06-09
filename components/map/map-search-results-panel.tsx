@@ -37,7 +37,10 @@ type MapSearchBlurBackdropProps = {
   tintColor: string;
 };
 
-function MapSearchBlurBackdrop({ style, tintColor }: MapSearchBlurBackdropProps) {
+function MapSearchBlurBackdrop({
+  style,
+  tintColor,
+}: MapSearchBlurBackdropProps) {
   return (
     <View style={[style, styles.blurLayer]} pointerEvents="none">
       {Platform.OS === "web" ? (
@@ -191,7 +194,7 @@ export function MapSearchResultsPanel({
               <ActivityIndicator size="large" color="#fbbf24" />
             </View>
           ) : showEmpty ? (
-            <View style={styles.centeredState}>
+            <View style={styles.emptyState}>
               <Text className="font-semibold text-lg text-white">
                 No countries found
               </Text>
@@ -327,6 +330,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 24,
     paddingBottom: 24,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "flex-start",
+    paddingHorizontal: 24,
+    paddingTop: 100,
   },
   recentRow: {
     flexDirection: "row",

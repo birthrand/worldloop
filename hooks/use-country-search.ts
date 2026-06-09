@@ -3,6 +3,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   getCachedSearchResults,
+  getSyncLocalSearchResults,
+  hasLocalSearchCatalog,
+  prefetchLocalSearchCatalog,
   searchCountriesWithCache,
 } from "@/lib/search-countries";
 import { useSearchUiStore } from "@/store/use-search-ui-store";
@@ -73,6 +76,10 @@ export function useCountrySearch(enabled: boolean) {
       const requestId = ++searchRequestIdRef.current;
       setError(null);
 
+      const localPreview = getSyncLocalSearchResults(q, r);
+      const hasLocalPreview =
+        localPreview.length > 0 || (hasLocalSearchCatalog() && (!!q || !!r));
+
       const cached = await getCachedSearchResults(q, r);
       if (requestId !== searchRequestIdRef.current) return;
 
@@ -81,7 +88,7 @@ export function useCountrySearch(enabled: boolean) {
         showedCached = true;
         setResults(cached);
         setStatus("success");
-      } else {
+      } else if (!hasLocalPreview) {
         setStatus("loading");
       }
 
@@ -147,7 +154,30 @@ export function useCountrySearch(enabled: boolean) {
   useEffect(() => {
     if (!enabled) return;
     void loadRecentSearches();
-  }, [enabled, loadRecentSearches]);
+    prefetchLocalSearchCatalog(region?.trim() ?? "");
+  }, [enabled, loadRecentSearches, region]);
+
+  useEffect(() => {
+    if (!enabled) return;
+
+    const q = query.trim();
+    const r = region?.trim() ?? "";
+    if (!q && !r) return;
+
+    const local = getSyncLocalSearchResults(q, r);
+    if (local.length > 0) {
+      setResults(local);
+      setStatus("success");
+      setError(null);
+      return;
+    }
+
+    if (hasLocalSearchCatalog()) {
+      setResults([]);
+      setStatus("success");
+      setError(null);
+    }
+  }, [enabled, query, region]);
 
   useEffect(() => {
     if (!enabled) {

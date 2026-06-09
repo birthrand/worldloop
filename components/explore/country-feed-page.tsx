@@ -10,7 +10,6 @@ import { Platform, StyleSheet, View } from "react-native";
 import { prefetchCountryImage } from "@/components/explore/country-image";
 import { ExploreCountryCard } from "@/components/explore/explore-country-card";
 import { HeroImagePager } from "@/components/explore/hero-image-pager";
-import { HeroSaveButton } from "@/components/explore/hero-save-button";
 import { MediaCarousel } from "@/components/explore/media-carousel";
 import {
   EXPLORE_FEED_BOTTOM_INSET,
@@ -121,8 +120,6 @@ export function CountryFeedPage({
                     onImagePressIn={warmAiExplorer}
                   />
                 ) : null}
-
-                <HeroSaveButton country={country} />
 
                 {images.length > 1 ? (
                   <View style={styles.dotsOverlay} pointerEvents="box-none">

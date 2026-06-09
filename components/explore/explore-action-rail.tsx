@@ -421,6 +421,26 @@ export function ExploreActionRail({
             <RailIconDivider tone="toolbar" />
 
             <GlassIconButton
+              icon={saved ? "bookmark" : "bookmark-outline"}
+              label="Save"
+              variant="compact"
+              iconTone="bright"
+              active={saved}
+              haptic="medium"
+              onPress={handleToggleSaved}
+              accessibilityLabel={
+                saved ? `Unsave ${country.name}` : `Save ${country.name}`
+              }
+              accessibilityHint={
+                saved
+                  ? "Removes this country from your saved list"
+                  : "Adds this country to your saved list"
+              }
+            />
+
+            <RailIconDivider tone="toolbar" />
+
+            <GlassIconButton
               icon="ellipsis-horizontal"
               label="More"
               variant="compact"
