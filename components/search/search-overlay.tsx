@@ -32,9 +32,9 @@ import {
 } from "@/constants/map-chrome-styles";
 import { CONTINENTS, continentDisplayLabel } from "@/constants/regions";
 import { SPACE_TAB_BAR_BG } from "@/constants/space-theme";
+import { openCountryInCulture } from "@/features/navigation/open-country-in-culture";
 import { useCountrySearch } from "@/hooks/use-country-search";
 import { getAiFact, getCountryImages } from "@/lib/format-country";
-import { openCountryInCulture } from "@/lib/open-country-in-culture";
 import { openCountryInExplore } from "@/lib/open-country-in-explore";
 import { useSearchUiStore } from "@/store/use-search-ui-store";
 import type { Country } from "@/types/country";

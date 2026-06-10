@@ -1,4 +1,9 @@
 import { HttpError } from "./http.js";
+import {
+  MAX_IMAGE_DISPLAY_WIDTH,
+  MIN_IMAGE_DISPLAY_WIDTH,
+  normalizeImageDisplayWidth,
+} from "./upstream-validation.js";
 
 export const MAX_PAGE_LIMIT = 30;
 export const DEFAULT_PAGE_LIMIT = 20;
@@ -44,6 +49,47 @@ export function parseCountryName(raw: unknown): string {
   }
 
   return name;
+}
+
+/** Logical CSS width × device pixel ratio, used to pick a hero image rendition. */
+export function parseOptionalDisplayWidth(raw: unknown): number | undefined {
+  if (raw === undefined) return undefined;
+
+  if (typeof raw !== "string" || raw.trim() === "") {
+    throw new HttpError(
+      "displayWidth must be a number",
+      400,
+      "INVALID_DISPLAY_WIDTH",
+    );
+  }
+
+  if (!/^\d+$/.test(raw)) {
+    throw new HttpError(
+      "displayWidth must be a number",
+      400,
+      "INVALID_DISPLAY_WIDTH",
+    );
+  }
+
+  const parsed = Number.parseInt(raw, 10);
+
+  if (parsed < MIN_IMAGE_DISPLAY_WIDTH) {
+    throw new HttpError(
+      `displayWidth must be at least ${MIN_IMAGE_DISPLAY_WIDTH}`,
+      400,
+      "INVALID_DISPLAY_WIDTH",
+    );
+  }
+
+  if (parsed > MAX_IMAGE_DISPLAY_WIDTH) {
+    throw new HttpError(
+      `displayWidth must be at most ${MAX_IMAGE_DISPLAY_WIDTH}`,
+      400,
+      "INVALID_DISPLAY_WIDTH",
+    );
+  }
+
+  return normalizeImageDisplayWidth(parsed);
 }
 
 export function parseOptionalLimit(raw: unknown): number | undefined {

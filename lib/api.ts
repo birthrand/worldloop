@@ -1,9 +1,23 @@
 import { API_BASE_URL } from "@/constants/api";
+import { getHeroDisplayPixelWidth } from "@/lib/display-pixel-width";
 import type { Country, MapCountry } from "@/types/country";
+
+function appendHeroDisplayWidth(url: URL): void {
+  url.searchParams.set("displayWidth", String(getHeroDisplayPixelWidth()));
+}
 
 export type FeedCountriesResponse = {
   data: Country[];
   nextCursor: string | null;
+};
+
+export type CultureFeedCountriesResponse = {
+  data: Country[];
+  nextCursor: string | null;
+  meta: {
+    total: number;
+    seed: string;
+  };
 };
 
 export async function fetchFeedCountries(
@@ -18,6 +32,7 @@ export async function fetchFeedCountries(
   if (limit !== undefined) {
     url.searchParams.set("limit", String(limit));
   }
+  appendHeroDisplayWidth(url);
 
   const response = await fetch(url.toString());
 
@@ -26,6 +41,31 @@ export async function fetchFeedCountries(
   }
 
   return response.json() as Promise<FeedCountriesResponse>;
+}
+
+export async function fetchCultureFeedCountries(
+  seed: string,
+  cursor?: string,
+  limit?: number,
+): Promise<CultureFeedCountriesResponse> {
+  const url = new URL(`${API_BASE_URL}/feed/culture/countries`);
+  url.searchParams.set("seed", seed);
+
+  if (cursor !== undefined && cursor !== "") {
+    url.searchParams.set("cursor", cursor);
+  }
+  if (limit !== undefined) {
+    url.searchParams.set("limit", String(limit));
+  }
+  appendHeroDisplayWidth(url);
+
+  const response = await fetch(url.toString());
+
+  if (!response.ok) {
+    throw new Error(`Culture feed request failed (${response.status})`);
+  }
+
+  return response.json() as Promise<CultureFeedCountriesResponse>;
 }
 
 export type SearchCountriesResponse = {
@@ -51,6 +91,7 @@ export async function fetchSearchCountries(
 
   if (q) url.searchParams.set("query", q);
   if (r) url.searchParams.set("region", r);
+  appendHeroDisplayWidth(url);
 
   const response = await fetch(url.toString());
 
@@ -143,7 +184,9 @@ type CountryDetailResponse = {
 
 export async function fetchCountryByName(name: string): Promise<Country> {
   const encoded = encodeURIComponent(name.trim());
-  const response = await fetch(`${API_BASE_URL}/country/${encoded}`);
+  const url = new URL(`${API_BASE_URL}/country/${encoded}`);
+  appendHeroDisplayWidth(url);
+  const response = await fetch(url.toString());
 
   if (!response.ok) {
     throw new Error(`Country request failed (${response.status})`);
@@ -191,7 +234,9 @@ export async function fetchCountryExplorer(
   name: string,
 ): Promise<CountryExplorerResponse["data"]> {
   const encoded = encodeURIComponent(name.trim());
-  const response = await fetch(`${API_BASE_URL}/country/${encoded}/explorer`);
+  const url = new URL(`${API_BASE_URL}/country/${encoded}/explorer`);
+  appendHeroDisplayWidth(url);
+  const response = await fetch(url.toString());
 
   if (!response.ok) {
     throw new Error(`Country explorer request failed (${response.status})`);
@@ -226,7 +271,9 @@ export async function fetchCountryProfile(
   name: string,
 ): Promise<CountryProfileResponse["data"]> {
   const encoded = encodeURIComponent(name.trim());
-  const response = await fetch(`${API_BASE_URL}/country/${encoded}/profile`);
+  const url = new URL(`${API_BASE_URL}/country/${encoded}/profile`);
+  appendHeroDisplayWidth(url);
+  const response = await fetch(url.toString());
 
   if (!response.ok) {
     throw new Error(`Country profile request failed (${response.status})`);

@@ -256,7 +256,7 @@ cd backend && npm run dev
 **1. Single country (via feed slice or profile):**
 
 ```bash
-curl -s "http://localhost:3000/country/Japan/profile" | jq '.videos'
+curl -s "http://localhost:3001/country/Japan/profile" | jq '.data.country.videos'
 ```
 
 Expect:
@@ -279,7 +279,7 @@ Expect:
 **4. Feed batch:**
 
 ```bash
-curl -s "http://localhost:3000/feed/countries?limit=3" | jq '.data[] | {name, videos: .videos | length}'
+curl -s "http://localhost:3001/feed/countries?limit=3" | jq '.data[] | {name, videos: .videos | length}'
 ```
 
 **5. Invalid upstream** — mock 502 from Pexels in unit test or temporary throw; endpoint still returns country without video.

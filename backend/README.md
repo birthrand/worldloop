@@ -70,13 +70,23 @@ Configure keys in `backend/.env` only (never in the Expo app). Image URLs are re
 
 Results are **cached per country** in Redis (`images:{country}`, 30-day TTL). Reuse the cached array on subsequent requests; do not call providers again for the same country while the cache entry is valid.
 
+**Orientation:** Unsplash and Pexels searches request **portrait** photos first (TikTok-style Explore hero), then **landscape** to fill up to 5 URLs when portrait results are scarce.
+
+**Resolution:** Redis caches provider **size variants** per country (`images:v2:{country}`). At serve time the backend picks the smallest variant that meets the client `displayWidth` query param (logical CSS width × device pixel ratio), capped at 1920px — so 3× phones get sharper heroes without always downloading originals. Buckets: 640 / 1080 / 1440 / 1920. Map/discover thumbnails use 640px internally.
+
+```bash
+curl -s "http://localhost:3001/feed/countries?limit=1&displayWidth=1170" | jq '.data[0].images[0]'
+```
+
 Consumers should mirror the same provider fallback order and country-level caching so image behavior stays consistent with the backend.
 
 ## Video API (Feature 15)
 
-Configure `PEXELS_API_KEY` in `backend/.env` only (same key as images). When unset or when Pexels returns no match, endpoints return `videos: []` with HTTP 200.
+Configure `PEXELS_API_KEY` and/or `PIXABAY_API_KEY` in `backend/.env` only. When both are unset or all providers return no match, endpoints return `videos: []` with HTTP 200.
 
-- **Provider:** Pexels Video Search API (`{country} landscape`, fallback `{country} travel`)
+- **Providers:** Pexels Video Search API (primary), then Pixabay Video API (fallback)
+- **Orientation:** portrait first (TikTok-style Culture feed), landscape fallback
+- **Queries:** `{country} culture`, `{country} travel`, `{country} landscape` per orientation pass
 - **Cache:** Redis key `videos:{country}` (30-day TTL)
 - **Shape:** At most one `CountryVideo` per country — HTTPS MP4 `url`, optional `poster`, `provider`, `duration`
 
@@ -87,13 +97,14 @@ curl -s "http://localhost:3001/feed/countries?limit=3" | jq '.data[] | {name, vi
 
 ## Endpoints
 
-| Method | Path              | Description                                            |
-| ------ | ----------------- | ------------------------------------------------------ |
-| GET    | `/health`         | Health check                                           |
-| GET    | `/country/:name`  | Single country with `images[]` (1–5 URLs)              |
-| GET    | `/feed/countries` | Paginated feed (`?cursor=&limit=`, default 20, max 30) |
-| GET    | `/map/countries`  | All map countries with coordinates and first image     |
-| GET    | `/discover`       | Spatial bbox discover — ranked countries in viewport   |
+| Method | Path                      | Description                                            |
+| ------ | ------------------------- | ------------------------------------------------------ |
+| GET    | `/health`                 | Health check                                           |
+| GET    | `/country/:name`          | Single country with `images[]` (1–5 URLs)              |
+| GET    | `/feed/countries`         | Paginated feed (`?cursor=&limit=`, default 20, max 30) |
+| GET    | `/feed/culture/countries` | Video-only Culture feed (`?seed=&cursor=&limit=`)      |
+| GET    | `/map/countries`          | All map countries with coordinates and first image     |
+| GET    | `/discover`               | Spatial bbox discover — ranked countries in viewport   |
 
 ## Examples
 
@@ -101,6 +112,7 @@ curl -s "http://localhost:3001/feed/countries?limit=3" | jq '.data[] | {name, vi
 curl http://localhost:3001/country/japan
 curl "http://localhost:3001/feed/countries?limit=20"
 curl "http://localhost:3001/feed/countries?cursor=20&limit=20"
+curl "http://localhost:3001/feed/culture/countries?seed=session-1&limit=20"
 curl http://localhost:3001/country/not-a-real-country
 
 # Europe-ish bbox

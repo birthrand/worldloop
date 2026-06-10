@@ -1,50 +1,279 @@
-# Welcome to your Expo app 👋
+<div align="center">
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+# WorldLoop
 
-## Get started
+**Discover the world, one country at a time.**
 
-1. Install dependencies
+A TikTok-style mobile app for exploring countries through immersive feeds, interactive maps, AI-generated insights, and culture videos.
 
-   ```bash
-   npm install
-   ```
+[![Expo](https://img.shields.io/badge/Expo-SDK%2054-000020?style=flat-square&logo=expo&logoColor=white)](https://expo.dev)
+[![React Native](https://img.shields.io/badge/React%20Native-0.81-61DAFB?style=flat-square&logo=react&logoColor=black)](https://reactnative.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Node.js](https://img.shields.io/badge/Node.js-API-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
+[![Redis](https://img.shields.io/badge/Redis-Cache-DC382D?style=flat-square&logo=redis&logoColor=white)](https://redis.io)
 
-2. Start the app
+</div>
 
-   ```bash
-   npx expo start
-   ```
+---
 
-In the output, you'll find options to open the app in a
+## Overview
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+WorldLoop turns every country into a swipeable content unit — like a short-form video feed, but for geography and culture. Users browse portrait hero imagery, watch travel clips, spin a 3D globe, and dive into AI-powered country profiles.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+The project is built as a **full-stack learning showcase**: a polished Expo mobile client paired with a TypeScript API that handles caching, media sourcing, and AI generation server-side.
 
-## Get a fresh project
+---
 
-When you're ready, run:
+## Features
 
-```bash
-npm run reset-project
+| Screen          | What it does                                                                     |
+| --------------- | -------------------------------------------------------------------------------- |
+| **Explore**     | Vertical, full-screen country feed with hero images, stats, and AI fun facts     |
+| **Culture**     | TikTok-style vertical video feed sourced from travel & culture clips per country |
+| **Map**         | Interactive 3D globe with country pins, spatial discovery, and tap-to-preview    |
+| **AI Explorer** | Deep-dive country profile with landmarks, Wikipedia context, and map focus       |
+| **Search**      | Global search overlay with region filters across feeds and map                   |
+| **Saved**       | Bookmark countries and track discovery progress                                  |
+| **Onboarding**  | Animated intro flow with globe visuals and feature highlights                    |
+
+### Highlights
+
+- **TikTok-style UX** — vertical paging feeds with snap transitions and immersive media
+- **Smart image pipeline** — Unsplash → Pexels → Wikipedia fallback, cached per country in Redis
+- **Video culture feed** — portrait-first travel clips from Pexels / Pixabay
+- **Spatial discovery** — viewport-based country ranking on the map via bounding-box queries
+- **AI content layer** — fun facts, captions, and explorer summaries generated server-side
+- **Responsive imagery** — backend serves size-appropriate image variants based on device pixel width
+
+---
+
+## Screenshots
+
+> Replace these with your own device captures for the best portfolio presentation.
+
+<table>
+  <tr>
+    <td align="center"><b>Explore Feed</b><br/><img src="prompt_material/explore-screen-ui.png" width="280" alt="Explore feed UI" /></td>
+    <td align="center"><b>Map & Globe</b><br/><img src="prompt_material/map-screen-ui.png" width="280" alt="Map screen UI" /></td>
+    <td align="center"><b>AI Explorer</b><br/><img src="prompt_material/ai-content-explorer-ui.png" width="280" alt="AI content explorer UI" /></td>
+  </tr>
+</table>
+
+---
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph client["Expo App"]
+    UI["Screens & Components"]
+    Store["Zustand Stores"]
+    UI --> Store
+  end
+
+  subgraph api["Backend API"]
+    Routes["Express Routes"]
+    Services["Country · Feed · Image · Video · AI"]
+    Cache["Redis Cache"]
+    Routes --> Services --> Cache
+  end
+
+  subgraph external["External APIs"]
+    RC["REST Countries"]
+    IMG["Unsplash / Pexels"]
+    VID["Pexels / Pixabay"]
+    AI["OpenAI"]
+  end
+
+  Store -->|"REST"| Routes
+  Services --> RC
+  Services --> IMG
+  Services --> VID
+  Services --> AI
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+**Design principles**
 
-## Learn more
+- API keys and AI calls stay on the backend — never in the mobile client
+- Country data is normalized into a single content model consumed by every screen
+- Redis caches expensive upstream calls (images, videos, AI) with long TTLs
+- Zustand + AsyncStorage handle client state and persistence
 
-To learn more about developing your project with Expo, look at the following resources:
+---
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Tech Stack
 
-## Join the community
+### Mobile (Expo)
 
-Join our community of developers creating universal apps.
+| Layer     | Tools                                                 |
+| --------- | ----------------------------------------------------- |
+| Framework | Expo SDK 54, React Native, Expo Router                |
+| Language  | TypeScript                                            |
+| Styling   | NativeWind v5, Tailwind CSS v4                        |
+| State     | Zustand, AsyncStorage                                 |
+| Media     | expo-image, expo-video, Lottie                        |
+| Maps & 3D | react-native-maps, Three.js, @react-three/fiber       |
+| Animation | react-native-reanimated, react-native-gesture-handler |
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+### Backend
+
+| Layer   | Tools                          |
+| ------- | ------------------------------ |
+| Runtime | Node.js, Express 5, TypeScript |
+| Cache   | Redis 7 (Docker)               |
+| Data    | REST Countries API             |
+| Images  | Unsplash, Pexels, Wikipedia    |
+| Video   | Pexels Video, Pixabay          |
+| AI      | OpenAI (gpt-4o-mini)           |
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 20+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (recommended, for Redis)
+- iOS Simulator, Android Emulator, or Expo Go
+
+### 1. Clone & install
+
+```bash
+git clone https://github.com/<birthtand>/worldloop.git
+cd worldloop
+npm install
+```
+
+### 2. Start Redis
+
+```bash
+docker compose up -d redis
+docker compose exec redis redis-cli ping   # should return PONG
+```
+
+### 3. Configure environment
+
+```bash
+# Mobile app
+cp .env.example .env
+
+# Backend API
+cd backend
+cp .env.example .env
+npm install
+```
+
+Add API keys in `backend/.env` as needed (images, video, and AI features degrade gracefully without them):
+
+```env
+UNSPLASH_ACCESS_KEY=
+PEXELS_API_KEY=
+PIXABAY_API_KEY=
+OPENAI_API_KEY=
+```
+
+### 4. Run the backend
+
+```bash
+cd backend
+npm run dev
+# → http://localhost:3001
+```
+
+Confirm the startup log shows `Redis connected`.
+
+### 5. Run the app
+
+```bash
+# from repo root
+npx expo start
+```
+
+Press `i` for iOS Simulator, `a` for Android Emulator, or scan the QR code with Expo Go.
+
+---
+
+## Project Structure
+
+```txt
+worldloop/
+├── app/                  # Expo Router screens (tabs, onboarding, country routes)
+├── components/           # Reusable UI (explore, culture, map, ai-explorer, …)
+├── store/                # Zustand stores (feeds, map, search, saved)
+├── lib/                  # API client, map math, formatting helpers
+├── hooks/                # Data-fetching and screen logic hooks
+├── constants/            # Themes, images, regions, map styles
+├── backend/              # Node.js + Express API
+│   └── src/
+│       ├── api/          # Route definitions
+│       ├── controllers/  # Request handlers
+│       ├── services/     # Business logic (feed, image, video, AI, cache)
+│       └── lib/          # Validation, upstream helpers
+├── prompts-worldloop/    # Incremental backend build prompts
+└── docker-compose.yml    # Local Redis
+```
+
+---
+
+## API Overview
+
+| Method | Endpoint                  | Description                    |
+| ------ | ------------------------- | ------------------------------ |
+| `GET`  | `/health`                 | Health check                   |
+| `GET`  | `/country/:name`          | Single country with images     |
+| `GET`  | `/feed/countries`         | Paginated explore feed         |
+| `GET`  | `/feed/culture/countries` | Video-only culture feed        |
+| `GET`  | `/map/countries`          | All countries with coordinates |
+| `GET`  | `/discover`               | Spatial bbox country discovery |
+
+Full backend docs: [`backend/README.md`](backend/README.md)
+
+---
+
+## Scripts
+
+### Mobile
+
+```bash
+npm start          # Expo dev server
+npm run android    # Open on Android
+npm run ios        # Open on iOS
+npm run lint       # ESLint
+npm run typecheck  # TypeScript check
+npm test           # Vitest
+```
+
+### Backend
+
+```bash
+cd backend
+npm run dev        # Watch mode (tsx)
+npm run build      # Compile to dist/
+npm run typecheck  # TypeScript check
+```
+
+---
+
+## What I Built
+
+This project demonstrates end-to-end mobile product development:
+
+- **Feed engineering** — cursor-based pagination, prefetching, and region filters
+- **Map & spatial UX** — 3D globe rendering, clustering, viewport discovery
+- **Media orchestration** — multi-provider fallbacks with Redis-backed caching
+- **API design** — typed services, validation, rate limiting, and secure key handling
+- **Mobile polish** — custom tab bar, glass UI, onboarding, and immersive full-screen layouts
+
+---
+
+## License
+
+This project is for portfolio and educational purposes. External API content (images, videos) is subject to each provider's terms of use.
+
+---
+
+<div align="center">
+
+Built with Expo · React Native · TypeScript
+
+</div>

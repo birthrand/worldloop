@@ -3,6 +3,7 @@ import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  RefreshControl,
   StyleSheet,
   View,
   type LayoutChangeEvent,
@@ -21,15 +22,21 @@ export function CultureFeed() {
   const [pageHeight, setPageHeight] = useState(0);
   const [pageWidth, setPageWidth] = useState(0);
   const pageHeightRef = useRef(0);
+  const pageWidthRef = useRef(0);
   const listRef = useRef<FlatList<Country>>(null);
 
   const countries = useCultureFeedStore((s) => s.countries);
   const selectedRegion = useCultureFeedStore((s) => s.selectedRegion);
   const currentIndex = useCultureFeedStore((s) => s.currentIndex);
+  const focusEpoch = useCultureFeedStore((s) => s.focusEpoch);
   const status = useCultureFeedStore((s) => s.status);
-  const feedListKey = selectedRegion ?? "for-you";
+  const feedListKey = `${selectedRegion ?? "for-you"}-${focusEpoch}`;
   const setCurrentIndex = useCultureFeedStore((s) => s.setCurrentIndex);
-  const loadMoreFeed = useCultureFeedStore((s) => s.loadMoreFeed);
+  const extendCultureFeedAtEnd = useCultureFeedStore(
+    (s) => s.extendCultureFeedAtEnd,
+  );
+  const refreshCultureFeed = useCultureFeedStore((s) => s.refreshCultureFeed);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
@@ -47,13 +54,11 @@ export function CultureFeed() {
       }
 
       if (
-        state.selectedRegion === null &&
-        state.nextCursor !== null &&
         index >= state.countries.length - 2 &&
         state.status !== "loading" &&
         state.status !== "loadingMore"
       ) {
-        void loadMoreFeed();
+        void extendCultureFeedAtEnd();
       }
     },
   ).current;
@@ -66,9 +71,18 @@ export function CultureFeed() {
     const { width, height } = event.nativeEvent.layout;
     const nextHeight = Math.round(height);
     const nextWidth = Math.round(width);
-    if (nextHeight > 0 && nextHeight !== pageHeightRef.current) {
+    if (nextHeight <= 0 || nextWidth <= 0) return;
+
+    const heightChanged = nextHeight !== pageHeightRef.current;
+    const widthChanged = nextWidth !== pageWidthRef.current;
+    if (!heightChanged && !widthChanged) return;
+
+    if (heightChanged) {
       pageHeightRef.current = nextHeight;
       setPageHeight(nextHeight);
+    }
+    if (widthChanged) {
+      pageWidthRef.current = nextWidth;
       setPageWidth(nextWidth);
     }
   }, []);
@@ -87,6 +101,15 @@ export function CultureFeed() {
 
   const keyExtractor = useCallback((item: Country) => item.name, []);
 
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await refreshCultureFeed();
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refreshCultureFeed]);
+
   return (
     <View style={styles.feed}>
       <View style={styles.feedBody} onLayout={onFeedLayout}>
@@ -98,7 +121,7 @@ export function CultureFeed() {
             data={countries}
             keyExtractor={keyExtractor}
             renderItem={renderItem}
-            extraData={`${pageHeight}-${currentIndex}-${isTabFocused}`}
+            extraData={`${pageHeight}-${pageWidth}-${currentIndex}-${isTabFocused}`}
             pagingEnabled
             showsVerticalScrollIndicator={false}
             decelerationRate="fast"
@@ -121,6 +144,14 @@ export function CultureFeed() {
                 });
               });
             }}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={onRefresh}
+                tintColor="#fbbf24"
+                colors={["#fbbf24"]}
+              />
+            }
           />
         ) : null}
 

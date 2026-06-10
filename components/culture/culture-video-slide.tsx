@@ -41,7 +41,7 @@ export function CultureVideoSlide({
 
   const player = useVideoPlayer(source, (instance) => {
     instance.loop = true;
-    instance.muted = isMuted;
+    instance.muted = true;
   });
 
   useEventListener(player, "playingChange", ({ isPlaying }) => {
@@ -58,20 +58,20 @@ export function CultureVideoSlide({
   });
 
   useEffect(() => {
+    player.muted = isMuted;
+
     if (isActive) {
       player.play();
       return;
     }
-    player.pause();
-  }, [isActive, player]);
 
-  useEffect(() => {
-    player.muted = isMuted;
-  }, [isMuted, player]);
+    player.pause();
+  }, [isActive, isMuted, player]);
 
   useEffect(() => {
     const handleAppState = (nextState: AppStateStatus) => {
       if (nextState === "active" && isActive) {
+        player.muted = isMuted;
         player.play();
         return;
       }
@@ -82,7 +82,7 @@ export function CultureVideoSlide({
 
     const subscription = AppState.addEventListener("change", handleAppState);
     return () => subscription.remove();
-  }, [isActive, player]);
+  }, [isActive, isMuted, player]);
 
   useEffect(() => {
     setShowPoster(true);
