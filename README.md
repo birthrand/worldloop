@@ -28,13 +28,13 @@ The project is built as a **full-stack learning showcase**: a polished Expo mobi
 
 | Screen          | What it does                                                                     |
 | --------------- | -------------------------------------------------------------------------------- |
+| **Onboarding**  | Welcome flow with hero imagery and a clear path into the app                     |
 | **Explore**     | Vertical, full-screen country feed with hero images, stats, and AI fun facts     |
+| **AI Explorer** | Deep-dive country profile with stats, map focus, and Wikipedia context           |
+| **Map**         | Interactive globe with country pins, spatial discovery, and tap-to-preview       |
 | **Culture**     | TikTok-style vertical video feed sourced from travel & culture clips per country |
-| **Map**         | Interactive 3D globe with country pins, spatial discovery, and tap-to-preview    |
-| **AI Explorer** | Deep-dive country profile with landmarks, Wikipedia context, and map focus       |
+| **Saved**       | Bookmark countries on a constellation-style saved space                          |
 | **Search**      | Global search overlay with region filters across feeds and map                   |
-| **Saved**       | Bookmark countries and track discovery progress                                  |
-| **Onboarding**  | Animated intro flow with globe visuals and feature highlights                    |
 
 ### Highlights
 
@@ -49,13 +49,18 @@ The project is built as a **full-stack learning showcase**: a polished Expo mobi
 
 ## Screenshots
 
-> Replace these with your own device captures for the best portfolio presentation.
+Device captures from the Expo app (`assets/screenshots/`), in screen order:
 
 <table>
   <tr>
-    <td align="center"><b>Explore Feed</b><br/><img src="prompt_material/explore-screen-ui.png" width="280" alt="Explore feed UI" /></td>
-    <td align="center"><b>Map & Globe</b><br/><img src="prompt_material/map-screen-ui.png" width="280" alt="Map screen UI" /></td>
-    <td align="center"><b>AI Explorer</b><br/><img src="prompt_material/ai-content-explorer-ui.png" width="280" alt="AI content explorer UI" /></td>
+    <td align="center"><b>Onboarding</b><br/><img src="assets/screenshots/s1.PNG" width="220" alt="WorldLoop onboarding welcome screen" /></td>
+    <td align="center"><b>Explore</b><br/><img src="assets/screenshots/s2.PNG" width="220" alt="Explore feed showing Estonia" /></td>
+    <td align="center"><b>AI Explorer</b><br/><img src="assets/screenshots/s3.PNG" width="220" alt="AI Explorer country profile for Ecuador" /></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Map</b><br/><img src="assets/screenshots/s4.PNG" width="220" alt="Interactive map focused on Africa" /></td>
+    <td align="center"><b>Culture</b><br/><img src="assets/screenshots/s5.PNG" width="220" alt="Culture video feed for San Marino" /></td>
+    <td align="center"><b>Saved</b><br/><img src="assets/screenshots/s6.PNG" width="220" alt="Saved countries constellation view" /></td>
   </tr>
 </table>
 
@@ -198,6 +203,8 @@ Press `i` for iOS Simulator, `a` for Android Emulator, or scan the QR code with 
 ```txt
 worldloop/
 ├── app/                  # Expo Router screens (tabs, onboarding, country routes)
+├── assets/
+│   └── screenshots/      # README & portfolio device captures (s1–s6)
 ├── components/           # Reusable UI (explore, culture, map, ai-explorer, …)
 ├── store/                # Zustand stores (feeds, map, search, saved)
 ├── lib/                  # API client, map math, formatting helpers
