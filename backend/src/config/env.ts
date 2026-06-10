@@ -5,11 +5,12 @@ export const env = {
     const parsed = Number(process.env.PORT);
     return Number.isInteger(parsed) && parsed > 0 ? parsed : 3001;
   })(),
-  redisUrl: process.env.REDIS_URL ?? "redis://localhost:6379",
+  redisUrl: process.env.REDIS_URL ?? "redis://127.0.0.1:6379",
   restCountriesBaseUrl:
     process.env.REST_COUNTRIES_BASE_URL ?? "https://restcountries.com/v3.1",
   unsplashAccessKey: process.env.UNSPLASH_ACCESS_KEY ?? "",
   pexelsApiKey: process.env.PEXELS_API_KEY ?? "",
+  pixabayApiKey: process.env.PIXABAY_API_KEY ?? "",
   openAiApiKey: process.env.OPENAI_API_KEY ?? "",
   openAiBaseUrl: process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1",
   openAiModel: process.env.OPENAI_MODEL ?? "gpt-4o-mini",

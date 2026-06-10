@@ -1,15 +1,16 @@
 import type { CountryBasic } from "../types/country.js";
 import type { MapCountriesResponse, MapCountry } from "../types/map.js";
-import {
-  CACHE_TTL,
-  cacheKeys,
-  getOrSet,
-} from "./cache.service.js";
+import { CACHE_TTL, cacheKeys, getOrSet } from "./cache.service.js";
 import { getFeedCountries } from "./country.service.js";
-import { getImagesForCountry } from "./image.service.js";
+import {
+  getImagesForCountry,
+  MAP_THUMBNAIL_DISPLAY_WIDTH,
+} from "./image.service.js";
 
 async function toMapCountry(country: CountryBasic): Promise<MapCountry> {
-  const images = await getImagesForCountry(country.name);
+  const images = await getImagesForCountry(country.name, {
+    displayWidthPx: MAP_THUMBNAIL_DISPLAY_WIDTH,
+  });
 
   return {
     name: country.name,
@@ -31,5 +32,9 @@ async function buildMapCountries(): Promise<MapCountriesResponse> {
 
 /** All countries with valid coordinates, optimized for the map screen. */
 export async function getMapCountries(): Promise<MapCountriesResponse> {
-  return getOrSet(cacheKeys.mapCountries(), CACHE_TTL.map, buildMapCountries);
+  return getOrSet(
+    cacheKeys.mapCountries(MAP_THUMBNAIL_DISPLAY_WIDTH),
+    CACHE_TTL.map,
+    buildMapCountries,
+  );
 }

@@ -16,14 +16,24 @@ export const CACHE_TTL = {
   news: 4 * 60 * 60,
   wikipedia: 30 * 24 * 60 * 60,
   landmarks: 30 * 24 * 60 * 60,
+  /** Negative caching — transient empty upstream results (e.g. video miss). */
+  short: 15 * 60,
 } as const;
 
 export const cacheKeys = {
   country: (name: string) => `country:${name.trim().toLowerCase()}`,
-  feedCountries: (cursor = "all") => `feed:countries:${cursor}`,
-  search: (query: string, region: string) =>
-    `search:${query.toLowerCase()}:${region.toLowerCase()}`,
-  mapCountries: () => "map:countries",
+  feedCountries: (cursor = "all", displayWidth = 1080) =>
+    `feed:countries:${cursor}:w${displayWidth}`,
+  cultureVideoIndex: () => "culture:video-index",
+  cultureFeed: (
+    seed: string,
+    cursor: string,
+    limit: number,
+    displayWidth = 1080,
+  ) => `feed:culture:${seed}:${cursor}:${limit}:w${displayWidth}`,
+  search: (query: string, region: string, displayWidth = 1080) =>
+    `search:${query.toLowerCase()}:${region.toLowerCase()}:w${displayWidth}`,
+  mapCountries: (displayWidth = 640) => `map:countries:w${displayWidth}`,
   discover: (params: {
     west: number;
     south: number;
@@ -48,7 +58,8 @@ export const cacheKeys = {
     ].join(":");
     return `discover:${bboxPart}:${centerPart}:${regionPart}:${params.limit}:${params.cursor}`;
   },
-  images: (name: string) => `images:${name.trim().toLowerCase()}`,
+  /** v2 — stores provider size variants; resolved URL picked at serve time. */
+  images: (name: string) => `images:v2:${name.trim().toLowerCase()}`,
   videos: (name: string) => `videos:${name.trim().toLowerCase()}`,
   ai: (name: string) => `ai:${name.toLowerCase()}`,
   news: (name: string) => `news:${name.trim().toLowerCase()}`,

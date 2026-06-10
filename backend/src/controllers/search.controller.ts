@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 
 import {
+  parseOptionalDisplayWidth,
   parseOptionalRegion,
   parseOptionalSearchQuery,
 } from "../lib/validation.js";
@@ -15,7 +16,8 @@ export async function searchCountriesHandler(
     const query = parseOptionalSearchQuery(req.query.query);
     const region = parseOptionalRegion(req.query.region);
 
-    const result = await searchCountries(query, region);
+    const displayWidthPx = parseOptionalDisplayWidth(req.query.displayWidth);
+    const result = await searchCountries(query, region, { displayWidthPx });
     res.json(result);
   } catch (error) {
     next(error);

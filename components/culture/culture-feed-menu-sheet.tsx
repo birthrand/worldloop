@@ -42,10 +42,12 @@ function FeedMenuRow({
       accessibilityState={{ selected }}
       accessibilityLabel={accessibilityLabel}
       onPress={onPress}
-      style={({ pressed }) => [styles.menuRow, pressed && styles.pressed]}
+      className="min-h-12 flex-row items-center justify-between gap-3 py-1.5"
+      style={({ pressed }) => pressed && styles.pressed}
     >
       <Text
-        style={[styles.menuLabel, selected && styles.menuLabelSelected]}
+        className={`flex-1 text-[15px] leading-5 text-white ${selected ? "font-semibold" : "font-medium"}`}
+        style={{ includeFontPadding: false }}
         numberOfLines={1}
       >
         {label}
@@ -89,7 +91,7 @@ export function CultureFeedMenuSheet({
     if (!isContinent(name)) return;
 
     if (selectedRegion === name) {
-      void setRegionFilter(null);
+      void restoreForYouFeed();
       onClose();
       return;
     }
@@ -114,20 +116,21 @@ export function CultureFeedMenuSheet({
         />
         <Animated.View
           entering={SHEET_ENTER}
-          style={[styles.sheet, { paddingBottom: insets.bottom + 12 }]}
+          className="w-full gap-1 rounded-t-2xl border border-b-0 border-white/14 bg-gray-900 px-4 pt-3"
+          style={{ paddingBottom: insets.bottom + 12 }}
           accessibilityViewIsModal
         >
-          <View style={styles.sheetHeader}>
-            <Text style={styles.sheetTitle}>Browse feed</Text>
+          <View className="mb-0.5 flex-row items-center justify-between gap-2">
+            <Text className="font-semibold text-base leading-5 text-white">
+              Browse feed
+            </Text>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Close feed filters"
               hitSlop={10}
               onPress={onClose}
-              style={({ pressed }) => [
-                styles.closeButton,
-                pressed && styles.pressed,
-              ]}
+              className="h-7 w-7 items-center justify-center"
+              style={({ pressed }) => pressed && styles.pressed}
             >
               <Ionicons
                 name="close"
@@ -137,7 +140,7 @@ export function CultureFeedMenuSheet({
             </Pressable>
           </View>
 
-          <View style={styles.menuPanel}>
+          <View className="mt-1 gap-0">
             {EXPLORE_HEADER_TABS.map((name, index) => {
               const selected = name === selectedTab;
               const accessibilityLabel =
@@ -152,7 +155,7 @@ export function CultureFeedMenuSheet({
 
               return (
                 <View key={name}>
-                  {index > 0 ? <View style={styles.menuDivider} /> : null}
+                  {index > 0 ? <View className="h-px bg-white/8" /> : null}
                   <FeedMenuRow
                     label={label}
                     selected={selected}
@@ -177,64 +180,5 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.55)",
     justifyContent: "flex-end",
-  },
-  sheet: {
-    width: "100%",
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingTop: 12,
-    paddingHorizontal: 16,
-    backgroundColor: "#111827",
-    borderWidth: 1,
-    borderBottomWidth: 0,
-    borderColor: "rgba(255, 255, 255, 0.14)",
-    gap: 4,
-  },
-  sheetHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8,
-    marginBottom: 2,
-  },
-  sheetTitle: {
-    fontSize: 16,
-    lineHeight: 20,
-    fontFamily: "Poppins-SemiBold",
-    color: "#ffffff",
-  },
-  closeButton: {
-    width: 28,
-    height: 28,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  menuPanel: {
-    gap: 0,
-    marginTop: 4,
-  },
-  menuRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-    minHeight: 48,
-    paddingVertical: 6,
-  },
-  menuLabel: {
-    flex: 1,
-    fontSize: 15,
-    lineHeight: 20,
-    fontFamily: "Poppins-Medium",
-    color: "#ffffff",
-    includeFontPadding: false,
-  },
-  menuLabelSelected: {
-    fontFamily: "Poppins-SemiBold",
-    color: "#ffffff",
-  },
-  menuDivider: {
-    height: 1,
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
   },
 });

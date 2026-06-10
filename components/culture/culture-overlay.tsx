@@ -18,6 +18,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 const CULTURE_OVERLAY_TAB_CLEARANCE = -70;
 /** Action rail sits above the country card. */
 const CULTURE_ACTION_RAIL_CLEARANCE = -16;
+/** Bottom band only — keeps the hero video bright. */
+const BOTTOM_SCRIM_HEIGHT = "38%";
 
 type CultureOverlayProps = {
   country: Country;
@@ -41,8 +43,8 @@ export function CultureOverlay({ country }: CultureOverlayProps) {
       pointerEvents="box-none"
     >
       <LinearGradient
-        colors={["transparent", "rgba(0, 0, 0, 0.45)", "rgba(0, 0, 0, 0.72)"]}
-        locations={[0, 0.45, 1]}
+        colors={["transparent", "rgba(0, 0, 0, 0.22)", "rgba(0, 0, 0, 0.48)"]}
+        locations={[0, 0.55, 1]}
         style={styles.scrim}
         pointerEvents="none"
       />
@@ -124,7 +126,11 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   scrim: {
-    ...StyleSheet.absoluteFillObject,
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: BOTTOM_SCRIM_HEIGHT,
   },
   expandedScrim: {
     ...StyleSheet.absoluteFillObject,

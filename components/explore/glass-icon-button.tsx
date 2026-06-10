@@ -39,6 +39,8 @@ type GlassIconButtonProps = {
   compactSize?: "default" | "small";
   /** Override icon pixel size for plain / compact variants. */
   iconSize?: number;
+  /** Plain variant only — caption under the icon (Culture action rail). */
+  showLabel?: boolean;
 };
 
 function triggerHaptic(style: HapticStyle) {
@@ -65,6 +67,7 @@ export function GlassIconButton({
   iconOnly = false,
   compactSize = "default",
   iconSize: iconSizeOverride,
+  showLabel = false,
 }: GlassIconButtonProps) {
   const isSmallCompact = variant === "compact" && compactSize === "small";
   const compactIconSize =
@@ -108,8 +111,11 @@ export function GlassIconButton({
           ? styles.hitArea
           : variant === "plain"
             ? [
-                styles.hitAreaPlain,
-                { minWidth: plainTouchSize, minHeight: plainTouchSize },
+                showLabel ? styles.hitAreaPlainLabeled : styles.hitAreaPlain,
+                {
+                  minWidth: plainTouchSize,
+                  minHeight: showLabel ? undefined : plainTouchSize,
+                },
               ]
             : [
                 styles.hitAreaCompact,
@@ -140,10 +146,12 @@ export function GlassIconButton({
           color={iconColor}
         />
       )}
-      {variant === "glass" && !iconOnly ? (
+      {(variant === "glass" && !iconOnly) ||
+      (variant === "plain" && showLabel) ? (
         <Text
           style={[
             styles.label,
+            variant === "plain" && showLabel && styles.plainLabel,
             active && !disabled && { color: activeColor },
             disabled && styles.labelDisabled,
           ]}
@@ -171,6 +179,11 @@ const styles = StyleSheet.create({
   hitAreaPlain: {
     alignItems: "center",
     justifyContent: "center",
+  },
+  hitAreaPlainLabeled: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
   },
   hitAreaDisabled: {
     opacity: 0.72,
@@ -201,6 +214,14 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: "Poppins-Medium",
     color: "#ffffff",
+  },
+  plainLabel: {
+    fontSize: 10,
+    lineHeight: 12,
+    textAlign: "center",
+    textShadowColor: "rgba(0, 0, 0, 0.45)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   labelDisabled: {
     color: "rgba(255, 255, 255, 0.45)",

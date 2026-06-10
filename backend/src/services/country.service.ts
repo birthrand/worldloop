@@ -112,11 +112,17 @@ export async function getCountryByName(name: string): Promise<CountryBasic> {
   return getOrSet(key, CACHE_TTL.country, () => fetchCountryFromApi(name));
 }
 
+export async function getAllCountryBasics(): Promise<CountryBasic[]> {
+  const key = cacheKeys.feedCountries("basics");
+
+  return getOrSet(key, CACHE_TTL.feed, () => fetchAllCountriesFromApi());
+}
+
 export async function getFeedCountries(): Promise<CountryBasic[]> {
   const key = cacheKeys.feedCountries("all");
 
   return getOrSet(key, CACHE_TTL.feed, async () => {
-    const countries = await fetchAllCountriesFromApi();
+    const countries = await getAllCountryBasics();
     return shuffleCountries(countries);
   });
 }

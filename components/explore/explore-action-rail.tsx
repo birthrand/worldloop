@@ -494,6 +494,7 @@ export function ExploreActionRail({
               icon="globe-outline"
               label="Map"
               variant="plain"
+              showLabel
               iconTone="bright"
               iconSize={CULTURE_CHROME_ICON_SIZE}
               onPress={handleJumpToMap}
@@ -505,6 +506,7 @@ export function ExploreActionRail({
               icon={saved ? "bookmark" : "bookmark-outline"}
               label="Save"
               variant="plain"
+              showLabel
               iconTone="bright"
               iconSize={CULTURE_CHROME_ICON_SIZE}
               active={saved}
@@ -524,6 +526,7 @@ export function ExploreActionRail({
               icon="share-social-outline"
               label="Share"
               variant="plain"
+              showLabel
               iconTone="bright"
               iconSize={CULTURE_CHROME_ICON_SIZE}
               onPress={() => {
@@ -537,6 +540,7 @@ export function ExploreActionRail({
               icon="swap-vertical-outline"
               label="Sort"
               variant="plain"
+              showLabel
               iconTone="bright"
               iconSize={CULTURE_CHROME_ICON_SIZE}
               active={hasCustomSort}
@@ -551,6 +555,7 @@ export function ExploreActionRail({
               }
               label={cultureIsMuted ? "Muted" : "Sound"}
               variant="plain"
+              showLabel
               iconTone="bright"
               iconSize={CULTURE_CHROME_ICON_SIZE}
               active={!cultureIsMuted}

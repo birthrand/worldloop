@@ -1,10 +1,14 @@
 import { countryMatchesExploreRegion } from "../lib/app-region.js";
 import { HttpError } from "../lib/http.js";
+import { normalizeImageDisplayWidth } from "../lib/upstream-validation.js";
 import type { Country, CountryBasic } from "../types/country.js";
 import { enrichCountryWithAi } from "./ai.service.js";
 import { CACHE_TTL, cacheKeys, getOrSet } from "./cache.service.js";
 import { getFeedCountries } from "./country.service.js";
-import { enrichCountryWithImages } from "./image.service.js";
+import {
+  enrichCountryWithImages,
+  type ImageDisplayOptions,
+} from "./image.service.js";
 import { enrichCountryWithVideos } from "./video.service.js";
 
 export type SearchResponse = {
@@ -16,8 +20,11 @@ export type SearchResponse = {
   };
 };
 
-async function enrichCountry(country: CountryBasic): Promise<Country> {
-  const withImages = await enrichCountryWithImages(country);
+async function enrichCountry(
+  country: CountryBasic,
+  imageOptions: ImageDisplayOptions,
+): Promise<Country> {
+  const withImages = await enrichCountryWithImages(country, imageOptions);
   const withVideos = await enrichCountryWithVideos(withImages);
   return enrichCountryWithAi(withVideos);
 }
@@ -70,10 +77,13 @@ function filterCountries(
 async function executeSearch(
   query: string,
   region: string,
+  imageOptions: ImageDisplayOptions,
 ): Promise<SearchResponse> {
   const allCountries = await getFeedCountries();
   const matches = filterCountries(allCountries, query, region);
-  const data = await Promise.all(matches.map(enrichCountry));
+  const data = await Promise.all(
+    matches.map((country) => enrichCountry(country, imageOptions)),
+  );
 
   return {
     data,
@@ -92,6 +102,7 @@ async function executeSearch(
 export async function searchCountries(
   query?: string,
   region?: string,
+  imageOptions: ImageDisplayOptions = {},
 ): Promise<SearchResponse> {
   const normalizedQuery = query?.trim() ?? "";
   const normalizedRegion = region?.trim() ?? "";
@@ -104,9 +115,14 @@ export async function searchCountries(
     );
   }
 
-  const cacheKey = cacheKeys.search(normalizedQuery, normalizedRegion);
+  const displayWidth = normalizeImageDisplayWidth(imageOptions.displayWidthPx);
+  const cacheKey = cacheKeys.search(
+    normalizedQuery,
+    normalizedRegion,
+    displayWidth,
+  );
 
   return getOrSet(cacheKey, CACHE_TTL.search, () =>
-    executeSearch(normalizedQuery, normalizedRegion),
+    executeSearch(normalizedQuery, normalizedRegion, imageOptions),
   );
 }

@@ -11,7 +11,10 @@ import type { DiscoverQuery, DiscoverResponse } from "../types/discover.js";
 import type { MapCountry } from "../types/map.js";
 import { CACHE_TTL, cacheKeys, getOrSet } from "./cache.service.js";
 import { getFeedCountries } from "./country.service.js";
-import { getImagesForCountry } from "./image.service.js";
+import {
+  getImagesForCountry,
+  MAP_THUMBNAIL_DISPLAY_WIDTH,
+} from "./image.service.js";
 
 /** Centroid ± degrees when no precomputed bbox asset exists (temporary v1 fallback). */
 const CENTROID_FALLBACK_PADDING_DEGREES = 2;
@@ -59,7 +62,9 @@ async function ensureServerGeoIndex(): Promise<GeoIndexedCountry[]> {
 }
 
 async function toMapCountry(entity: GeoIndexedCountry): Promise<MapCountry> {
-  const images = await getImagesForCountry(entity.name);
+  const images = await getImagesForCountry(entity.name, {
+    displayWidthPx: MAP_THUMBNAIL_DISPLAY_WIDTH,
+  });
 
   return {
     name: entity.name,

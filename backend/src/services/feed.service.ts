@@ -1,10 +1,14 @@
 import { HttpError } from "../lib/http.js";
+import { normalizeImageDisplayWidth } from "../lib/upstream-validation.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../lib/validation.js";
 import type { Country, CountryBasic } from "../types/country.js";
 import { enrichCountryWithAi } from "./ai.service.js";
 import { CACHE_TTL, cacheKeys, getOrSet } from "./cache.service.js";
 import { getFeedCountries } from "./country.service.js";
-import { enrichCountryWithImages } from "./image.service.js";
+import {
+  enrichCountryWithImages,
+  type ImageDisplayOptions,
+} from "./image.service.js";
 import { enrichCountryWithVideos } from "./video.service.js";
 
 export type FeedBatchResponse = {
@@ -49,8 +53,11 @@ function parseCursor(cursor?: string): number {
   return offset;
 }
 
-async function enrichCountry(country: CountryBasic): Promise<Country> {
-  const withImages = await enrichCountryWithImages(country);
+async function enrichCountry(
+  country: CountryBasic,
+  imageOptions: ImageDisplayOptions,
+): Promise<Country> {
+  const withImages = await enrichCountryWithImages(country, imageOptions);
   const withVideos = await enrichCountryWithVideos(withImages);
   return enrichCountryWithAi(withVideos);
 }
@@ -58,11 +65,14 @@ async function enrichCountry(country: CountryBasic): Promise<Country> {
 async function buildFeedBatch(
   offset: number,
   limit: number,
+  imageOptions: ImageDisplayOptions,
 ): Promise<FeedBatchResponse> {
   const allCountries = await getFeedCountries();
   const slice = allCountries.slice(offset, offset + limit);
 
-  const data = await Promise.all(slice.map(enrichCountry));
+  const data = await Promise.all(
+    slice.map((country) => enrichCountry(country, imageOptions)),
+  );
 
   const nextOffset = offset + limit;
   const nextCursor =
@@ -74,12 +84,17 @@ async function buildFeedBatch(
 export async function getFeedBatch(
   cursor?: string,
   limit?: number,
+  imageOptions: ImageDisplayOptions = {},
 ): Promise<FeedBatchResponse> {
   const offset = parseCursor(cursor);
   const pageSize = parseLimit(limit);
-  const cacheKey = cacheKeys.feedCountries(`${offset}:${pageSize}`);
+  const displayWidth = normalizeImageDisplayWidth(imageOptions.displayWidthPx);
+  const cacheKey = cacheKeys.feedCountries(
+    `${offset}:${pageSize}`,
+    displayWidth,
+  );
 
   return getOrSet(cacheKey, CACHE_TTL.feed, () =>
-    buildFeedBatch(offset, pageSize),
+    buildFeedBatch(offset, pageSize, imageOptions),
   );
 }
