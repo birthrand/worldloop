@@ -1,12 +1,12 @@
 Read AGENTS.md first and follow it strictly.
 
-Reference: `prompts-worldloop/00-backend-overview.md`, `prompts-worldloop/03-image-service.md`, `prompts-worldloop/05-feed-endpoint.md`, `prompts/17-explore-video-feed.md`
+Reference: `prompts-worldloop/00-backend-overview.md`, `prompts-worldloop/03-image-service.md`, `prompts-worldloop/05-feed-endpoint.md`, `prompts/17-culture-video-feed.md`
 
-Implement **Feature 15: Video Service** — one short landscape travel clip per country for the Explore feed hero.
+Implement **Feature 15: Video Service** — one short travel clip per country for the Culture tab video feed.
 
 ## Goal
 
-Provide **0–1 playable MP4 URLs** per country so the mobile Explore feed can autoplay muted looping video (see `prompts/17-explore-video-feed.md`).
+Provide **0–1 playable MP4 URLs** per country so the mobile Culture tab can autoplay muted looping video (see `prompts/17-culture-video-feed.md`).
 
 Provider chain (v1):
 
@@ -23,7 +23,7 @@ Do **not** call video APIs from the Expo app. URLs only — no hosting or transc
 - `backend/src/services/feed.service.ts` — `enrichCountry()` = images + AI
 - `backend/src/types/country.ts` — no `videos` field yet
 - `backend/src/lib/upstream-validation.ts` — `parsePexelsResults()` for **photos** only
-- Mobile Explore hero is image-only (`HeroImagePager`)
+- Mobile Explore hero is image-only (`HeroImagePager`); Culture tab owns video playback
 
 This prompt adds a **parallel enrichment service** for video, mirroring the image service patterns.
 
@@ -69,7 +69,7 @@ export type Country = {
 - v1 returns **at most 1** video per country
 - `url` must be `https://` and end in `.mp4` (or known Pexels CDN MP4 path)
 
-Mirror the same types in mobile `types/country.ts` when implementing `prompts/17-explore-video-feed.md`.
+Mirror the same types in mobile `types/country.ts` when implementing `prompts/17-culture-video-feed.md`.
 
 ---
 
@@ -203,7 +203,7 @@ On cache hit, existing `getOrSet` logging applies.
 - Uploading or proxying video through WorldLoop CDN
 - AI-generated video
 - Video pre-generation batch jobs (`10-pregeneration-system.md`)
-- Mobile playback UI (`prompts/17-explore-video-feed.md`)
+- Mobile playback UI (`prompts/17-culture-video-feed.md`)
 
 ---
 
@@ -284,13 +284,13 @@ curl -s "http://localhost:3001/feed/countries?limit=3" | jq '.data[] | {name, vi
 
 **5. Invalid upstream** — mock 502 from Pexels in unit test or temporary throw; endpoint still returns country without video.
 
-After backend is verified, implement mobile playback per `prompts/17-explore-video-feed.md`.
+After backend is verified, implement mobile playback per `prompts/17-culture-video-feed.md`.
 
 ---
 
 ## Performance notes
 
-- Fetch **one** video per country — Explore v1 only plays the first slide
+- Fetch **one** video per country — Culture v1 only plays the first clip
 - Video enrichment runs in parallel per country inside `Promise.all` in feed batches (same as images/AI today)
 - Consider skipping video fetch when `PEXELS_API_KEY` is empty (short-circuit before HTTP)
 - Do not block feed on slow Pexels responses beyond existing upstream timeout patterns — fail open to `[]`
@@ -299,6 +299,6 @@ After backend is verified, implement mobile playback per `prompts/17-explore-vid
 
 ## Next steps
 
-1. `prompts/17-explore-video-feed.md` — mobile `HeroMediaPager` + `expo-video`
+1. `prompts/17-culture-video-feed.md` — Culture tab `CultureVideoSlide` + `expo-video`
 2. Optional: bump feed Redis cache version if you need immediate `videos` on all cached batches
 3. Optional v2: second provider (Mixkit static catalog keyed by region) when Pexels has no country match

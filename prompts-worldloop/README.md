@@ -49,4 +49,4 @@ Incremental backend implementation prompts for the WorldLoop API. Implement in n
 | Geo discovery        | `12`                   | After client `prompts/15a`–`15d`; bbox query API                            |
 | News / explorer      | `13`                   | After `04`; pairs with `prompts/16-ai-content-explorer-ui.md`               |
 | Landmarks pipeline   | `14`                   | After `03`; Wikidata + Overpass; extends profile endpoint                   |
-| Explore video hero   | `15`                   | After `03`; Pexels Video API; pairs with `prompts/17-explore-video-feed.md` |
+| Culture video feed   | `15`                   | After `03`; Pexels Video API; pairs with `prompts/17-culture-video-feed.md` |

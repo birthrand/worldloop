@@ -9,23 +9,17 @@ import {
 
 import { OnboardingVisualPager } from "@/components/onboarding/onboarding-visual-pager";
 import { ONBOARDING_SLIDES } from "@/data/onboarding-slides";
-import { useOnboardingStore } from "@/store/use-onboarding-store";
 
 export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
-  const completeOnboarding = useOnboardingStore(
-    (state) => state.completeOnboarding,
-  );
 
   const handleGetStarted = useCallback(() => {
-    completeOnboarding();
-    router.replace("/(tabs)/explore");
-  }, [completeOnboarding]);
+    router.push("/(auth)/sign-up");
+  }, []);
 
   const handleLogin = useCallback(() => {
-    completeOnboarding();
-    router.replace("/(tabs)/explore");
-  }, [completeOnboarding]);
+    router.push("/(auth)/sign-in");
+  }, []);
 
   return (
     <SafeAreaView edges={[]} style={styles.screen}>
