@@ -4,8 +4,8 @@ import { StyleSheet, View } from "react-native";
 
 import { ExploreError } from "@/components/explore/explore-error";
 import { ExploreFeed } from "@/components/explore/explore-feed";
-import { ExploreLoading } from "@/components/explore/explore-loading";
-import { SavedSpaceBackground } from "@/components/saved/saved-space-background";
+import { ExploreFeedSkeleton } from "@/components/explore/explore-feed-skeleton";
+import { EXPLORE_FEED_BODY_BG } from "@/constants/explore-feed-layout";
 import { useCountryFeedStore } from "@/store/use-country-feed-store";
 import { useSpatialContextStore } from "@/store/use-spatial-context-store";
 
@@ -71,7 +71,6 @@ export default function ExploreScreen() {
   return (
     <View style={styles.screen}>
       <StatusBar style="light" />
-      <SavedSpaceBackground />
 
       {showError ? (
         <ExploreError
@@ -85,11 +84,11 @@ export default function ExploreScreen() {
           }}
         />
       ) : showInitialLoading || showHereLoading ? (
-        <ExploreLoading />
+        <ExploreFeedSkeleton />
       ) : showFeed ? (
         <ExploreFeed />
       ) : (
-        <ExploreLoading />
+        <ExploreFeedSkeleton />
       )}
     </View>
   );
@@ -98,6 +97,6 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#0b132b",
+    backgroundColor: EXPLORE_FEED_BODY_BG,
   },
 });

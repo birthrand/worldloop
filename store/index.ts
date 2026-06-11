@@ -5,6 +5,7 @@ export { useIdentityStore } from "./use-identity-store";
 export type { SelectionSource } from "./use-identity-store";
 export { useMapStore } from "./use-map-store";
 export { useOnboardingStore } from "./use-onboarding-store";
+export { useProfileSettingsStore } from "./use-profile-settings-store";
 export { useSavedCountriesStore } from "./use-saved-countries-store";
 export { useSearchUiStore } from "./use-search-ui-store";
 export { useSpatialContextStore } from "./use-spatial-context-store";

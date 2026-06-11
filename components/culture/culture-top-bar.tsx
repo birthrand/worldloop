@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -11,11 +11,16 @@ import {
   CULTURE_CHROME_ICON_SIZE,
   CULTURE_CHROME_TITLE_SIZE,
   CULTURE_CHROME_TOUCH_SIZE,
+  CULTURE_HEADER_HORIZONTAL_PADDING,
 } from "@/constants/culture-chrome";
 import { useCultureFeedStore } from "@/store/use-culture-feed-store";
 import { useSearchUiStore } from "@/store/use-search-ui-store";
 
-export function CultureTopBar() {
+type CultureTopBarProps = {
+  visible?: boolean;
+};
+
+export function CultureTopBar({ visible = true }: CultureTopBarProps) {
   const insets = useSafeAreaInsets();
   const [isFeedMenuOpen, setIsFeedMenuOpen] = useState(false);
   const openSearch = useSearchUiStore((s) => s.openSearch);
@@ -23,6 +28,16 @@ export function CultureTopBar() {
     (s) => s.isOpen && s.context === "culture",
   );
   const isSortSheetOpen = useCultureFeedStore((s) => s.isSortSheetOpen);
+
+  useEffect(() => {
+    if (!visible && isFeedMenuOpen) {
+      setIsFeedMenuOpen(false);
+    }
+  }, [isFeedMenuOpen, visible]);
+
+  if (!visible) {
+    return null;
+  }
 
   return (
     <View style={styles.overlayRoot} pointerEvents="box-none">
@@ -45,6 +60,7 @@ export function CultureTopBar() {
           brandFontSize={CULTURE_CHROME_TITLE_SIZE}
           iconSize={CULTURE_CHROME_ICON_SIZE}
           searchIconSize={CULTURE_CHROME_ICON_SIZE}
+          horizontalPadding={CULTURE_HEADER_HORIZONTAL_PADDING}
         />
       </View>
 

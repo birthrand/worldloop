@@ -1,3 +1,4 @@
+import { ProfileBackButton } from "@/components/profile/profile-back-button";
 import { Ionicons } from "@expo/vector-icons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
@@ -21,10 +22,20 @@ export function getWorldLoopHeaderHeight(safeAreaTop: number) {
 }
 
 type WorldLoopHeaderProps = {
-  onMenuPress: () => void;
+  onMenuPress?: () => void;
   menuActive?: boolean;
-  onSearchPress: () => void;
+  onSearchPress?: () => void;
   searchActive?: boolean;
+  /** Center title — defaults to WorldLoop. */
+  title?: string;
+  /** When false, left slot is empty (keeps title centered). */
+  showMenu?: boolean;
+  /** When false, right slot is empty (keeps title centered). */
+  showSearch?: boolean;
+  /** When true, left slot shows a back chevron instead of menu/empty. */
+  showBack?: boolean;
+  onBackPress?: () => void;
+  backAccessibilityLabel?: string;
   inactiveColor?: string;
   brandFontFamily?: string;
   /** Row height — use 48+ on immersive overlays for 44pt touch targets. */
@@ -37,6 +48,13 @@ type WorldLoopHeaderProps = {
   menuAccessibilityHint?: string;
   searchAccessibilityLabel?: string;
   searchAccessibilityHint?: string;
+  showMore?: boolean;
+  onMorePress?: () => void;
+  moreActive?: boolean;
+  moreAccessibilityLabel?: string;
+  moreAccessibilityHint?: string;
+  /** Override horizontal inset for icon row — defaults to 16. */
+  horizontalPadding?: number;
 };
 
 export function WorldLoopHeader({
@@ -44,6 +62,12 @@ export function WorldLoopHeader({
   menuActive = false,
   onSearchPress,
   searchActive = false,
+  title = "WorldLoop",
+  showMenu = true,
+  showSearch = true,
+  showBack = false,
+  onBackPress,
+  backAccessibilityLabel = "Go back",
   inactiveColor = WORLDLOOP_HEADER_MUTED_COLOR,
   brandFontFamily = "Poppins-Medium",
   rowHeight = WORLDLOOP_HEADER_ROW_HEIGHT,
@@ -55,36 +79,78 @@ export function WorldLoopHeader({
   menuAccessibilityHint = "Opens For You, Here, and continent filters",
   searchAccessibilityLabel = "Search countries",
   searchAccessibilityHint = "Opens country search",
+  showMore = false,
+  onMorePress,
+  moreActive = false,
+  moreAccessibilityLabel = "More actions",
+  moreAccessibilityHint = "Opens share, sort, and other country actions",
+  horizontalPadding = WORLDLOOP_HEADER_HORIZONTAL_PADDING,
 }: WorldLoopHeaderProps) {
+  const actionIconSize = iconSize;
+  const leftSlotWidth = sideSlotWidth;
+  const hasDualRightActions = showMore && showSearch;
+  const rightActionWidth = hasDualRightActions
+    ? actionIconSize + 8
+    : sideSlotWidth;
+  const rightSlotWidth = hasDualRightActions
+    ? rightActionWidth * 2
+    : sideSlotWidth;
+  const titleSideInsetLeft = horizontalPadding + leftSlotWidth;
+  const titleSideInsetRight = horizontalPadding + rightSlotWidth;
+  const centerTitleInRow = leftSlotWidth !== rightSlotWidth;
+
   return (
-    <View style={[styles.headerRow, { height: rowHeight }]}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={menuAccessibilityLabel}
-        accessibilityHint={menuAccessibilityHint}
-        hitSlop={8}
-        onPress={onMenuPress}
-        style={[styles.sideSlot, { width: sideSlotWidth, height: rowHeight }]}
-      >
-        {({ pressed }) => (
-          <View
-            style={[
-              styles.headerIconBox,
-              { width: iconSize, height: iconSize },
-            ]}
-          >
-            <Ionicons
-              name="reorder-three-outline"
-              size={iconSize}
-              color={
-                pressed || menuActive
-                  ? WORLDLOOP_HEADER_ACCENT_COLOR
-                  : inactiveColor
-              }
-            />
-          </View>
-        )}
-      </Pressable>
+    <View
+      style={[
+        styles.headerRow,
+        { height: rowHeight, paddingHorizontal: horizontalPadding },
+      ]}
+    >
+      {showBack ? (
+        <View
+          style={[styles.sideSlot, { width: sideSlotWidth, height: rowHeight }]}
+        >
+          <ProfileBackButton
+            onPress={onBackPress ?? (() => {})}
+            accessibilityLabel={backAccessibilityLabel}
+            size={36}
+            iconSize={iconSize + 2}
+            iconColor={inactiveColor}
+          />
+        </View>
+      ) : showMenu ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={menuAccessibilityLabel}
+          accessibilityHint={menuAccessibilityHint}
+          hitSlop={8}
+          onPress={onMenuPress}
+          style={[styles.sideSlot, { width: leftSlotWidth, height: rowHeight }]}
+        >
+          {({ pressed }) => (
+            <View
+              style={[
+                styles.headerIconBox,
+                { width: actionIconSize, height: actionIconSize },
+              ]}
+            >
+              <Ionicons
+                name="reorder-three-outline"
+                size={actionIconSize}
+                color={
+                  pressed || menuActive
+                    ? WORLDLOOP_HEADER_ACCENT_COLOR
+                    : inactiveColor
+                }
+              />
+            </View>
+          )}
+        </Pressable>
+      ) : (
+        <View
+          style={[styles.sideSlot, { width: leftSlotWidth, height: rowHeight }]}
+        />
+      )}
 
       <Text
         style={[
@@ -94,40 +160,98 @@ export function WorldLoopHeader({
             fontFamily: brandFontFamily,
             fontSize: brandFontSize,
             lineHeight: rowHeight,
-            left: WORLDLOOP_HEADER_HORIZONTAL_PADDING + sideSlotWidth,
-            right: WORLDLOOP_HEADER_HORIZONTAL_PADDING + sideSlotWidth,
+            left: centerTitleInRow ? 0 : titleSideInsetLeft,
+            right: centerTitleInRow ? 0 : titleSideInsetRight,
           },
         ]}
         pointerEvents="none"
       >
-        WorldLoop
+        {title}
       </Text>
 
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={searchAccessibilityLabel}
-        accessibilityHint={searchAccessibilityHint}
-        hitSlop={8}
-        onPress={onSearchPress}
-        style={({ pressed }) => [
-          styles.sideSlot,
-          { width: sideSlotWidth, height: rowHeight },
-          pressed && styles.pressed,
-        ]}
-      >
+      {showSearch || showMore ? (
         <View
           style={[
-            styles.searchIconBox,
-            { width: searchIconSize, height: searchIconSize },
+            styles.rightActions,
+            { width: rightSlotWidth, height: rowHeight },
           ]}
         >
-          <Ionicons
-            name="search-outline"
-            size={searchIconSize}
-            color={searchActive ? WORLDLOOP_HEADER_ACCENT_COLOR : inactiveColor}
-          />
+          {showSearch ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={searchAccessibilityLabel}
+              accessibilityHint={searchAccessibilityHint}
+              hitSlop={8}
+              onPress={onSearchPress}
+              style={({ pressed }) => [
+                styles.rightActionButton,
+                { width: rightActionWidth },
+                pressed && styles.pressed,
+              ]}
+            >
+              {({ pressed }) => (
+                <View
+                  style={[
+                    styles.headerIconBox,
+                    { width: actionIconSize, height: actionIconSize },
+                  ]}
+                >
+                  <Ionicons
+                    name="search-outline"
+                    size={actionIconSize}
+                    color={
+                      searchActive || pressed
+                        ? WORLDLOOP_HEADER_ACCENT_COLOR
+                        : inactiveColor
+                    }
+                  />
+                </View>
+              )}
+            </Pressable>
+          ) : null}
+
+          {showMore ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={moreAccessibilityLabel}
+              accessibilityHint={moreAccessibilityHint}
+              hitSlop={8}
+              onPress={onMorePress}
+              style={({ pressed }) => [
+                styles.rightActionButton,
+                { width: rightActionWidth },
+                pressed && styles.pressed,
+              ]}
+            >
+              {({ pressed }) => (
+                <View
+                  style={[
+                    styles.headerIconBox,
+                    { width: actionIconSize, height: actionIconSize },
+                  ]}
+                >
+                  <Ionicons
+                    name="ellipsis-vertical"
+                    size={actionIconSize}
+                    color={
+                      pressed || moreActive
+                        ? WORLDLOOP_HEADER_ACCENT_COLOR
+                        : inactiveColor
+                    }
+                  />
+                </View>
+              )}
+            </Pressable>
+          ) : null}
         </View>
-      </Pressable>
+      ) : (
+        <View
+          style={[
+            styles.sideSlot,
+            { width: rightSlotWidth, height: rowHeight },
+          ]}
+        />
+      )}
     </View>
   );
 }
@@ -138,17 +262,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: WORLDLOOP_HEADER_HORIZONTAL_PADDING,
   },
   sideSlot: {
     alignItems: "center",
     justifyContent: "center",
   },
-  headerIconBox: {
+  rightActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+  },
+  rightActionButton: {
+    height: "100%",
     alignItems: "center",
     justifyContent: "center",
   },
-  searchIconBox: {
+  headerIconBox: {
     alignItems: "center",
     justifyContent: "center",
   },

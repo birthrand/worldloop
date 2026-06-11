@@ -1,6 +1,9 @@
 import { CountryFeedPage } from "@/components/explore/country-feed-page";
 import { ExploreTopBar } from "@/components/explore/explore-top-bar";
-import { getExploreHeaderContentHeight } from "@/constants/explore-feed-layout";
+import {
+  EXPLORE_FEED_BODY_BG,
+  getExploreHeroTopInset,
+} from "@/constants/explore-feed-layout";
 import { getCountryImages } from "@/lib/format-country";
 import { prefetchCountryProfiles } from "@/lib/prefetch-country-profiles";
 import { useCountryFeedStore } from "@/store/use-country-feed-store";
@@ -42,9 +45,13 @@ export function ExploreFeed() {
   const error = useCountryFeedStore((s) => s.error);
 
   const feedListKey = `${discoveryMode}-${selectedRegion ?? "for-you"}-${focusEpoch}`;
-  const headerContentInset = getExploreHeaderContentHeight(insets.top, {
-    hereMode: discoveryMode === "here",
-  });
+  const heroTopInset = useMemo(
+    () =>
+      getExploreHeroTopInset(insets.top, {
+        hereMode: discoveryMode === "here",
+      }),
+    [discoveryMode, insets.top],
+  );
   const currentCountry = countries[currentIndex];
   const currentHeroImages = useMemo(
     () => (currentCountry ? getCountryImages(currentCountry) : []),
@@ -68,7 +75,7 @@ export function ExploreFeed() {
 
   useEffect(() => {
     hasSyncedInitialScrollRef.current = false;
-  }, [selectedRegion, discoveryMode]);
+  }, [feedListKey]);
 
   // Only scroll programmatically when restoring a non-zero index (e.g. layout).
   // Search/home focus remounts the list at index 0 — never scroll the feed to a deep index.
@@ -86,7 +93,7 @@ export function ExploreFeed() {
     scrollToCurrentIndex(animated);
   }, [currentIndex, countries.length, pageHeight, scrollToCurrentIndex]);
 
-  const onViewableItemsChanged = useRef(
+  const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
       const first = viewableItems[0];
       if (first?.index == null) return;
@@ -112,7 +119,8 @@ export function ExploreFeed() {
         void loadMoreFeed();
       }
     },
-  ).current;
+    [loadMoreFeed, setCurrentIndex],
+  );
 
   const viewabilityConfig = useRef({
     itemVisiblePercentThreshold: 50,
@@ -131,12 +139,12 @@ export function ExploreFeed() {
       <CountryFeedPage
         country={item}
         pageHeight={pageHeight}
-        headerContentInset={headerContentInset}
+        heroTopInset={heroTopInset}
         isActive={index === currentIndex}
         onActiveHeroIndexChange={setActiveHeroIndex}
       />
     ),
-    [currentIndex, headerContentInset, pageHeight],
+    [currentIndex, heroTopInset, pageHeight],
   );
 
   const keyExtractor = useCallback((item: Country) => item.name, []);
@@ -242,11 +250,11 @@ const styles = StyleSheet.create({
   },
   feedBody: {
     flex: 1,
-    backgroundColor: "#0b132b",
+    backgroundColor: EXPLORE_FEED_BODY_BG,
   },
   list: {
     flex: 1,
-    backgroundColor: "transparent",
+    backgroundColor: EXPLORE_FEED_BODY_BG,
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -258,7 +266,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(11, 19, 43, 0.92)",
+    backgroundColor: "rgba(7, 14, 31, 0.92)",
     paddingHorizontal: 32,
     gap: 12,
   },

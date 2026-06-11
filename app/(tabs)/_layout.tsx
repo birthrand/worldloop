@@ -1,4 +1,5 @@
-import { Tabs } from "expo-router";
+import { useAuth } from "@clerk/expo";
+import { Redirect, Tabs } from "expo-router";
 import { StyleSheet, View } from "react-native";
 
 import { BottomTabBar } from "@/components/bottom-tab-bar";
@@ -6,6 +7,16 @@ import { SearchOverlay } from "@/components/search/search-overlay";
 import { SPACE_SCREEN_BASE, SPACE_TAB_BAR_BG } from "@/constants/space-theme";
 
 export default function TabsLayout() {
+  const { isSignedIn, isLoaded } = useAuth();
+
+  if (!isLoaded) {
+    return null;
+  }
+
+  if (!isSignedIn) {
+    return <Redirect href="/onboarding" />;
+  }
+
   return (
     <View style={styles.root}>
       <Tabs

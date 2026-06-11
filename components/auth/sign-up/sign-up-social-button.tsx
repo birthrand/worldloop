@@ -14,6 +14,7 @@ type SignUpSocialProvider = "google" | "apple";
 type SignUpSocialButtonProps = {
   provider: SignUpSocialProvider;
   onPress?: () => void;
+  disabled?: boolean;
 };
 
 const SOCIAL_ICON_SIZE = 18;
@@ -32,11 +33,13 @@ const PROVIDER_CONFIG = {
 export function SignUpSocialButton({
   provider,
   onPress,
+  disabled = false,
 }: SignUpSocialButtonProps) {
   const config = PROVIDER_CONFIG[provider];
 
   const handlePress = () => {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (disabled) return;
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onPress?.();
   };
 
@@ -44,8 +47,14 @@ export function SignUpSocialButton({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={config.label}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={handlePress}
-      style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
+      style={({ pressed }) => [
+        styles.button,
+        disabled && styles.buttonDisabled,
+        pressed && !disabled && styles.buttonPressed,
+      ]}
     >
       <View style={styles.content}>
         {provider === "google" ? (
@@ -76,8 +85,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   buttonPressed: {
-    opacity: 0.92,
-    borderColor: "rgba(255, 255, 255, 0.22)",
+    backgroundColor: SIGN_UP_COLORS.socialBgPressed,
+    borderColor: SIGN_UP_COLORS.socialBorderPressed,
+    transform: [{ scale: 0.98 }],
+  },
+  buttonDisabled: {
+    opacity: 0.45,
   },
   content: {
     flexDirection: "row",

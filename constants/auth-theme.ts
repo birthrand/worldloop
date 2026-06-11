@@ -31,8 +31,10 @@ export const AUTH_COLORS = {
   tabActiveText: "#FFFFFF",
   dividerLine: "rgba(255, 255, 255, 0.14)",
   socialBg: "rgba(255, 255, 255, 0.06)",
+  socialBgPressed: "rgba(255, 255, 255, 0.16)",
   /** Outlined secondary control — matches register social buttons */
   socialBorder: "rgba(255, 255, 255, 0.14)",
+  socialBorderPressed: "rgba(255, 255, 255, 0.38)",
   socialText: "#FFFFFF",
   google: "#EA4335",
   facebook: "#1877F2",

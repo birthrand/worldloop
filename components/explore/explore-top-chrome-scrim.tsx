@@ -1,6 +1,12 @@
 import { BlurView } from "expo-blur";
 import { Platform, StyleSheet, View } from "react-native";
 
+import {
+  EXPLORE_FEED_CHROME_BASE_TINT,
+  EXPLORE_FEED_CHROME_SCRIM_FALLBACK,
+  EXPLORE_FEED_CHROME_TOP_GRADIENT,
+} from "@/constants/explore-feed-layout";
+
 type GradientViewStyle = {
   experimental_backgroundImage: string;
 };
@@ -10,11 +16,6 @@ type ExploreTopChromeScrimProps = {
 };
 
 const HEADER_SCRIM_BLUR_INTENSITY = 52;
-const HEADER_SCRIM_WEB_FALLBACK = "rgba(5, 10, 24, 0.88)";
-
-/** Dense top band keeps logo and icons legible on bright hero photos. */
-const HEADER_SCRIM_TOP_GRADIENT =
-  "linear-gradient(to bottom, rgba(3, 6, 16, 0.82) 0%, rgba(5, 10, 24, 0.62) 38%, rgba(11, 19, 43, 0.28) 68%, rgba(11, 19, 43, 0) 100%)";
 
 /** Frosted fade so header chrome stays readable without blocking the hero image. */
 export function ExploreTopChromeScrim({ height }: ExploreTopChromeScrimProps) {
@@ -34,7 +35,7 @@ export function ExploreTopChromeScrim({ height }: ExploreTopChromeScrimProps) {
         style={[
           styles.fadeOverlay,
           {
-            experimental_backgroundImage: HEADER_SCRIM_TOP_GRADIENT,
+            experimental_backgroundImage: EXPLORE_FEED_CHROME_TOP_GRADIENT,
           } satisfies GradientViewStyle,
         ]}
       />
@@ -52,11 +53,11 @@ const styles = StyleSheet.create({
   },
   webFallback: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: HEADER_SCRIM_WEB_FALLBACK,
+    backgroundColor: EXPLORE_FEED_CHROME_SCRIM_FALLBACK,
   },
   baseTint: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(3, 6, 16, 0.28)",
+    backgroundColor: EXPLORE_FEED_CHROME_BASE_TINT,
   },
   fadeOverlay: {
     ...StyleSheet.absoluteFillObject,

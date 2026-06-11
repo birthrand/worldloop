@@ -32,7 +32,7 @@ export function AuthSocialButton({ provider, onPress }: AuthSocialButtonProps) {
   const config = PROVIDER_CONFIG[provider];
 
   const handlePress = () => {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onPress?.();
   };
 
@@ -64,8 +64,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   buttonPressed: {
-    opacity: 0.92,
-    borderColor: "rgba(255, 255, 255, 0.22)",
+    backgroundColor: AUTH_COLORS.socialBgPressed,
+    borderColor: AUTH_COLORS.socialBorderPressed,
+    transform: [{ scale: 0.98 }],
   },
   label: {
     color: AUTH_COLORS.socialText,
