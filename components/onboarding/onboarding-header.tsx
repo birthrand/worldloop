@@ -1,9 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 
-import {
-  ONBOARDING_COLORS,
-  ONBOARDING_TYPOGRAPHY,
-} from "@/constants/onboarding-theme";
+import { ONBOARDING_TYPOGRAPHY } from "@/constants/onboarding-theme";
 
 export function OnboardingHeader() {
   return (
@@ -20,7 +17,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   brand: {
-    color: ONBOARDING_COLORS.textPrimary,
+    color: "rgba(255, 255, 255, 0.8)",
     fontFamily: "Poppins-SemiBold",
     fontSize: ONBOARDING_TYPOGRAPHY.brand.fontSize,
     lineHeight: ONBOARDING_TYPOGRAPHY.brand.lineHeight,

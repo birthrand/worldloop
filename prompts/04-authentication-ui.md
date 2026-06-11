@@ -1,6 +1,12 @@
 Read AGENTS.md first and follow it strictly.
 
-Implement the Sign Up screen exactly as shown in the attached design. Then create a matching Sign In screen using the same layout and visual style, but with sign-in copy and no password field. Both screens should use email and social auth UI only.
+Implement the Sign Up screen exactly as shown in the attached design. Then create a matching Sign In screen using the same layout and visual style, but with sign-in copy.
+
+**Sign In:** email + password + social (Google/Apple), with a "Forgot password?" link.
+
+**Sign Up:** email + password + confirm password + social (Google/Apple).
+
+Both screens share the same shell, spacing, and visual treatment. Do not remove the password field from sign-in.
 
 Update onboarding so pressing Get Started navigates to the Sign Up screen.
 

@@ -1,9 +1,9 @@
 import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
+import { SignUpFooterLink } from "@/components/auth/sign-up/sign-up-footer-link";
 import { OnboardingCta } from "@/components/onboarding/onboarding-cta";
 import { OnboardingHeadline } from "@/components/onboarding/onboarding-headline";
 import { OnboardingHeadlineDivider } from "@/components/onboarding/onboarding-headline-divider";
-import { OnboardingLoginLink } from "@/components/onboarding/onboarding-login-link";
 import {
   ONBOARDING_COLORS,
   ONBOARDING_SPACING,
@@ -58,7 +58,11 @@ export function OnboardingSlideContent({
       >
         <OnboardingCta label={slide.ctaLabel} onPress={onPress} />
         {showLoginLink && onLoginPress ? (
-          <OnboardingLoginLink onPress={onLoginPress} />
+          <SignUpFooterLink
+            prompt="Already have an account?"
+            actionLabel="Log in"
+            onPress={onLoginPress}
+          />
         ) : null}
       </View>
     </View>

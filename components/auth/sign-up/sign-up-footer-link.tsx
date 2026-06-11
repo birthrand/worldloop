@@ -2,15 +2,22 @@ import * as Haptics from "expo-haptics";
 import { Pressable, StyleSheet, Text } from "react-native";
 
 import {
-  ONBOARDING_COLORS,
-  ONBOARDING_TYPOGRAPHY,
-} from "@/constants/onboarding-theme";
+  SIGN_UP_COLORS,
+  SIGN_UP_SPACING,
+  SIGN_UP_TYPOGRAPHY,
+} from "@/constants/sign-up-theme";
 
-type OnboardingLoginLinkProps = {
+type SignUpFooterLinkProps = {
+  prompt: string;
+  actionLabel: string;
   onPress: () => void;
 };
 
-export function OnboardingLoginLink({ onPress }: OnboardingLoginLinkProps) {
+export function SignUpFooterLink({
+  prompt,
+  actionLabel,
+  onPress,
+}: SignUpFooterLinkProps) {
   const handlePress = () => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onPress();
@@ -19,13 +26,12 @@ export function OnboardingLoginLink({ onPress }: OnboardingLoginLinkProps) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="Log in to your account"
       onPress={handlePress}
       style={styles.wrap}
       hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
     >
       <Text style={styles.prompt}>
-        Already have an account? <Text style={styles.link}>Log in</Text>
+        {prompt} <Text style={styles.action}>{actionLabel}</Text>
       </Text>
     </Pressable>
   );
@@ -34,20 +40,19 @@ export function OnboardingLoginLink({ onPress }: OnboardingLoginLinkProps) {
 const styles = StyleSheet.create({
   wrap: {
     alignItems: "center",
-    paddingVertical: 4,
+    paddingVertical: SIGN_UP_SPACING.footerTapPadding,
     minHeight: 44,
     justifyContent: "center",
   },
   prompt: {
-    color: ONBOARDING_COLORS.textMuted,
+    color: SIGN_UP_COLORS.textMuted,
     fontFamily: "Poppins-Regular",
-    fontSize: ONBOARDING_TYPOGRAPHY.secondary.fontSize,
-    lineHeight: ONBOARDING_TYPOGRAPHY.secondary.lineHeight,
+    fontSize: SIGN_UP_TYPOGRAPHY.footer.fontSize,
+    lineHeight: SIGN_UP_TYPOGRAPHY.footer.lineHeight,
     textAlign: "center",
-    flexShrink: 0,
   },
-  link: {
-    color: ONBOARDING_COLORS.gold,
-    fontFamily: "Poppins-SemiBold",
+  action: {
+    color: SIGN_UP_COLORS.link,
+    fontFamily: "Poppins-Medium",
   },
 });
