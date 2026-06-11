@@ -1,4 +1,3 @@
-import { BlurView } from "expo-blur";
 import { useEffect, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -84,51 +83,46 @@ export function AuthVerificationModal({
             { paddingBottom: Math.max(insets.bottom, 20) },
           ]}
         >
-          <BlurView intensity={32} tint="dark" style={styles.sheetBlur}>
-            <View style={styles.sheet}>
-              <Text style={styles.title}>Check your email</Text>
-              <Text style={styles.message}>
-                We sent a 6-digit verification code to{" "}
-                <Text style={styles.email}>{email || "your email"}</Text>. Enter
-                it below to continue.
-              </Text>
+          <View style={styles.sheet}>
+            <Text style={styles.title}>Check your email</Text>
+            <Text style={styles.message}>
+              We sent a 6-digit verification code to{" "}
+              <Text style={styles.email}>{email || "your email"}</Text>. Enter
+              it below to continue.
+            </Text>
 
-              <Pressable
-                accessibilityRole="none"
-                onPress={() => inputRef.current?.focus()}
-                style={styles.codeRow}
-              >
-                {Array.from({ length: CODE_LENGTH }, (_, index) => {
-                  const digit = code[index] ?? "";
-                  const isActive = code.length === index;
+            <Pressable
+              accessibilityRole="none"
+              onPress={() => inputRef.current?.focus()}
+              style={styles.codeRow}
+            >
+              {Array.from({ length: CODE_LENGTH }, (_, index) => {
+                const digit = code[index] ?? "";
+                const isActive = code.length === index;
 
-                  return (
-                    <View
-                      key={index}
-                      style={[
-                        styles.codeCell,
-                        isActive && styles.codeCellActive,
-                      ]}
-                    >
-                      <Text style={styles.codeDigit}>{digit}</Text>
-                    </View>
-                  );
-                })}
-              </Pressable>
+                return (
+                  <View
+                    key={index}
+                    style={[styles.codeCell, isActive && styles.codeCellActive]}
+                  >
+                    <Text style={styles.codeDigit}>{digit}</Text>
+                  </View>
+                );
+              })}
+            </Pressable>
 
-              <TextInput
-                ref={inputRef}
-                value={code}
-                onChangeText={handleChange}
-                keyboardType="number-pad"
-                textContentType="oneTimeCode"
-                autoComplete="one-time-code"
-                maxLength={CODE_LENGTH}
-                caretHidden
-                style={styles.hiddenInput}
-              />
-            </View>
-          </BlurView>
+            <TextInput
+              ref={inputRef}
+              value={code}
+              onChangeText={handleChange}
+              keyboardType="number-pad"
+              textContentType="oneTimeCode"
+              autoComplete="one-time-code"
+              maxLength={CODE_LENGTH}
+              caretHidden
+              style={styles.hiddenInput}
+            />
+          </View>
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -142,23 +136,31 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(11, 19, 43, 0.72)",
+    backgroundColor: AUTH_COLORS.modalBackdrop,
   },
   sheetWrap: {
     paddingHorizontal: 20,
   },
-  sheetBlur: {
-    borderRadius: AUTH_CARD_RADIUS,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: AUTH_COLORS.cardBorder,
-  },
   sheet: {
-    backgroundColor: AUTH_COLORS.cardBg,
+    borderRadius: AUTH_CARD_RADIUS,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.5)",
+    backgroundColor: AUTH_COLORS.modalSheetBg,
     paddingHorizontal: 24,
     paddingTop: 28,
     paddingBottom: 24,
     gap: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000000",
+        shadowOffset: { width: 0, height: -8 },
+        shadowOpacity: 0.4,
+        shadowRadius: 24,
+      },
+      android: {
+        elevation: 16,
+      },
+    }),
   },
   title: {
     color: AUTH_COLORS.textPrimary,

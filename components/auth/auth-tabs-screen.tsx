@@ -38,6 +38,7 @@ export function AuthTabsScreen({ initialTab }: AuthTabsScreenProps) {
 
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
+  const [registerConfirmPassword, setRegisterConfirmPassword] = useState("");
 
   const {
     isVerificationVisible,
@@ -54,8 +55,13 @@ export function AuthTabsScreen({ initialTab }: AuthTabsScreenProps) {
   );
 
   const canRegister = useMemo(() => {
-    return registerEmail.trim().length > 0 && registerPassword.length >= 6;
-  }, [registerEmail, registerPassword]);
+    return (
+      registerEmail.trim().length > 0 &&
+      registerPassword.length >= 6 &&
+      registerConfirmPassword.length > 0 &&
+      registerPassword === registerConfirmPassword
+    );
+  }, [registerEmail, registerPassword, registerConfirmPassword]);
 
   const loginForm = (
     <>
@@ -135,6 +141,16 @@ export function AuthTabsScreen({ initialTab }: AuthTabsScreenProps) {
             isPassword
             textContentType="newPassword"
             autoComplete="new-password"
+          />
+          <SignUpField
+            label="Confirm Password"
+            placeholder="••••••••"
+            accessibilityLabel="Confirm password"
+            value={registerConfirmPassword}
+            onChangeText={setRegisterConfirmPassword}
+            isPassword
+            textContentType="newPassword"
+            autoComplete="password"
           />
         </View>
 

@@ -22,7 +22,7 @@ export const AUTH_COLORS = {
   accentBorderMuted: "rgba(245, 184, 76, 0.28)",
   inputBg: "rgba(255, 255, 255, 0.06)",
   inputBorder: "rgba(255, 255, 255, 0.12)",
-  inputPlaceholder: "#64748B",
+  inputPlaceholder: "#6E7A8A",
   fieldBorder: "rgba(255, 255, 255, 0)",
   fieldLabel: "#9CA3AF",
   tabTrack: "rgba(255, 255, 255, 0.1)",
@@ -40,6 +40,9 @@ export const AUTH_COLORS = {
   overlay: "rgba(11, 19, 43, 0.35)",
   /** Uniform scrim over blurred `background-main` for readable header text */
   backgroundScrim: "rgba(0, 0, 0, 0.5)",
+  /** Verification modal — neutral dark, matches sign-in / sign-up screens */
+  modalBackdrop: "rgba(0, 0, 0, 0.8)",
+  modalSheetBg: "rgba(26, 26, 26, 0.96)",
 } as const;
 
 export const AUTH_BACKGROUND_BLUR_INTENSITY = 40;

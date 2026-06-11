@@ -39,7 +39,7 @@ export function AuthFormField({
       <TextInput
         {...props}
         secureTextEntry={isPassword && !isVisible}
-        placeholderTextColor={AUTH_COLORS.sheetLabel}
+        placeholderTextColor={AUTH_COLORS.inputPlaceholder}
         style={[styles.input, style]}
       />
       {isPassword ? (

@@ -7,8 +7,8 @@ export const SIGN_UP_COLORS = {
   sheetBg: "rgba(255, 255, 255, 0.08)",
   sheetText: "#FFFFFF",
   sheetTextMuted: "#A3A3A3",
-  /** Placeholder copy — lighter than muted body for WCAG-friendly contrast on dark fields */
-  fieldPlaceholder: "#B8C0CC",
+  /** Placeholder copy — subdued so entered values read clearly on dark fields */
+  fieldPlaceholder: "#6E7A8A",
   sheetLabel: "#FFFFFF",
   fieldBorder: "rgba(255, 255, 255, 0.1)",
   tabTrack: "rgba(255, 255, 255, 0.1)",
