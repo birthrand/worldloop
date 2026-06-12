@@ -80,7 +80,7 @@ export function ProfileHeroHeader({
       <View style={styles.statsGroup}>
         <InlineStat value={stats.countries} lines={["COUNTRIES", "VISITED"]} />
         <View style={styles.statDivider} />
-        <InlineStat value={stats.cities} lines={["CITIES", "EXPLORED"]} />
+        <InlineStat value={stats.cities} lines={["LANDMARKS", "EXPLORED"]} />
         <View style={styles.statDivider} />
         <InlineStat value={stats.places} lines={["PLACES", "SAVED"]} />
       </View>

@@ -4,7 +4,8 @@ import { ClerkProvider } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
 import { Stack } from "expo-router";
 import { useEffect } from "react";
-import { View } from "react-native";
+import { StyleSheet } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import { useAppFonts } from "@/hooks/use-app-fonts";
 import { clerkPublishableKey } from "@/lib/clerk";
@@ -30,7 +31,7 @@ export default function RootLayout() {
 
   return (
     <ClerkProvider publishableKey={clerkPublishableKey} tokenCache={tokenCache}>
-      <View className="flex-1 bg-background font-regular">
+      <GestureHandlerRootView style={styles.root}>
         <Stack
           screenOptions={{
             headerShown: false,
@@ -48,7 +49,13 @@ export default function RootLayout() {
           <Stack.Screen name="country" options={{ headerShown: false }} />
           {__DEV__ ? <Stack.Screen name="dev" /> : null}
         </Stack>
-      </View>
+      </GestureHandlerRootView>
     </ClerkProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+});

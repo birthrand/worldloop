@@ -1,50 +1,32 @@
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useEffect, useRef } from "react";
-import { Animated, StyleSheet, View, type DimensionValue } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Animated, Platform, StyleSheet, View } from "react-native";
 
-import { ExploreTopBar } from "@/components/explore/explore-top-bar";
+import { ExploreSwipeHeader } from "@/components/explore/explore-swipe-header";
 import {
-  EXPLORE_FEED_BODY_BG,
-  EXPLORE_FEED_BOTTOM_INSET,
-  EXPLORE_FEED_SURFACE_RADIUS,
-  getExploreHeroTopInset,
-} from "@/constants/explore-feed-layout";
+  EXPLORE_SWIPE_ACTION_BUTTON_SIZE,
+  EXPLORE_SWIPE_CARD_FACT_MIN_HEIGHT,
+  EXPLORE_SWIPE_CARD_FOOTER_ACTION_GAP,
+  EXPLORE_SWIPE_CARD_INFO_BG,
+  EXPLORE_SWIPE_CARD_INFO_TOP_ROW_MIN_HEIGHT,
+  EXPLORE_SWIPE_CARD_RADIUS,
+  EXPLORE_SWIPE_CARD_SHADOW,
+  EXPLORE_SWIPE_CARD_SHADOW_OFFSET_Y,
+  EXPLORE_SWIPE_CARD_SHADOW_OPACITY,
+  EXPLORE_SWIPE_CARD_SHADOW_RADIUS,
+  EXPLORE_SWIPE_CAROUSEL_SEGMENT_GAP,
+  EXPLORE_SWIPE_CAROUSEL_SEGMENT_HEIGHT,
+  EXPLORE_SWIPE_CAROUSEL_SEGMENT_WIDTH,
+  EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING,
+  EXPLORE_SWIPE_DECK_VERTICAL_GAP,
+  EXPLORE_SWIPE_TEXT_BODY,
+  EXPLORE_SWIPE_TEXT_HEADER_LINE_HEIGHT,
+} from "@/constants/explore-swipe-layout";
 
-const SKELETON_COLOR = "rgba(255, 255, 255, 0.14)";
-
-type SkeletonBoneProps = {
-  pulse: Animated.Value;
-  width: DimensionValue;
-  height: DimensionValue;
-  borderRadius?: number;
-  style?: object;
-};
-
-function SkeletonBone({
-  pulse,
-  width,
-  height,
-  borderRadius = 8,
-  style,
-}: SkeletonBoneProps) {
-  return (
-    <Animated.View
-      style={[
-        styles.bone,
-        {
-          width,
-          height,
-          borderRadius,
-          opacity: pulse,
-        },
-        style,
-      ]}
-    />
-  );
-}
+const SKELETON_COLOR = "rgba(255, 255, 255, 0.12)";
 
 function useSkeletonPulse() {
-  const pulse = useRef(new Animated.Value(0.4)).current;
+  const pulse = useRef(new Animated.Value(0.45)).current;
 
   useEffect(() => {
     const animation = Animated.loop(
@@ -70,79 +52,67 @@ function useSkeletonPulse() {
 }
 
 export function ExploreFeedSkeleton() {
-  const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight();
   const pulse = useSkeletonPulse();
-  const heroTopInset = getExploreHeroTopInset(insets.top);
 
   return (
     <View style={styles.feed} accessibilityLabel="Loading explore feed">
-      <View style={styles.feedBody}>
-        <View style={[styles.pageContent, { paddingTop: heroTopInset }]}>
-          <View style={styles.feedUnit}>
-            <View style={styles.heroRegion}>
-              <SkeletonBone
-                pulse={pulse}
-                width="100%"
-                height="100%"
-                borderRadius={0}
-                style={styles.heroSkeleton}
-              />
-            </View>
+      <ExploreSwipeHeader />
 
-            <View
+      <View
+        style={[
+          styles.deckRegion,
+          {
+            paddingBottom: tabBarHeight + EXPLORE_SWIPE_DECK_VERTICAL_GAP,
+          },
+        ]}
+      >
+        <View style={styles.cardShell}>
+          <View style={styles.heroBoneShell}>
+            <Animated.View
               style={[
-                styles.cardRegion,
-                { paddingBottom: EXPLORE_FEED_BOTTOM_INSET },
+                styles.heroBone,
+                {
+                  opacity: pulse,
+                  borderTopLeftRadius: EXPLORE_SWIPE_CARD_RADIUS,
+                  borderTopRightRadius: EXPLORE_SWIPE_CARD_RADIUS,
+                },
               ]}
-            >
-              <View style={styles.card}>
-                <View style={styles.cardHeader}>
-                  <SkeletonBone
-                    pulse={pulse}
-                    width={32}
-                    height={32}
-                    borderRadius={16}
-                  />
-                  <View style={styles.cardTitleBlock}>
-                    <SkeletonBone
-                      pulse={pulse}
-                      width="72%"
-                      height={16}
-                      borderRadius={6}
-                    />
-                    <SkeletonBone
-                      pulse={pulse}
-                      width="48%"
-                      height={12}
-                      borderRadius={4}
-                    />
-                  </View>
-                </View>
-                <SkeletonBone
-                  pulse={pulse}
-                  width="100%"
-                  height={12}
-                  borderRadius={4}
+            />
+            <View style={styles.segmentBoneTrack}>
+              {Array.from({ length: 4 }, (_, index) => (
+                <Animated.View
+                  key={`segment-bone-${index}`}
+                  style={[
+                    styles.segmentBone,
+                    index === 0 ? styles.segmentBoneActive : null,
+                    { opacity: pulse },
+                  ]}
                 />
-                <SkeletonBone
-                  pulse={pulse}
-                  width="94%"
-                  height={12}
-                  borderRadius={4}
+              ))}
+            </View>
+          </View>
+          <View style={styles.infoBone}>
+            <View style={styles.infoTopBone}>
+              <View style={styles.textBlock}>
+                <Animated.View style={[styles.titleBone, { opacity: pulse }]} />
+                <Animated.View
+                  style={[styles.subtitleBone, { opacity: pulse }]}
                 />
-                <SkeletonBone
-                  pulse={pulse}
-                  width="78%"
-                  height={12}
-                  borderRadius={4}
+              </View>
+              <View style={styles.actions}>
+                <Animated.View
+                  style={[styles.actionBone, { opacity: pulse }]}
+                />
+                <Animated.View
+                  style={[styles.actionBone, { opacity: pulse }]}
                 />
               </View>
             </View>
+            <Animated.View style={[styles.factTextBone, { opacity: pulse }]} />
           </View>
         </View>
       </View>
-
-      <ExploreTopBar overlay />
     </View>
   );
 }
@@ -150,50 +120,109 @@ export function ExploreFeedSkeleton() {
 const styles = StyleSheet.create({
   feed: {
     flex: 1,
+    backgroundColor: "transparent",
   },
-  feedBody: {
+  deckRegion: {
     flex: 1,
-    backgroundColor: EXPLORE_FEED_BODY_BG,
+    justifyContent: "flex-start",
+    alignItems: "center",
+    paddingHorizontal: EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING,
   },
-  pageContent: {
-    flex: 1,
-  },
-  feedUnit: {
-    flex: 1,
+  cardShell: {
+    alignSelf: "stretch",
     width: "100%",
+    flex: 1,
     overflow: "hidden",
-    borderBottomLeftRadius: EXPLORE_FEED_SURFACE_RADIUS,
-    borderBottomRightRadius: EXPLORE_FEED_SURFACE_RADIUS,
+    borderRadius: EXPLORE_SWIPE_CARD_RADIUS,
+    backgroundColor: EXPLORE_SWIPE_CARD_INFO_BG,
+    ...Platform.select({
+      ios: {
+        shadowColor: EXPLORE_SWIPE_CARD_SHADOW,
+        shadowOffset: {
+          width: 0,
+          height: EXPLORE_SWIPE_CARD_SHADOW_OFFSET_Y,
+        },
+        shadowOpacity: EXPLORE_SWIPE_CARD_SHADOW_OPACITY,
+        shadowRadius: EXPLORE_SWIPE_CARD_SHADOW_RADIUS,
+      },
+      android: {
+        elevation: 8,
+      },
+      default: {},
+    }),
   },
-  heroRegion: {
+  heroBoneShell: {
     flex: 1,
-    width: "100%",
     minHeight: 0,
   },
-  heroSkeleton: {
-    flex: 1,
+  heroBone: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: SKELETON_COLOR,
   },
-  cardRegion: {
-    flexShrink: 0,
-    width: "100%",
-  },
-  card: {
-    gap: 10,
-    paddingHorizontal: 14,
-    paddingTop: 12,
-    paddingBottom: 14,
-  },
-  cardHeader: {
+  segmentBoneTrack: {
+    position: "absolute",
+    top: 18,
+    alignSelf: "center",
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    marginBottom: 4,
+    width: EXPLORE_SWIPE_CAROUSEL_SEGMENT_WIDTH,
+    gap: EXPLORE_SWIPE_CAROUSEL_SEGMENT_GAP,
   },
-  cardTitleBlock: {
+  segmentBone: {
     flex: 1,
-    gap: 6,
+    height: EXPLORE_SWIPE_CAROUSEL_SEGMENT_HEIGHT,
+    borderRadius: 999,
+    backgroundColor: SKELETON_COLOR,
   },
-  bone: {
+  segmentBoneActive: {
+    backgroundColor: "rgba(255, 255, 255, 0.28)",
+  },
+  infoBone: {
+    flexShrink: 0,
+    paddingHorizontal: EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING,
+    paddingTop: 14,
+    paddingBottom: 16,
+    gap: 12,
+    backgroundColor: EXPLORE_SWIPE_CARD_INFO_BG,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(255, 255, 255, 0.1)",
+  },
+  infoTopBone: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    minHeight: EXPLORE_SWIPE_CARD_INFO_TOP_ROW_MIN_HEIGHT,
+  },
+  textBlock: {
+    flex: 1,
+    gap: 8,
+  },
+  titleBone: {
+    width: "60%",
+    height: EXPLORE_SWIPE_TEXT_HEADER_LINE_HEIGHT,
+    borderRadius: 6,
+    backgroundColor: SKELETON_COLOR,
+  },
+  subtitleBone: {
+    width: "40%",
+    height: EXPLORE_SWIPE_TEXT_BODY,
+    borderRadius: 4,
+    backgroundColor: SKELETON_COLOR,
+  },
+  actions: {
+    flexDirection: "row",
+    gap: EXPLORE_SWIPE_CARD_FOOTER_ACTION_GAP,
+  },
+  actionBone: {
+    width: EXPLORE_SWIPE_ACTION_BUTTON_SIZE,
+    height: EXPLORE_SWIPE_ACTION_BUTTON_SIZE,
+    borderRadius: EXPLORE_SWIPE_ACTION_BUTTON_SIZE / 2,
+    backgroundColor: "transparent",
+  },
+  factTextBone: {
+    width: "100%",
+    height: EXPLORE_SWIPE_CARD_FACT_MIN_HEIGHT,
+    borderRadius: 6,
     backgroundColor: SKELETON_COLOR,
   },
 });
