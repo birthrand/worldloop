@@ -198,17 +198,17 @@ const styles = StyleSheet.create({
     borderRadius: GLASS_TOUCH_SIZE / 2,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.45)",
+    backgroundColor: "rgba(0, 0, 0, 0.28)",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.12)",
+    borderColor: "rgba(255, 255, 255, 0.08)",
   },
   circleActive: {
-    backgroundColor: "rgba(251, 191, 36, 0.18)",
-    borderColor: "rgba(251, 191, 36, 0.45)",
+    backgroundColor: "rgba(251, 191, 36, 0.12)",
+    borderColor: "rgba(0, 0, 0, 0.22)",
   },
   circleDisabled: {
-    backgroundColor: "rgba(0, 0, 0, 0.3)",
-    borderColor: "rgba(255, 255, 255, 0.08)",
+    backgroundColor: "rgba(0, 0, 0, 0.18)",
+    borderColor: "rgba(255, 255, 255, 0.06)",
   },
   label: {
     fontSize: 11,

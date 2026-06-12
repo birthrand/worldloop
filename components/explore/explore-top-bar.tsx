@@ -2,12 +2,15 @@ import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import {
+  ExploreCountryMoreMenus,
+  getExploreHasCustomSort,
+} from "@/components/explore/explore-country-more-menus";
 import { ExploreFeedMenuSheet } from "@/components/explore/explore-feed-menu-sheet";
 import { ExploreHeroHeaderBackdrop } from "@/components/explore/explore-hero-header-backdrop";
 import { ExploreTopChromeScrim } from "@/components/explore/explore-top-chrome-scrim";
 import {
   WORLDLOOP_HEADER_BOTTOM_PADDING,
-  WORLDLOOP_HEADER_HORIZONTAL_PADDING,
   WORLDLOOP_HEADER_TOP_PADDING,
   WorldLoopHeader,
 } from "@/components/worldloop-header";
@@ -17,6 +20,7 @@ import {
   CULTURE_CHROME_TOUCH_SIZE,
 } from "@/constants/culture-chrome";
 import {
+  EXPLORE_HEADER_HORIZONTAL_PADDING,
   EXPLORE_HEADER_OVERLAY_BOTTOM_PADDING,
   getExploreHeaderChromeHeight,
 } from "@/constants/explore-feed-layout";
@@ -50,6 +54,13 @@ export function ExploreTopBar({
   );
 
   const [isFeedMenuOpen, setIsFeedMenuOpen] = useState(false);
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const countries = useCountryFeedStore((s) => s.countries);
+  const currentIndex = useCountryFeedStore((s) => s.currentIndex);
+  const sortField = useCountryFeedStore((s) => s.sortField);
+  const sortOrder = useCountryFeedStore((s) => s.sortOrder);
+  const currentCountry = countries[currentIndex];
+  const hasCustomSort = getExploreHasCustomSort(sortField, sortOrder);
 
   const hereScopeLabel = focusedRegion
     ? continentDisplayLabel(focusedRegion)
@@ -65,7 +76,7 @@ export function ExploreTopBar({
   return (
     <View
       style={overlay ? styles.overlayRoot : undefined}
-      pointerEvents={overlay ? "box-none" : undefined}
+      pointerEvents={overlay ? "box-none" : "auto"}
     >
       {hasHeroBackdrop ? (
         <ExploreHeroHeaderBackdrop
@@ -91,12 +102,16 @@ export function ExploreTopBar({
           menuActive={isFeedMenuOpen}
           onSearchPress={() => openSearch()}
           searchActive={isSearchOpen}
+          showMore
+          onMorePress={() => setIsMoreMenuOpen(true)}
+          moreActive={hasCustomSort || isMoreMenuOpen}
           inactiveColor={EXPLORE_HEADER_INACTIVE_COLOR}
+          brandFontFamily="Poppins-Bold"
           rowHeight={CULTURE_CHROME_TOUCH_SIZE}
           sideSlotWidth={CULTURE_CHROME_TOUCH_SIZE}
           brandFontSize={CULTURE_CHROME_TITLE_SIZE}
           iconSize={CULTURE_CHROME_ICON_SIZE}
-          searchIconSize={CULTURE_CHROME_ICON_SIZE}
+          horizontalPadding={EXPLORE_HEADER_HORIZONTAL_PADDING}
         />
 
         {discoveryMode === "here" ? (
@@ -108,6 +123,12 @@ export function ExploreTopBar({
         <ExploreFeedMenuSheet
           visible={isFeedMenuOpen}
           onClose={() => setIsFeedMenuOpen(false)}
+        />
+
+        <ExploreCountryMoreMenus
+          country={currentCountry}
+          isMoreMenuOpen={isMoreMenuOpen}
+          onCloseMoreMenu={() => setIsMoreMenuOpen(false)}
         />
       </View>
     </View>
@@ -123,7 +144,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   hereSubtitle: {
-    paddingHorizontal: WORLDLOOP_HEADER_HORIZONTAL_PADDING,
+    paddingHorizontal: EXPLORE_HEADER_HORIZONTAL_PADDING,
     fontSize: 11,
     lineHeight: 14,
     fontFamily: "Poppins-Regular",

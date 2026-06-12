@@ -1,0 +1,161 @@
+import { router } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
+import { Dimensions, ScrollView, StyleSheet, View } from "react-native";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+
+import { TAB_BAR_CONTENT_HEIGHT } from "@/components/bottom-tab-bar";
+import { ProfileHeroBackdrop } from "@/components/profile/profile-hero-backdrop";
+import { ProfileHeroHeader } from "@/components/profile/profile-hero-header";
+import { ProfileNavRow } from "@/components/profile/profile-nav-row";
+import {
+  WORLDLOOP_HEADER_TOP_PADDING,
+  WorldLoopHeader,
+} from "@/components/worldloop-header";
+import {
+  CULTURE_CHROME_TITLE_SIZE,
+  CULTURE_CHROME_TOUCH_SIZE,
+} from "@/constants/culture-chrome";
+import { PROFILE_HEADER_BOTTOM_GAP } from "@/constants/profile-theme";
+import { SPACE_SCREEN_BASE } from "@/constants/space-theme";
+import { useHeaderBackButton } from "@/hooks/use-header-back-button";
+import { useProfileStats } from "@/hooks/use-profile-stats";
+import { useCountryFeedStore } from "@/store/use-country-feed-store";
+import { useSavedCountriesStore } from "@/store/use-saved-countries-store";
+
+const HERO_HEIGHT_RATIO = 0.4;
+
+export default function ProfileScreen() {
+  const insets = useSafeAreaInsets();
+  const seedIfEmpty = useSavedCountriesStore((s) => s.seedIfEmpty);
+  const enrichFromFeed = useSavedCountriesStore((s) => s.enrichFromFeed);
+  const feedCountries = useCountryFeedStore((s) => s.countries);
+  const feedStatus = useCountryFeedStore((s) => s.status);
+  const loadInitialFeed = useCountryFeedStore((s) => s.loadInitialFeed);
+
+  const stats = useProfileStats();
+  const { visible: showBack, onBackPress } = useHeaderBackButton();
+  const heroHeight = Dimensions.get("window").height * HERO_HEIGHT_RATIO;
+
+  useEffect(() => {
+    const finishHydration = useSavedCountriesStore.persist.onFinishHydration(
+      () => {
+        seedIfEmpty();
+      },
+    );
+    if (useSavedCountriesStore.persist.hasHydrated()) {
+      seedIfEmpty();
+    }
+    return finishHydration;
+  }, [seedIfEmpty]);
+
+  useEffect(() => {
+    if (feedCountries.length === 0 && feedStatus === "idle") {
+      void loadInitialFeed();
+    }
+  }, [feedCountries.length, feedStatus, loadInitialFeed]);
+
+  useEffect(() => {
+    enrichFromFeed(feedCountries);
+  }, [feedCountries, enrichFromFeed]);
+
+  const scrollBottomPadding = TAB_BAR_CONTENT_HEIGHT + insets.bottom + 16;
+
+  return (
+    <SafeAreaView style={styles.safeArea} edges={["left", "right"]}>
+      <StatusBar style="light" />
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={{ paddingBottom: scrollBottomPadding }}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={[styles.heroSection, { minHeight: heroHeight }]}>
+          <ProfileHeroBackdrop height={heroHeight} />
+
+          <View
+            style={{
+              paddingTop: insets.top + WORLDLOOP_HEADER_TOP_PADDING,
+              paddingBottom: PROFILE_HEADER_BOTTOM_GAP,
+            }}
+          >
+            <WorldLoopHeader
+              title="Profile"
+              showBack={showBack}
+              onBackPress={onBackPress}
+              backAccessibilityLabel="Go back"
+              showMenu={false}
+              showSearch={false}
+              inactiveColor="#ffffff"
+              rowHeight={CULTURE_CHROME_TOUCH_SIZE}
+              sideSlotWidth={CULTURE_CHROME_TOUCH_SIZE}
+              brandFontSize={CULTURE_CHROME_TITLE_SIZE}
+            />
+          </View>
+
+          <ProfileHeroHeader stats={stats.inlineStats} />
+        </View>
+
+        <View style={styles.content}>
+          <View style={styles.navRows}>
+            <ProfileNavRow
+              icon="bookmark-outline"
+              title="Saved places"
+              subtitle="View all your saved destinations"
+              trailing="thumbnail"
+              thumbnailUri={stats.savedThumbnailUri}
+              onPress={() => router.push("/(tabs)/saved")}
+            />
+            <ProfileNavRow
+              icon="globe-outline"
+              title="Visited countries"
+              subtitle={`${stats.countriesExplored} countries explored`}
+              trailing="flags"
+              visitedCountries={stats.topVisitedCountries}
+              totalVisited={stats.countriesExplored}
+              onPress={() => router.push("/(tabs)/map")}
+            />
+            <ProfileNavRow
+              icon="map-outline"
+              title="Travel map"
+              subtitle="See everywhere you've been"
+              trailing="map"
+              onPress={() => router.push("/(tabs)/map")}
+            />
+            <ProfileNavRow
+              icon="settings-outline"
+              title="Settings"
+              subtitle="Manage your account and preferences"
+              trailing="none"
+              onPress={() => router.push("/(tabs)/profile/settings")}
+            />
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: SPACE_SCREEN_BASE,
+  },
+  scroll: {
+    flex: 1,
+  },
+  heroSection: {
+    position: "relative",
+    overflow: "hidden",
+  },
+  content: {
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    gap: 12,
+  },
+  navRows: {
+    gap: 10,
+  },
+});

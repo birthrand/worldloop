@@ -3,15 +3,17 @@ import {
   useEffect,
   useLayoutEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { Animated, Platform, StyleSheet, View } from "react-native";
 
 import { prefetchCountryImage } from "@/components/explore/country-image";
 import { ExploreCountryCard } from "@/components/explore/explore-country-card";
 import { HeroImagePager } from "@/components/explore/hero-image-pager";
 import { MediaCarousel } from "@/components/explore/media-carousel";
 import {
+  EXPLORE_FEED_BODY_BG,
   EXPLORE_FEED_BOTTOM_INSET,
   EXPLORE_FEED_SURFACE_RADIUS,
 } from "@/constants/explore-feed-layout";
@@ -24,11 +26,12 @@ import { prefetchCountryProfile } from "@/lib/prefetch-country-profiles";
 import type { Country } from "@/types/country";
 
 const DOTS_BOTTOM_INSET = 5;
+const HERO_INSET_ANIMATION_MS = 220;
 
 type CountryFeedPageProps = {
   country: Country;
   pageHeight: number;
-  headerContentInset: number;
+  heroTopInset: number;
   isActive?: boolean;
   onActiveHeroIndexChange?: (index: number) => void;
 };
@@ -36,13 +39,22 @@ type CountryFeedPageProps = {
 export function CountryFeedPage({
   country,
   pageHeight,
-  headerContentInset,
+  heroTopInset,
   isActive = false,
   onActiveHeroIndexChange,
 }: CountryFeedPageProps) {
   const images = useMemo(() => getCountryImages(country), [country.name]);
   const [heroIndex, setHeroIndex] = useState(0);
   const [heroLayout, setHeroLayout] = useState({ width: 0, height: 0 });
+  const paddingTopAnim = useRef(new Animated.Value(heroTopInset)).current;
+
+  useEffect(() => {
+    Animated.timing(paddingTopAnim, {
+      toValue: heroTopInset,
+      duration: HERO_INSET_ANIMATION_MS,
+      useNativeDriver: false,
+    }).start();
+  }, [heroTopInset, paddingTopAnim]);
 
   const heroSlides = useMemo(
     () => Array.from({ length: images.length }, (_, index) => `${index}`),
@@ -81,8 +93,16 @@ export function CountryFeedPage({
   }, [country]);
 
   return (
-    <View style={{ height: pageHeight, width: "100%" }}>
-      <View style={[styles.pageContent, { paddingTop: headerContentInset }]}>
+    <Animated.View
+      style={{
+        height: pageHeight,
+        width: "100%",
+        backgroundColor: EXPLORE_FEED_BODY_BG,
+      }}
+    >
+      <Animated.View
+        style={[styles.pageContent, { paddingTop: paddingTopAnim }]}
+      >
         <View style={styles.feedColumn}>
           <View style={styles.feedUnit}>
             <View style={styles.heroRegion}>
@@ -143,8 +163,8 @@ export function CountryFeedPage({
             </View>
           </View>
         </View>
-      </View>
-    </View>
+      </Animated.View>
+    </Animated.View>
   );
 }
 
@@ -185,7 +205,7 @@ const styles = StyleSheet.create({
     flex: 1,
     width: "100%",
     overflow: "hidden",
-    backgroundColor: "#0b132b",
+    backgroundColor: EXPLORE_FEED_BODY_BG,
   },
   cardRegion: {
     flexShrink: 0,

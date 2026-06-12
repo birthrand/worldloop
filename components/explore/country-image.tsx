@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, View, type StyleProp } from "react-native";
 
 import { FlagBadge } from "@/components/explore/flag-badge";
+import { EXPLORE_FEED_BODY_BG } from "@/constants/explore-feed-layout";
 import { normalizeImageUrl } from "@/lib/normalize-image-url";
 
 const WIKIMEDIA_HEADERS = {
@@ -151,7 +152,7 @@ export function CountryImage({
 
 const styles = StyleSheet.create({
   fallback: {
-    backgroundColor: "#0b132b",
+    backgroundColor: EXPLORE_FEED_BODY_BG,
     alignItems: "center",
     justifyContent: "center",
   },

@@ -21,8 +21,10 @@ export const SIGN_UP_COLORS = {
   link: "#F5B84C",
   dividerLine: "rgba(255, 255, 255, 0.12)",
   socialBg: "rgba(255, 255, 255, 0.06)",
+  socialBgPressed: "rgba(255, 255, 255, 0.16)",
   /** Outlined secondary control — visible edge without competing with primary CTA */
   socialBorder: "rgba(255, 255, 255, 0.14)",
+  socialBorderPressed: "rgba(255, 255, 255, 0.38)",
   socialText: "#FFFFFF",
   google: "#EA4335",
   backButtonBorder: "rgba(255, 255, 255, 0.1)",

@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   buttonDisabled: {
-    opacity: 0.45,
+    opacity: 0.35,
   },
   buttonPressed: {
     opacity: 0.92,

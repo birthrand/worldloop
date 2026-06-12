@@ -1,31 +1,16 @@
+import { useAuth } from "@clerk/expo";
 import { Redirect } from "expo-router";
-import { useEffect, useState } from "react";
-
-import { useOnboardingStore } from "@/store/use-onboarding-store";
 
 export default function Index() {
-  const hasCompletedOnboarding = useOnboardingStore(
-    (state) => state.hasCompletedOnboarding,
-  );
-  const [hydrated, setHydrated] = useState(
-    useOnboardingStore.persist.hasHydrated(),
-  );
+  const { isSignedIn, isLoaded } = useAuth();
 
-  useEffect(() => {
-    if (hydrated) return;
-
-    return useOnboardingStore.persist.onFinishHydration(() => {
-      setHydrated(true);
-    });
-  }, [hydrated]);
-
-  if (!hydrated) {
+  if (!isLoaded) {
     return null;
   }
 
-  if (!hasCompletedOnboarding) {
-    return <Redirect href="/onboarding" />;
+  if (isSignedIn) {
+    return <Redirect href="/(tabs)/explore" />;
   }
 
-  return <Redirect href="/(tabs)/explore" />;
+  return <Redirect href="/onboarding" />;
 }

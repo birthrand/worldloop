@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -22,15 +23,21 @@ const CODE_LENGTH = 6;
 type AuthVerificationModalProps = {
   visible: boolean;
   email: string;
+  error?: string | null;
+  loading?: boolean;
   onClose: () => void;
-  onComplete: () => void;
+  onVerify: (code: string) => void | Promise<void>;
+  onResend?: () => void | Promise<void>;
 };
 
 export function AuthVerificationModal({
   visible,
   email,
+  error = null,
+  loading = false,
   onClose,
-  onComplete,
+  onVerify,
+  onResend,
 }: AuthVerificationModalProps) {
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
@@ -53,9 +60,9 @@ export function AuthVerificationModal({
     const digits = value.replace(/\D/g, "").slice(0, CODE_LENGTH);
     setCode(digits);
 
-    if (digits.length === CODE_LENGTH) {
+    if (digits.length === CODE_LENGTH && !loading) {
       inputRef.current?.blur();
-      onComplete();
+      void onVerify(digits);
     }
   };
 
@@ -111,6 +118,30 @@ export function AuthVerificationModal({
               })}
             </Pressable>
 
+            {error ? <Text style={styles.error}>{error}</Text> : null}
+
+            {loading ? (
+              <ActivityIndicator
+                color={AUTH_COLORS.gold}
+                style={styles.loader}
+              />
+            ) : null}
+
+            {onResend ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Resend verification code"
+                onPress={() => void onResend()}
+                disabled={loading}
+                style={({ pressed }) => [
+                  styles.resendButton,
+                  pressed && styles.resendButtonPressed,
+                ]}
+              >
+                <Text style={styles.resendLabel}>Resend code</Text>
+              </Pressable>
+            ) : null}
+
             <TextInput
               ref={inputRef}
               value={code}
@@ -120,6 +151,7 @@ export function AuthVerificationModal({
               autoComplete="one-time-code"
               maxLength={CODE_LENGTH}
               caretHidden
+              editable={!loading}
               style={styles.hiddenInput}
             />
           </View>
@@ -204,6 +236,29 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins-SemiBold",
     fontSize: 20,
     lineHeight: 24,
+  },
+  error: {
+    color: "#F87171",
+    fontFamily: "Poppins-Regular",
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: "center",
+  },
+  loader: {
+    marginTop: -4,
+  },
+  resendButton: {
+    alignSelf: "center",
+    paddingVertical: 4,
+  },
+  resendButtonPressed: {
+    opacity: 0.75,
+  },
+  resendLabel: {
+    color: AUTH_COLORS.gold,
+    fontFamily: "Poppins-Medium",
+    fontSize: 14,
+    lineHeight: 20,
   },
   hiddenInput: {
     position: "absolute",

@@ -1,5 +1,5 @@
 import { useIsFocused } from "@react-navigation/native";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -7,6 +7,8 @@ import {
   StyleSheet,
   View,
   type LayoutChangeEvent,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
   type ViewToken,
 } from "react-native";
 
@@ -37,13 +39,31 @@ export function CultureFeed() {
   );
   const refreshCultureFeed = useCultureFeedStore((s) => s.refreshCultureFeed);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+  const lastScrollOffsetYRef = useRef(0);
+  const lastVisibleIndexRef = useRef(0);
 
-  const onViewableItemsChanged = useRef(
+  useEffect(() => {
+    setIsHeaderVisible(true);
+    lastScrollOffsetYRef.current = 0;
+    lastVisibleIndexRef.current = 0;
+  }, [feedListKey]);
+
+  const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
       const first = viewableItems[0];
       if (first?.index == null) return;
 
       const index = first.index;
+      const previousIndex = lastVisibleIndexRef.current;
+
+      if (index > previousIndex) {
+        setIsHeaderVisible(false);
+      } else if (index < previousIndex) {
+        setIsHeaderVisible(true);
+      }
+
+      lastVisibleIndexRef.current = index;
       setCurrentIndex(index);
 
       const state = useCultureFeedStore.getState();
@@ -61,7 +81,8 @@ export function CultureFeed() {
         void extendCultureFeedAtEnd();
       }
     },
-  ).current;
+    [extendCultureFeedAtEnd, setCurrentIndex],
+  );
 
   const viewabilityConfig = useRef({
     itemVisiblePercentThreshold: 50,
@@ -110,6 +131,22 @@ export function CultureFeed() {
     }
   }, [refreshCultureFeed]);
 
+  const onFeedScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const offsetY = event.nativeEvent.contentOffset.y;
+      const delta = offsetY - lastScrollOffsetYRef.current;
+
+      if (delta < -8) {
+        setIsHeaderVisible(true);
+      } else if (delta > 8) {
+        setIsHeaderVisible(false);
+      }
+
+      lastScrollOffsetYRef.current = offsetY;
+    },
+    [],
+  );
+
   return (
     <View style={styles.feed}>
       <View style={styles.feedBody} onLayout={onFeedLayout}>
@@ -125,6 +162,8 @@ export function CultureFeed() {
             pagingEnabled
             showsVerticalScrollIndicator={false}
             decelerationRate="fast"
+            scrollEventThrottle={16}
+            onScroll={onFeedScroll}
             onViewableItemsChanged={onViewableItemsChanged}
             viewabilityConfig={viewabilityConfig}
             getItemLayout={(_, index) => ({
@@ -162,7 +201,7 @@ export function CultureFeed() {
         ) : null}
       </View>
 
-      <CultureTopBar />
+      <CultureTopBar visible={isHeaderVisible} />
     </View>
   );
 }

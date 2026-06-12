@@ -1,15 +1,14 @@
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { StyleSheet, View } from "react-native";
 
 import { CultureEmpty } from "@/components/culture/culture-empty";
 import { CultureFeed } from "@/components/culture/culture-feed";
+import { CultureFeedSkeleton } from "@/components/culture/culture-feed-skeleton";
 import { ExploreError } from "@/components/explore/explore-error";
 import { useCultureFeedStore } from "@/store/use-culture-feed-store";
 
 export default function CultureScreen() {
-  const insets = useSafeAreaInsets();
   const countries = useCultureFeedStore((s) => s.countries);
   const selectedRegion = useCultureFeedStore((s) => s.selectedRegion);
   const hasLoadedOnce = useCultureFeedStore((s) => s.hasLoadedOnce);
@@ -51,10 +50,7 @@ export default function CultureScreen() {
           }}
         />
       ) : showLoading ? (
-        <View style={[styles.loading, { paddingTop: insets.top }]}>
-          <ActivityIndicator size="large" color="#fbbf24" />
-          <Text style={styles.loadingText}>Loading culture clips…</Text>
-        </View>
+        <CultureFeedSkeleton />
       ) : showEmpty ? (
         <CultureEmpty
           onRetry={() => {
@@ -76,16 +72,5 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: "#0b132b",
-  },
-  loading: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 16,
-  },
-  loadingText: {
-    fontSize: 14,
-    fontFamily: "Poppins-Regular",
-    color: "rgba(255, 255, 255, 0.8)",
   },
 });

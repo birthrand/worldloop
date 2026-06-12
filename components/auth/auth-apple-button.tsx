@@ -14,7 +14,7 @@ type AuthAppleButtonProps = {
 
 export function AuthAppleButton({ onPress }: AuthAppleButtonProps) {
   const handlePress = () => {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onPress?.();
   };
 
@@ -45,7 +45,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   buttonPressed: {
-    opacity: 0.88,
+    backgroundColor: AUTH_COLORS.socialBgPressed,
+    borderColor: AUTH_COLORS.socialBorderPressed,
+    transform: [{ scale: 0.98 }],
   },
   label: {
     color: AUTH_COLORS.textPrimary,

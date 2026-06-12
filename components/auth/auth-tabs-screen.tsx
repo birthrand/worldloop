@@ -1,7 +1,7 @@
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useMemo, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 import { AuthForgotPasswordLink } from "@/components/auth/auth-forgot-password-link";
 import { AuthVerificationModal } from "@/components/auth/auth-verification-modal";
@@ -12,7 +12,7 @@ import { SignUpPrimaryButton } from "@/components/auth/sign-up/sign-up-primary-b
 import { SignUpScreenShell } from "@/components/auth/sign-up/sign-up-screen-shell";
 import { SignUpSocialButton } from "@/components/auth/sign-up/sign-up-social-button";
 import { SIGN_UP_SPACING } from "@/constants/sign-up-theme";
-import { useAuthVerificationFlow } from "@/hooks/use-auth-verification-flow";
+import { useClerkAuthFlow } from "@/hooks/use-clerk-auth-flow";
 import type { AuthTab } from "@/types/auth";
 
 const LOGIN_HEADER = {
@@ -41,13 +41,20 @@ export function AuthTabsScreen({ initialTab }: AuthTabsScreenProps) {
   const [registerConfirmPassword, setRegisterConfirmPassword] = useState("");
 
   const {
+    isSubmitting,
+    formError,
+    verificationErrors,
+    verificationEmail,
     isVerificationVisible,
-    openVerification,
+    submitCredentials,
+    handleVerifyCode,
+    handleResendCode,
+    handleSSO,
     closeVerification,
-    completeVerification,
-  } = useAuthVerificationFlow();
+  } = useClerkAuthFlow(isLogin);
 
-  const verificationEmail = isLogin ? loginEmail.trim() : registerEmail.trim();
+  const activeEmail = isLogin ? loginEmail.trim() : registerEmail.trim();
+  const activePassword = isLogin ? loginPassword : registerPassword;
 
   const canLogin = useMemo(
     () => loginEmail.trim().length > 0 && loginPassword.length > 0,
@@ -62,6 +69,21 @@ export function AuthTabsScreen({ initialTab }: AuthTabsScreenProps) {
       registerPassword === registerConfirmPassword
     );
   }, [registerEmail, registerPassword, registerConfirmPassword]);
+
+  const handlePrimaryPress = () => {
+    void submitCredentials(activeEmail, activePassword);
+  };
+
+  const handleGooglePress = () => {
+    void handleSSO("oauth_google");
+  };
+
+  const handleApplePress = () => {
+    void handleSSO("oauth_apple");
+  };
+
+  const verificationError =
+    verificationErrors?.code?.message ?? formError ?? null;
 
   const loginForm = (
     <>
@@ -95,18 +117,30 @@ export function AuthTabsScreen({ initialTab }: AuthTabsScreenProps) {
           </View>
         </View>
 
+        {formError && !isVerificationVisible ? (
+          <Text style={styles.formError}>{formError}</Text>
+        ) : null}
+
         <SignUpPrimaryButton
           label="Continue"
-          disabled={!canLogin}
-          onPress={openVerification}
+          disabled={!canLogin || isSubmitting}
+          onPress={handlePrimaryPress}
         />
       </View>
 
       <SignUpOrDivider />
 
       <View style={styles.socialStack}>
-        <SignUpSocialButton provider="google" onPress={openVerification} />
-        <SignUpSocialButton provider="apple" onPress={openVerification} />
+        <SignUpSocialButton
+          provider="google"
+          disabled={isSubmitting}
+          onPress={handleGooglePress}
+        />
+        <SignUpSocialButton
+          provider="apple"
+          disabled={isSubmitting}
+          onPress={handleApplePress}
+        />
       </View>
 
       <SignUpFooterLink
@@ -154,18 +188,30 @@ export function AuthTabsScreen({ initialTab }: AuthTabsScreenProps) {
           />
         </View>
 
+        {formError && !isVerificationVisible ? (
+          <Text style={styles.formError}>{formError}</Text>
+        ) : null}
+
         <SignUpPrimaryButton
           label="Create Account"
-          disabled={!canRegister}
-          onPress={openVerification}
+          disabled={!canRegister || isSubmitting}
+          onPress={handlePrimaryPress}
         />
       </View>
 
       <SignUpOrDivider />
 
       <View style={styles.socialStack}>
-        <SignUpSocialButton provider="google" onPress={openVerification} />
-        <SignUpSocialButton provider="apple" onPress={openVerification} />
+        <SignUpSocialButton
+          provider="google"
+          disabled={isSubmitting}
+          onPress={handleGooglePress}
+        />
+        <SignUpSocialButton
+          provider="apple"
+          disabled={isSubmitting}
+          onPress={handleApplePress}
+        />
       </View>
 
       <SignUpFooterLink
@@ -173,6 +219,8 @@ export function AuthTabsScreen({ initialTab }: AuthTabsScreenProps) {
         actionLabel="Log in"
         onPress={() => router.replace("/(auth)/sign-in")}
       />
+
+      <View nativeID="clerk-captcha" />
     </>
   );
 
@@ -189,9 +237,12 @@ export function AuthTabsScreen({ initialTab }: AuthTabsScreenProps) {
 
       <AuthVerificationModal
         visible={isVerificationVisible}
-        email={verificationEmail}
+        email={verificationEmail || activeEmail}
+        error={verificationError}
+        loading={isSubmitting}
         onClose={closeVerification}
-        onComplete={completeVerification}
+        onVerify={handleVerifyCode}
+        onResend={handleResendCode}
       />
     </View>
   );
@@ -217,5 +268,12 @@ const styles = StyleSheet.create({
   socialStack: {
     alignSelf: "stretch",
     gap: SIGN_UP_SPACING.socialGap,
+  },
+  formError: {
+    color: "#F87171",
+    fontFamily: "Poppins-Regular",
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: "center",
   },
 });
