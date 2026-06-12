@@ -37,7 +37,8 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   sideSlot: {
-    minWidth: 88,
+    width: 40,
+    minWidth: 40,
     alignItems: "flex-start",
     justifyContent: "center",
   },

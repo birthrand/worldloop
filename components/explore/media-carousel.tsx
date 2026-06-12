@@ -4,12 +4,14 @@ type MediaCarouselProps = {
   images: string[];
   activeIndex: number;
   onImageIndexChange: (index: number) => void;
+  disabled?: boolean;
 };
 
 export function MediaCarousel({
   images,
   activeIndex,
   onImageIndexChange,
+  disabled = false,
 }: MediaCarouselProps) {
   const slideCount = Math.max(images.length, 1);
 
@@ -18,7 +20,10 @@ export function MediaCarousel({
   }
 
   return (
-    <View style={styles.pillTrack}>
+    <View
+      style={[styles.pillTrack, disabled && styles.pillTrackDisabled]}
+      pointerEvents={disabled ? "none" : "auto"}
+    >
       {Array.from({ length: slideCount }, (_, index) => {
         const isActive = index === activeIndex;
         return (
@@ -26,8 +31,9 @@ export function MediaCarousel({
             key={`dot-${index}`}
             accessibilityRole="button"
             accessibilityLabel={`Show image ${index + 1} of ${slideCount}`}
-            accessibilityState={{ selected: isActive }}
+            accessibilityState={{ selected: isActive, disabled }}
             onPress={() => onImageIndexChange(index)}
+            disabled={disabled}
             hitSlop={8}
           >
             <View
@@ -54,6 +60,9 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.26)",
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "rgba(255, 255, 255, 0.1)",
+  },
+  pillTrackDisabled: {
+    opacity: 0.45,
   },
   indicator: {
     borderRadius: 999,

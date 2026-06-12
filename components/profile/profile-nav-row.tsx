@@ -6,9 +6,11 @@ import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { FlagBadge } from "@/components/explore/flag-badge";
 import { images } from "@/constants/images";
 import {
+  PROFILE_CARD_BG,
   PROFILE_ICON,
+  PROFILE_ICON_BOX_RADIUS,
   PROFILE_ICON_RING,
-  PROFILE_TEXT_SUBTITLE,
+  PROFILE_NAV_SUBTITLE,
 } from "@/constants/profile-theme";
 import type { VisitedCountryPreview } from "@/hooks/use-profile-stats";
 
@@ -161,7 +163,7 @@ function FlagStrip({
 const styles = StyleSheet.create({
   card: {
     borderRadius: 16,
-    backgroundColor: "#1a2235",
+    backgroundColor: PROFILE_CARD_BG,
     paddingHorizontal: 14,
     paddingVertical: 14,
   },
@@ -176,7 +178,7 @@ const styles = StyleSheet.create({
   iconBox: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: PROFILE_ICON_BOX_RADIUS,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
@@ -198,7 +200,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "400",
     lineHeight: 18,
-    color: PROFILE_TEXT_SUBTITLE,
+    color: PROFILE_NAV_SUBTITLE,
   },
   trailing: {
     flexDirection: "row",

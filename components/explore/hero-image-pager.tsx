@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   FlatList,
   NativeScrollEvent,
@@ -7,7 +7,10 @@ import {
   StyleSheet,
 } from "react-native";
 
-import { CountryImage } from "@/components/explore/country-image";
+import {
+  CountryImage,
+  isCountryImageReady,
+} from "@/components/explore/country-image";
 
 type HeroImagePagerProps = {
   images: string[];
@@ -19,6 +22,7 @@ type HeroImagePagerProps = {
   onIndexChange: (index: number) => void;
   onImagePress?: () => void;
   onImagePressIn?: () => void;
+  onActiveImageLoadChange?: (loaded: boolean) => void;
 };
 
 export function HeroImagePager({
@@ -31,10 +35,34 @@ export function HeroImagePager({
   onIndexChange,
   onImagePress,
   onImagePressIn,
+  onActiveImageLoadChange,
 }: HeroImagePagerProps) {
   const listRef = useRef<FlatList<string>>(null);
   const syncedIndexRef = useRef(activeIndex);
+  const [loadedByIndex, setLoadedByIndex] = useState<Record<number, boolean>>(
+    {},
+  );
   const slides = images.length > 0 ? images : [""];
+
+  const reportActiveLoadState = useCallback(
+    (index: number, loadedMap: Record<number, boolean>) => {
+      const uri = images[index];
+      const loaded =
+        loadedMap[index] ?? (uri ? isCountryImageReady(uri) : true);
+      onActiveImageLoadChange?.(loaded);
+    },
+    [images, onActiveImageLoadChange],
+  );
+
+  const handleSlideLoadChange = useCallback(
+    (index: number, loaded: boolean) => {
+      setLoadedByIndex((prev) => {
+        if (prev[index] === loaded) return prev;
+        return { ...prev, [index]: loaded };
+      });
+    },
+    [],
+  );
 
   const scrollToIndex = useCallback(
     (index: number, animated: boolean) => {
@@ -49,8 +77,13 @@ export function HeroImagePager({
 
   useEffect(() => {
     syncedIndexRef.current = 0;
+    setLoadedByIndex({});
     scrollToIndex(0, false);
   }, [images, scrollToIndex]);
+
+  useEffect(() => {
+    reportActiveLoadState(activeIndex, loadedByIndex);
+  }, [activeIndex, loadedByIndex, reportActiveLoadState]);
 
   useEffect(() => {
     if (activeIndex === syncedIndexRef.current) return;
@@ -87,7 +120,7 @@ export function HeroImagePager({
         offset: heroWidth * index,
         index,
       })}
-      renderItem={({ item }) => (
+      renderItem={({ item, index }) => (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Open AI country explorer"
@@ -103,6 +136,8 @@ export function HeroImagePager({
             iso2={iso2}
             style={StyleSheet.absoluteFill}
             contentFit="cover"
+            showSkeleton
+            onLoadStateChange={(loaded) => handleSlideLoadChange(index, loaded)}
           />
         </Pressable>
       )}

@@ -5,7 +5,7 @@ import {
   type ImageStyle,
 } from "expo-image";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { StyleSheet, View, type StyleProp } from "react-native";
+import { Animated, StyleSheet, View, type StyleProp } from "react-native";
 
 import { FlagBadge } from "@/components/explore/flag-badge";
 import { EXPLORE_FEED_BODY_BG } from "@/constants/explore-feed-layout";
@@ -55,6 +55,38 @@ export function prefetchCountryImage(uri: string | undefined): Promise<void> {
   return promise;
 }
 
+const SKELETON_COLOR = "rgba(255, 255, 255, 0.14)";
+
+function ImageLoadSkeleton() {
+  const pulse = useRef(new Animated.Value(0.45)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 0.85,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 0.4,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    animation.start();
+    return () => animation.stop();
+  }, [pulse]);
+
+  return (
+    <Animated.View
+      style={[StyleSheet.absoluteFill, styles.skeleton, { opacity: pulse }]}
+    />
+  );
+}
+
 type CountryImageProps = {
   /** Hero / thumbnail photo URL (Unsplash, Pexels, Wikimedia — not flagcdn). */
   uri: string | undefined;
@@ -65,6 +97,8 @@ type CountryImageProps = {
   contentFit?: ImageContentFit;
   contentPosition?: ImageContentPosition;
   flagSize?: { width: number; height: number };
+  showSkeleton?: boolean;
+  onLoadStateChange?: (loaded: boolean) => void;
 };
 
 export function CountryImage({
@@ -75,6 +109,8 @@ export function CountryImage({
   contentFit = "cover",
   contentPosition = "center",
   flagSize = { width: 56, height: 38 },
+  showSkeleton = false,
+  onLoadStateChange,
 }: CountryImageProps) {
   const normalizedUri = useMemo(
     () => (uri ? normalizeImageUrl(uri) : null),
@@ -113,7 +149,25 @@ export function CountryImage({
     });
   }, [normalizedUri, shownUri]);
 
+  useEffect(() => {
+    if (!onLoadStateChange) return;
+
+    if (!normalizedUri || failed) {
+      onLoadStateChange(true);
+      return;
+    }
+
+    if (shownUri === normalizedUri || warmedUris.has(normalizedUri)) {
+      onLoadStateChange(true);
+      return;
+    }
+
+    onLoadStateChange(false);
+  }, [failed, normalizedUri, onLoadStateChange, shownUri]);
+
   const showFlag = !shownUri && (!normalizedUri || failed);
+  const showLoadingSkeleton =
+    showSkeleton && Boolean(normalizedUri) && !shownUri && !failed;
 
   return (
     <View style={style} className="overflow-hidden">
@@ -134,6 +188,8 @@ export function CountryImage({
         ) : null}
       </View>
 
+      {showLoadingSkeleton ? <ImageLoadSkeleton /> : null}
+
       {shownUri ? (
         <Image
           source={imageSource(shownUri)}
@@ -143,7 +199,11 @@ export function CountryImage({
           recyclingKey={shownUri}
           cachePolicy="memory-disk"
           transition={{ duration: 200, effect: "cross-dissolve" }}
-          onError={() => setFailed(true)}
+          onLoad={() => onLoadStateChange?.(true)}
+          onError={() => {
+            setFailed(true);
+            onLoadStateChange?.(true);
+          }}
         />
       ) : null}
     </View>
@@ -158,5 +218,8 @@ const styles = StyleSheet.create({
   },
   fallbackBehindPhoto: {
     backgroundColor: "transparent",
+  },
+  skeleton: {
+    backgroundColor: SKELETON_COLOR,
   },
 });

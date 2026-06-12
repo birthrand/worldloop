@@ -69,8 +69,8 @@ if [[ "$ADMIN" == false ]]; then
   esac
 fi
 
-# Base URL: use CLERK_REST_API_URL if set, otherwise default to production
-BASE_URL="${CLERK_REST_API_URL:-https://api.clerk.com}"
+# Base URL: CLERK_BACKEND_API_URL (matches Clerk CLI); CLERK_REST_API_URL is legacy fallback
+BASE_URL="${CLERK_BACKEND_API_URL:-${CLERK_REST_API_URL:-https://api.clerk.com}}"
 
 # Build curl command
 CURL_ARGS=(

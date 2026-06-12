@@ -1,5 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
@@ -30,9 +35,12 @@ import { useSearchUiStore } from "@/store/use-search-ui-store";
 import { useSpatialContextStore } from "@/store/use-spatial-context-store";
 
 const EXPLORE_HEADER_INACTIVE_COLOR = "#ffffff";
+const HEADER_HIDE_OFFSET = -20;
+const HEADER_HIDE_DURATION_MS = 220;
 
 type ExploreTopBarProps = {
   overlay?: boolean;
+  visible?: boolean;
   backdropImageUri?: string;
   backdropFlag?: string;
   backdropIso2?: string;
@@ -40,6 +48,7 @@ type ExploreTopBarProps = {
 
 export function ExploreTopBar({
   overlay = false,
+  visible = true,
   backdropImageUri,
   backdropFlag,
   backdropIso2,
@@ -55,6 +64,31 @@ export function ExploreTopBar({
 
   const [isFeedMenuOpen, setIsFeedMenuOpen] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const visibility = useSharedValue(visible ? 1 : 0);
+
+  useEffect(() => {
+    visibility.value = withTiming(visible ? 1 : 0, {
+      duration: HEADER_HIDE_DURATION_MS,
+    });
+  }, [visible, visibility]);
+
+  useEffect(() => {
+    if (!visible && isFeedMenuOpen) {
+      setIsFeedMenuOpen(false);
+    }
+    if (!visible && isMoreMenuOpen) {
+      setIsMoreMenuOpen(false);
+    }
+  }, [isFeedMenuOpen, isMoreMenuOpen, visible]);
+
+  const animatedOverlayStyle = useAnimatedStyle(() => ({
+    opacity: visibility.value,
+    transform: [
+      {
+        translateY: (1 - visibility.value) * HEADER_HIDE_OFFSET,
+      },
+    ],
+  }));
   const countries = useCountryFeedStore((s) => s.countries);
   const currentIndex = useCountryFeedStore((s) => s.currentIndex);
   const sortField = useCountryFeedStore((s) => s.sortField);
@@ -73,11 +107,8 @@ export function ExploreTopBar({
     : 0;
   const hasHeroBackdrop = overlay && backdropFlag != null;
 
-  return (
-    <View
-      style={overlay ? styles.overlayRoot : undefined}
-      pointerEvents={overlay ? "box-none" : "auto"}
-    >
+  const root = (
+    <>
       {hasHeroBackdrop ? (
         <ExploreHeroHeaderBackdrop
           height={chromeHeight}
@@ -131,7 +162,20 @@ export function ExploreTopBar({
           onCloseMoreMenu={() => setIsMoreMenuOpen(false)}
         />
       </View>
-    </View>
+    </>
+  );
+
+  if (!overlay) {
+    return <View pointerEvents="auto">{root}</View>;
+  }
+
+  return (
+    <Animated.View
+      style={[styles.overlayRoot, animatedOverlayStyle]}
+      pointerEvents={visible ? "box-none" : "none"}
+    >
+      {root}
+    </Animated.View>
   );
 }
 

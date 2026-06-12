@@ -19,6 +19,8 @@ import {
   Text,
   View,
   type LayoutChangeEvent,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
   type ViewToken,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -31,6 +33,9 @@ export function ExploreFeed() {
   const listRef = useRef<FlatList<Country>>(null);
   const skipProgrammaticScrollRef = useRef(false);
   const hasSyncedInitialScrollRef = useRef(false);
+  const lastScrollOffsetYRef = useRef(0);
+  const lastVisibleIndexRef = useRef(0);
+  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const countries = useCountryFeedStore((s) => s.countries);
   const currentIndex = useCountryFeedStore((s) => s.currentIndex);
   const focusEpoch = useCountryFeedStore((s) => s.focusEpoch);
@@ -75,6 +80,9 @@ export function ExploreFeed() {
 
   useEffect(() => {
     hasSyncedInitialScrollRef.current = false;
+    setIsHeaderVisible(true);
+    lastScrollOffsetYRef.current = 0;
+    lastVisibleIndexRef.current = 0;
   }, [feedListKey]);
 
   // Only scroll programmatically when restoring a non-zero index (e.g. layout).
@@ -99,6 +107,15 @@ export function ExploreFeed() {
       if (first?.index == null) return;
 
       const index = first.index;
+      const previousIndex = lastVisibleIndexRef.current;
+
+      if (index > previousIndex) {
+        setIsHeaderVisible(false);
+      } else if (index < previousIndex) {
+        setIsHeaderVisible(true);
+      }
+
+      lastVisibleIndexRef.current = index;
       skipProgrammaticScrollRef.current = true;
       setCurrentIndex(index);
 
@@ -125,6 +142,22 @@ export function ExploreFeed() {
   const viewabilityConfig = useRef({
     itemVisiblePercentThreshold: 50,
   }).current;
+
+  const onFeedScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const offsetY = event.nativeEvent.contentOffset.y;
+      const delta = offsetY - lastScrollOffsetYRef.current;
+
+      if (delta < -8) {
+        setIsHeaderVisible(true);
+      } else if (delta > 8) {
+        setIsHeaderVisible(false);
+      }
+
+      lastScrollOffsetYRef.current = offsetY;
+    },
+    [],
+  );
 
   const onFeedLayout = useCallback((event: LayoutChangeEvent) => {
     const height = Math.round(event.nativeEvent.layout.height);
@@ -169,6 +202,8 @@ export function ExploreFeed() {
             pagingEnabled
             showsVerticalScrollIndicator={false}
             decelerationRate="fast"
+            scrollEventThrottle={16}
+            onScroll={onFeedScroll}
             onViewableItemsChanged={onViewableItemsChanged}
             viewabilityConfig={viewabilityConfig}
             getItemLayout={(_, index) => ({
@@ -236,6 +271,7 @@ export function ExploreFeed() {
       </View>
       <ExploreTopBar
         overlay
+        visible={isHeaderVisible}
         backdropImageUri={backdropImageUri}
         backdropFlag={currentCountry?.flag}
         backdropIso2={currentCountry?.cca2}

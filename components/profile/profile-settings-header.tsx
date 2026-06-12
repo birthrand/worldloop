@@ -1,24 +1,32 @@
 import { useUser } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
+import { ProfileCompletionCard } from "@/components/profile/profile-completion-card";
 import { images } from "@/constants/images";
 import {
   PROFILE_EDIT_BADGE_BG,
   PROFILE_EDIT_BADGE_ICON,
+  PROFILE_SCREEN_BG,
+  PROFILE_TEXT_SUBTITLE,
 } from "@/constants/profile-theme";
 
 const DEFAULT_LOCATION = "San Francisco, USA";
 
+function showComingSoon(label: string) {
+  Alert.alert(label, "This feature is coming in a later lesson.");
+}
+
 export function ProfileSettingsHeader() {
   const { user } = useUser();
 
-  const displayName =
-    user?.fullName ?? user?.firstName ?? user?.username ?? "Traveler";
-
-  const email =
-    user?.primaryEmailAddress?.emailAddress ?? "alex.morgan@example.com";
+  const emailLocal = user?.primaryEmailAddress?.emailAddress?.split("@")[0];
+  const handle = user?.username
+    ? `@${user.username}`
+    : emailLocal
+      ? `@${emailLocal}`
+      : "@traveler";
 
   const location =
     typeof user?.unsafeMetadata?.location === "string" &&
@@ -37,68 +45,92 @@ export function ProfileSettingsHeader() {
           contentFit="cover"
           accessibilityLabel="Profile photo"
         />
-        <View style={styles.editBadge}>
-          <Ionicons name="pencil" size={12} color={PROFILE_EDIT_BADGE_ICON} />
-        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Change profile photo"
+          onPress={() => showComingSoon("Change photo")}
+          style={({ pressed }) => [
+            styles.editBadge,
+            pressed && styles.editBadgePressed,
+          ]}
+        >
+          <Ionicons name="camera" size={13} color={PROFILE_EDIT_BADGE_ICON} />
+        </Pressable>
       </View>
 
-      <View style={styles.info}>
-        <Text className="font-bold text-[22px] text-white">{displayName}</Text>
-        <Text className="mt-1 text-sm text-white/55">{email}</Text>
-        <View style={styles.locationRow}>
-          <Ionicons
-            name="location-outline"
-            size={14}
-            color="rgba(255,255,255,0.55)"
-          />
-          <Text className="text-sm text-white/55">{location}</Text>
-        </View>
+      <Text
+        className="mt-3 text-center text-[13px] leading-[18px]"
+        style={{ color: PROFILE_TEXT_SUBTITLE }}
+      >
+        {handle}
+      </Text>
+
+      <View style={styles.locationChip}>
+        <Ionicons
+          name="location-outline"
+          size={13}
+          color={PROFILE_TEXT_SUBTITLE}
+        />
+        <Text
+          className="text-[13px] leading-[18px]"
+          style={{ color: PROFILE_TEXT_SUBTITLE }}
+          numberOfLines={1}
+        >
+          {location}
+        </Text>
       </View>
+
+      <ProfileCompletionCard />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
-    flexDirection: "row",
     alignItems: "center",
-    gap: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 4,
   },
   avatarWrap: {
-    width: 68,
-    height: 68,
+    width: 96,
+    height: 96,
   },
   avatar: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
     borderWidth: 2,
-    borderColor: "rgba(255, 255, 255, 0.18)",
+    borderColor: "rgba(255, 255, 255, 0.2)",
     backgroundColor: "rgba(255, 255, 255, 0.08)",
   },
   editBadge: {
     position: "absolute",
-    right: -2,
-    bottom: -2,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    right: 0,
+    bottom: 0,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: PROFILE_EDIT_BADGE_BG,
-    borderWidth: 2,
-    borderColor: "#0b132b",
+    borderWidth: 2.5,
+    borderColor: PROFILE_SCREEN_BG,
   },
-  info: {
-    flex: 1,
-    minWidth: 0,
+  editBadgePressed: {
+    opacity: 0.85,
   },
-  locationRow: {
+  locationChip: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    marginTop: 6,
+    marginTop: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: "rgba(255, 255, 255, 0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.06)",
+    maxWidth: "100%",
   },
 });
