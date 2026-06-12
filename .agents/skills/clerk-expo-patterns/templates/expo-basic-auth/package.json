@@ -1,11 +1,15 @@
 {
   "name": "clerk-expo",
-  "scripts": { "start": "expo start" },
+  "scripts": {
+    "start": "expo start"
+  },
   "dependencies": {
     "@clerk/expo": "latest",
     "expo": "latest",
+    "expo-auth-session": "latest",
     "expo-router": "latest",
     "expo-secure-store": "latest",
+    "expo-web-browser": "latest",
     "react": "latest",
     "react-native": "latest"
   }

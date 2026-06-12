@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { StyleSheet, Text, View } from "react-native";
 
-import { PROFILE_ICON } from "@/constants/profile-theme";
+import { PROFILE_CARD_BG, PROFILE_ICON } from "@/constants/profile-theme";
 
 type ProfileStatsBarProps = {
   countries: number;
@@ -48,7 +48,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderRadius: 16,
-    backgroundColor: "#1a2235",
+    backgroundColor: PROFILE_CARD_BG,
     paddingVertical: 18,
     paddingHorizontal: 8,
     marginHorizontal: 16,

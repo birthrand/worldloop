@@ -19,8 +19,12 @@ import {
   CULTURE_CHROME_TITLE_SIZE,
   CULTURE_CHROME_TOUCH_SIZE,
 } from "@/constants/culture-chrome";
-import { PROFILE_HEADER_BOTTOM_GAP } from "@/constants/profile-theme";
-import { SPACE_SCREEN_BASE } from "@/constants/space-theme";
+import {
+  PROFILE_HEADER_BOTTOM_GAP,
+  PROFILE_HERO_SAFE_TOP_GAP,
+  PROFILE_HERO_TOP_PADDING,
+  PROFILE_SCREEN_BG,
+} from "@/constants/profile-theme";
 import { useHeaderBackButton } from "@/hooks/use-header-back-button";
 import { useProfileStats } from "@/hooks/use-profile-stats";
 import { useCountryFeedStore } from "@/store/use-country-feed-store";
@@ -63,6 +67,9 @@ export default function ProfileScreen() {
   }, [feedCountries, enrichFromFeed]);
 
   const scrollBottomPadding = TAB_BAR_CONTENT_HEIGHT + insets.bottom + 16;
+  const heroTopInset = showBack
+    ? PROFILE_HERO_TOP_PADDING
+    : insets.top + PROFILE_HERO_SAFE_TOP_GAP;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["left", "right"]}>
@@ -75,27 +82,32 @@ export default function ProfileScreen() {
         <View style={[styles.heroSection, { minHeight: heroHeight }]}>
           <ProfileHeroBackdrop height={heroHeight} />
 
-          <View
-            style={{
-              paddingTop: insets.top + WORLDLOOP_HEADER_TOP_PADDING,
-              paddingBottom: PROFILE_HEADER_BOTTOM_GAP,
-            }}
-          >
-            <WorldLoopHeader
-              title="Profile"
-              showBack={showBack}
-              onBackPress={onBackPress}
-              backAccessibilityLabel="Go back"
-              showMenu={false}
-              showSearch={false}
-              inactiveColor="#ffffff"
-              rowHeight={CULTURE_CHROME_TOUCH_SIZE}
-              sideSlotWidth={CULTURE_CHROME_TOUCH_SIZE}
-              brandFontSize={CULTURE_CHROME_TITLE_SIZE}
-            />
-          </View>
+          {showBack ? (
+            <View
+              style={{
+                paddingTop: insets.top + WORLDLOOP_HEADER_TOP_PADDING,
+                paddingBottom: PROFILE_HEADER_BOTTOM_GAP,
+              }}
+            >
+              <WorldLoopHeader
+                showBack
+                onBackPress={onBackPress}
+                backAccessibilityLabel="Go back"
+                showMenu={false}
+                showSearch={false}
+                title=""
+                inactiveColor="#ffffff"
+                rowHeight={CULTURE_CHROME_TOUCH_SIZE}
+                sideSlotWidth={CULTURE_CHROME_TOUCH_SIZE}
+                brandFontSize={CULTURE_CHROME_TITLE_SIZE}
+              />
+            </View>
+          ) : null}
 
-          <ProfileHeroHeader stats={stats.inlineStats} />
+          <ProfileHeroHeader
+            stats={stats.inlineStats}
+            topInset={heroTopInset}
+          />
         </View>
 
         <View style={styles.content}>
@@ -141,7 +153,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: SPACE_SCREEN_BASE,
+    backgroundColor: PROFILE_SCREEN_BG,
   },
   scroll: {
     flex: 1,

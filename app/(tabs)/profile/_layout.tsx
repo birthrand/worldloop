@@ -1,11 +1,13 @@
 import { Stack } from "expo-router";
 
+import { PROFILE_SCREEN_BG } from "@/constants/profile-theme";
+
 export default function ProfileLayout() {
   return (
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: "#0b132b" },
+        contentStyle: { backgroundColor: PROFILE_SCREEN_BG },
         animation: "slide_from_right",
       }}
     >

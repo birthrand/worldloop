@@ -3,6 +3,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Alert, Pressable, StyleSheet, Text } from "react-native";
 
+import {
+  PROFILE_LOGOUT_BG,
+  PROFILE_LOGOUT_ICON,
+  PROFILE_LOGOUT_PRESSED_BG,
+  PROFILE_LOGOUT_TEXT,
+} from "@/constants/profile-theme";
+
 export function ProfileLogOutButton() {
   const { signOut } = useClerk();
 
@@ -29,8 +36,13 @@ export function ProfileLogOutButton() {
       onPress={handleLogOut}
       style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
     >
-      <Ionicons name="log-out-outline" size={20} color="#ef4444" />
-      <Text className="font-semibold text-base text-red-500">Log out</Text>
+      <Ionicons name="log-out-outline" size={18} color={PROFILE_LOGOUT_ICON} />
+      <Text
+        className="font-semibold text-[15px]"
+        style={{ color: PROFILE_LOGOUT_TEXT }}
+      >
+        Log out
+      </Text>
     </Pressable>
   );
 }
@@ -41,13 +53,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
-    marginHorizontal: 16,
-    marginTop: 16,
-    paddingVertical: 16,
+    minHeight: 58,
+    paddingVertical: 14,
     borderRadius: 16,
-    backgroundColor: "#1a2235",
+    backgroundColor: PROFILE_LOGOUT_BG,
   },
   buttonPressed: {
-    opacity: 0.88,
+    backgroundColor: PROFILE_LOGOUT_PRESSED_BG,
   },
 });

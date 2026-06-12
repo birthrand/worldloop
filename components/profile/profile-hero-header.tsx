@@ -7,6 +7,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { images } from "@/constants/images";
 import {
   PROFILE_HERO_TOP_PADDING,
+  PROFILE_NAV_SUBTITLE,
   PROFILE_TEXT_SUBTITLE,
 } from "@/constants/profile-theme";
 import type { ProfileInlineStats } from "@/hooks/use-profile-stats";
@@ -16,11 +17,14 @@ const DEFAULT_BIO = "Exploring the world, one destination at a time.";
 type ProfileHeroHeaderProps = {
   stats: ProfileInlineStats;
   onEditPress?: () => void;
+  /** Distance from the top of the hero block to the avatar. */
+  topInset?: number;
 };
 
 export function ProfileHeroHeader({
   stats,
   onEditPress,
+  topInset = PROFILE_HERO_TOP_PADDING,
 }: ProfileHeroHeaderProps) {
   const { user } = useUser();
 
@@ -50,7 +54,7 @@ export function ProfileHeroHeader({
   };
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { paddingTop: topInset }]}>
       <View style={styles.avatarFrame}>
         <Image
           source={avatarUri ? { uri: avatarUri } : images.profileAvatar}
@@ -74,11 +78,11 @@ export function ProfileHeroHeader({
       </Text>
 
       <View style={styles.statsGroup}>
-        <InlineStat value={stats.countries} label="COUNTRIES" />
+        <InlineStat value={stats.countries} lines={["COUNTRIES", "VISITED"]} />
         <View style={styles.statDivider} />
-        <InlineStat value={stats.cities} label="CITIES" />
+        <InlineStat value={stats.cities} lines={["CITIES", "EXPLORED"]} />
         <View style={styles.statDivider} />
-        <InlineStat value={stats.places} label="PLACES" />
+        <InlineStat value={stats.places} lines={["PLACES", "SAVED"]} />
       </View>
 
       <Pressable
@@ -97,18 +101,29 @@ export function ProfileHeroHeader({
   );
 }
 
-function InlineStat({ value, label }: { value: number; label: string }) {
+function InlineStat({
+  value,
+  lines,
+}: {
+  value: number;
+  lines: [string, string];
+}) {
   return (
     <View style={styles.inlineStat}>
       <Text className="font-medium text-[14px] leading-5 text-white">
         {value}
       </Text>
-      <Text
-        className="mt-0.5 text-[10px] tracking-[0.6px]"
-        style={{ color: PROFILE_TEXT_SUBTITLE }}
-      >
-        {label}
-      </Text>
+      <View style={styles.labelStack}>
+        {lines.map((line) => (
+          <Text
+            key={line}
+            className="text-center text-[10px] leading-[12px] tracking-[0.6px]"
+            style={{ color: PROFILE_NAV_SUBTITLE }}
+          >
+            {line}
+          </Text>
+        ))}
+      </View>
     </View>
   );
 }
@@ -117,8 +132,7 @@ const styles = StyleSheet.create({
   root: {
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingTop: PROFILE_HERO_TOP_PADDING,
-    paddingBottom: 24,
+    paddingBottom: 20,
   },
   avatarFrame: {
     width: 96,
@@ -141,11 +155,16 @@ const styles = StyleSheet.create({
   },
   inlineStat: {
     alignItems: "center",
-    minWidth: 64,
+    minWidth: 72,
+  },
+  labelStack: {
+    marginTop: 2,
+    alignItems: "center",
+    gap: 1,
   },
   statDivider: {
     width: 1,
-    height: 28,
+    height: 36,
     marginHorizontal: 16,
     backgroundColor: "rgba(255, 255, 255, 0.16)",
   },

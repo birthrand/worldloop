@@ -2,8 +2,13 @@ import { BlurView } from "expo-blur";
 import { Image } from "expo-image";
 import { Platform, StyleSheet, View } from "react-native";
 
+import { EXPLORE_FEED_HEADER_BACKDROP_WEB_FALLBACK } from "@/constants/explore-feed-layout";
 import { images } from "@/constants/images";
-import { SPACE_WEB_BLUR_FALLBACK } from "@/constants/space-theme";
+import {
+  PROFILE_HERO_BOTTOM_FADE,
+  PROFILE_HERO_SCRIM,
+  PROFILE_SCREEN_BG,
+} from "@/constants/profile-theme";
 
 const PROFILE_HERO_BLUR_INTENSITY = 48;
 
@@ -12,8 +17,7 @@ type GradientViewStyle = {
 };
 
 /** Fades hero into the solid profile background below. */
-const BOTTOM_FADE_GRADIENT =
-  "linear-gradient(to bottom, rgba(11, 19, 43, 0) 0%, rgba(11, 19, 43, 0.35) 55%, rgba(11, 19, 43, 0.92) 88%, #0b132b 100%)";
+const BOTTOM_FADE_GRADIENT = PROFILE_HERO_BOTTOM_FADE;
 
 type ProfileHeroBackdropProps = {
   height: number;
@@ -57,7 +61,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     overflow: "hidden",
-    backgroundColor: "#0b132b",
+    backgroundColor: PROFILE_SCREEN_BG,
   },
   image: {
     ...StyleSheet.absoluteFillObject,
@@ -65,11 +69,11 @@ const styles = StyleSheet.create({
   },
   webFallback: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: SPACE_WEB_BLUR_FALLBACK,
+    backgroundColor: EXPLORE_FEED_HEADER_BACKDROP_WEB_FALLBACK,
   },
   scrim: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(11, 19, 43, 0.38)",
+    backgroundColor: PROFILE_HERO_SCRIM,
   },
   bottomFade: {
     ...StyleSheet.absoluteFillObject,

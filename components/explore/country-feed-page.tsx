@@ -8,7 +8,10 @@ import {
 } from "react";
 import { Animated, Platform, StyleSheet, View } from "react-native";
 
-import { prefetchCountryImage } from "@/components/explore/country-image";
+import {
+  isCountryImageReady,
+  prefetchCountryImage,
+} from "@/components/explore/country-image";
 import { ExploreCountryCard } from "@/components/explore/explore-country-card";
 import { HeroImagePager } from "@/components/explore/hero-image-pager";
 import { MediaCarousel } from "@/components/explore/media-carousel";
@@ -46,6 +49,7 @@ export function CountryFeedPage({
   const images = useMemo(() => getCountryImages(country), [country.name]);
   const [heroIndex, setHeroIndex] = useState(0);
   const [heroLayout, setHeroLayout] = useState({ width: 0, height: 0 });
+  const [isActiveHeroLoaded, setIsActiveHeroLoaded] = useState(false);
   const paddingTopAnim = useRef(new Animated.Value(heroTopInset)).current;
 
   useEffect(() => {
@@ -63,7 +67,8 @@ export function CountryFeedPage({
 
   useEffect(() => {
     setHeroIndex(0);
-  }, [country.name]);
+    setIsActiveHeroLoaded(isCountryImageReady(images[0]));
+  }, [country.name, images]);
 
   useLayoutEffect(() => {
     if (!isActive) return;
@@ -80,8 +85,16 @@ export function CountryFeedPage({
     void prefetchCountryProfile(country.name);
   }, [country.name]);
 
-  const onImageIndexChange = useCallback((index: number) => {
-    setHeroIndex(index);
+  const onImageIndexChange = useCallback(
+    (index: number) => {
+      setHeroIndex(index);
+      setIsActiveHeroLoaded(isCountryImageReady(images[index]));
+    },
+    [images],
+  );
+
+  const onActiveHeroLoadChange = useCallback((loaded: boolean) => {
+    setIsActiveHeroLoaded((prev) => (prev === loaded ? prev : loaded));
   }, []);
 
   const warmAiExplorer = useCallback(() => {
@@ -133,6 +146,7 @@ export function CountryFeedPage({
                     onIndexChange={onImageIndexChange}
                     onImagePress={openAiExplorer}
                     onImagePressIn={warmAiExplorer}
+                    onActiveImageLoadChange={onActiveHeroLoadChange}
                   />
                 ) : null}
 
@@ -142,6 +156,7 @@ export function CountryFeedPage({
                       images={heroSlides}
                       activeIndex={heroIndex}
                       onImageIndexChange={onImageIndexChange}
+                      disabled={!isActiveHeroLoaded}
                     />
                   </View>
                 ) : null}
