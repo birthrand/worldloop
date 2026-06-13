@@ -10,6 +10,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
+import { ExploreRegionCompleteState } from "@/components/explore/explore-region-complete-state";
 import { ExploreSwipeCard } from "@/components/explore/explore-swipe-card";
 import {
   EXPLORE_SWIPE_CARD_INFO_BG,
@@ -23,6 +24,11 @@ import {
   EXPLORE_SWIPE_TEXT_BODY,
   EXPLORE_SWIPE_TEXT_HEADER,
 } from "@/constants/explore-swipe-layout";
+import { isContinent } from "@/constants/regions";
+import {
+  prefetchFeedHeroImagesAroundIndex,
+  warmFeedHeroesOnSwipeBegin,
+} from "@/lib/prefetch-feed-heroes";
 import { useCountryFeedStore } from "@/store/use-country-feed-store";
 import type { Country } from "@/types/country";
 
@@ -35,6 +41,7 @@ type SwipeableTopCardProps = {
   canGoBack: boolean;
   onDismiss: (direction: SwipeDirection) => void;
   onGoBack: () => void;
+  onSwipeBegin: () => void;
 };
 
 function SwipeableTopCard({
@@ -44,6 +51,7 @@ function SwipeableTopCard({
   canGoBack,
   onDismiss,
   onGoBack,
+  onSwipeBegin,
 }: SwipeableTopCardProps) {
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
@@ -68,6 +76,9 @@ function SwipeableTopCard({
   }, [onGoBack]);
 
   const pan = Gesture.Pan()
+    .onBegin(() => {
+      runOnJS(onSwipeBegin)();
+    })
     .onUpdate((event) => {
       if (isDismissing.value) return;
       translateX.value = event.translationX;
@@ -165,6 +176,9 @@ export function ExploreSwipeDeck({
   onIndexChange,
   onNeedMore,
 }: ExploreSwipeDeckProps) {
+  const discoveryMode = useCountryFeedStore((s) => s.discoveryMode);
+  const selectedRegion = useCountryFeedStore((s) => s.selectedRegion);
+  const setRegionFilter = useCountryFeedStore((s) => s.setRegionFilter);
   const [deckLayout, setDeckLayout] = useState({ width: 0, height: 0 });
 
   const visibleCountries = useMemo(() => {
@@ -181,6 +195,15 @@ export function ExploreSwipeDeck({
   );
   const cardWidth = innerWidth;
   const cardHeight = Math.max(0, Math.round(deckLayout.height));
+
+  useEffect(() => {
+    if (countries.length === 0) return;
+    void prefetchFeedHeroImagesAroundIndex(countries, currentIndex);
+  }, [countries, currentIndex]);
+
+  const handleSwipeBegin = useCallback(() => {
+    warmFeedHeroesOnSwipeBegin(countries, currentIndex);
+  }, [countries, currentIndex]);
 
   const handleDismiss = useCallback(
     (_direction: SwipeDirection) => {
@@ -219,16 +242,35 @@ export function ExploreSwipeDeck({
   }
 
   if (currentIndex >= countries.length) {
+    const showRegionComplete =
+      discoveryMode === "region" &&
+      selectedRegion !== null &&
+      isContinent(selectedRegion);
+
     return (
       <View style={styles.deck} onLayout={onDeckLayout}>
-        <View
-          style={[styles.emptyState, { width: cardWidth, height: cardHeight }]}
-        >
-          <Text style={styles.emptyTitle}>All caught up</Text>
-          <Text style={styles.emptySubtitle}>
-            Change your feed filters to discover more countries
-          </Text>
-        </View>
+        {showRegionComplete ? (
+          <ExploreRegionCompleteState
+            region={selectedRegion}
+            cardWidth={cardWidth}
+            cardHeight={cardHeight}
+            onContinue={(nextRegion) => {
+              void setRegionFilter(nextRegion);
+            }}
+          />
+        ) : (
+          <View
+            style={[
+              styles.emptyState,
+              { width: cardWidth, height: cardHeight },
+            ]}
+          >
+            <Text style={styles.emptyTitle}>All caught up</Text>
+            <Text style={styles.emptySubtitle}>
+              Change your feed filters to discover more countries
+            </Text>
+          </View>
+        )}
       </View>
     );
   }
@@ -259,6 +301,7 @@ export function ExploreSwipeDeck({
                 canGoBack={currentIndex > 0}
                 onDismiss={handleDismiss}
                 onGoBack={handleGoBack}
+                onSwipeBegin={handleSwipeBegin}
               />
             );
           }

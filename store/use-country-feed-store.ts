@@ -15,7 +15,11 @@ import {
 import { fetchExploreRegionCountries } from "@/lib/explore-region-countries";
 import { loadCountriesForDiscovery } from "@/lib/load-countries-for-discovery";
 import { prefetchCountryProfiles } from "@/lib/prefetch-country-profiles";
-import { prefetchFeedHeroImages } from "@/lib/prefetch-feed-heroes";
+import {
+  prefetchFeedHeroImages,
+  prefetchFeedHeroImagesAroundIndex,
+  warmCountryHeroImage,
+} from "@/lib/prefetch-feed-heroes";
 import { useSpatialContextStore } from "@/store/use-spatial-context-store";
 import type { Country } from "@/types/country";
 import type { DiscoveryScopeMode, GeoEntity } from "@/types/geo";
@@ -336,7 +340,10 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
 
       if (isStale()) return;
 
-      await prefetchFeedHeroImages(payload.countries);
+      await prefetchFeedHeroImagesAroundIndex(
+        payload.countries,
+        prior.currentIndex,
+      );
       if (isStale()) return;
       const { sortField, sortOrder } = get();
       const feedTail = sortCountries(payload.countries, sortField, sortOrder);
@@ -357,7 +364,7 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
         status: "idle",
         error: null,
       });
-      void prefetchFeedHeroImages(countries.slice(1, 3));
+      void prefetchFeedHeroImagesAroundIndex(countries, get().currentIndex);
       void prefetchCountryProfiles(countries, {
         aroundIndex: get().currentIndex,
       });
@@ -389,7 +396,7 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
 
     const cached = get().regionCache[region];
     if (cached) {
-      await prefetchFeedHeroImages(cached);
+      await prefetchFeedHeroImagesAroundIndex(cached, get().currentIndex);
       if (requestId !== regionFilterGeneration) return;
       const state = get();
       const { countries, currentIndex } = mergeFetchedWithFocusedCountry(
@@ -427,7 +434,7 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
       const data = await ensureRegionCountries(region);
       if (requestId !== regionFilterGeneration) return;
 
-      await prefetchFeedHeroImages(data);
+      await prefetchFeedHeroImagesAroundIndex(data, get().currentIndex);
       if (requestId !== regionFilterGeneration) return;
       const state = get();
       const { countries, currentIndex } = mergeFetchedWithFocusedCountry(
@@ -447,7 +454,7 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
         status: "idle",
         error: null,
       });
-      void prefetchFeedHeroImages(countries.slice(0, 4));
+      void prefetchFeedHeroImagesAroundIndex(countries, 0);
       void prefetchCountryProfiles(countries, { aroundIndex: 0 });
       prefetchRegionsSequentially(region);
     } catch (err) {
@@ -581,7 +588,8 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
       set({ currentIndex: 0 });
       return;
     }
-    const clamped = Math.max(0, Math.min(index, countries.length - 1));
+    // Allow `countries.length` as a past-end sentinel for the "All caught up" deck state.
+    const clamped = Math.max(0, Math.min(index, countries.length));
     set({ currentIndex: clamped });
   },
 
@@ -655,7 +663,7 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
         return;
       }
 
-      await prefetchFeedHeroImages(countries);
+      await prefetchFeedHeroImagesAroundIndex(countries, get().currentIndex);
       if (requestId !== hereFeedGeneration) return;
 
       set({
@@ -667,7 +675,7 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
         status: "idle",
         error: null,
       });
-      void prefetchFeedHeroImages(countries.slice(1, 3));
+      void prefetchFeedHeroImagesAroundIndex(countries, get().currentIndex);
       void prefetchCountryProfiles(countries, {
         aroundIndex: get().currentIndex,
       });
@@ -704,7 +712,10 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
 
     const snapshot = get().forYouSnapshot;
     if (snapshot && snapshot.countries.length > 0) {
-      await prefetchFeedHeroImages(snapshot.countries);
+      await prefetchFeedHeroImagesAroundIndex(
+        snapshot.countries,
+        get().currentIndex,
+      );
       if (isFeedGenerationStale(restoreRegionGen, restoreHereGen)) return;
 
       set({
@@ -737,16 +748,20 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
   },
 
   focusCountryInFeed: (country: Country) => {
+    warmCountryHeroImage(country);
+
     const { forYouSnapshot, nextCursor, status, focusEpoch } = get();
     const nextStatus = status === "loading" ? "idle" : status;
 
     if (!forYouSnapshot || forYouSnapshot.countries.length === 0) {
+      const countries = [country];
       set({
-        countries: [country],
+        countries,
         currentIndex: 0,
         focusEpoch: focusEpoch + 1,
         status: nextStatus,
       });
+      void prefetchCountryProfiles(countries, { aroundIndex: 0 });
       void get().loadInitialFeed(undefined, { force: true });
       return;
     }
@@ -754,14 +769,16 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
     const tail = forYouSnapshot.countries.filter(
       (c) => c.name !== country.name,
     );
+    const countries = [country, ...tail];
 
     set({
-      countries: [country, ...tail],
+      countries,
       currentIndex: 0,
       focusEpoch: focusEpoch + 1,
       nextCursor: forYouSnapshot.nextCursor ?? nextCursor,
       status: nextStatus,
     });
+    void prefetchCountryProfiles(countries, { aroundIndex: 0 });
   },
 
   focusCountryInDiscoveryQueue: (countryName) => {
@@ -781,6 +798,8 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
       currentIndex: feedIndex,
       focusEpoch: focusEpoch + 1,
     });
+    warmCountryHeroImage(countries[feedIndex]!);
+    void prefetchCountryProfiles(countries, { aroundIndex: feedIndex });
     return true;
   },
 
