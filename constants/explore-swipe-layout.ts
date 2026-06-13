@@ -2,7 +2,7 @@
 
 export const EXPLORE_SWIPE_SCREEN_BG = "#000000";
 /** Card info strip — elevated charcoal footer on black screen. */
-export const EXPLORE_SWIPE_CARD_SURFACE = "#1E1E1E";
+export const EXPLORE_SWIPE_CARD_SURFACE = "#141414";
 
 export const EXPLORE_SWIPE_CARD_RADIUS = 24;
 export const EXPLORE_SWIPE_CARD_IMAGE_FALLBACK = EXPLORE_SWIPE_SCREEN_BG;

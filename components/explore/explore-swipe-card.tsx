@@ -1,6 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Platform,
@@ -52,17 +51,15 @@ import {
   EXPLORE_SWIPE_TEXT_HEADER_LINE_HEIGHT,
 } from "@/constants/explore-swipe-layout";
 import { continentDisplayLabel } from "@/constants/regions";
-import { openCountryInCulture } from "@/features/navigation/open-country-in-culture";
 import { getAiFactByIndex, getCountryImages } from "@/lib/format-country";
 import {
-  openCountryAiExplorer,
-  warmCountryAiExplorer,
-} from "@/lib/open-country-ai-explorer";
-import { focusCountryOnMap } from "@/lib/open-country-on-map";
+  openCountryDetail,
+  warmCountryDetail,
+} from "@/lib/open-country-detail";
 import { useSavedCountriesStore } from "@/store/use-saved-countries-store";
 import type { Country } from "@/types/country";
 
-const CARD_ACTION_COUNT = 3;
+const CARD_ACTION_COUNT = 1;
 const CARD_ACTION_RAIL_WIDTH =
   EXPLORE_SWIPE_ACTION_BUTTON_SIZE * CARD_ACTION_COUNT +
   EXPLORE_SWIPE_CARD_FOOTER_ACTION_GAP * (CARD_ACTION_COUNT - 1);
@@ -133,23 +130,12 @@ export function ExploreSwipeCard({
     });
   }, []);
 
-  const openAiExplorer = () => {
-    openCountryAiExplorer(country);
+  const openDetail = () => {
+    openCountryDetail(country, { from: "explore" });
   };
 
-  const warmAiExplorer = () => {
-    warmCountryAiExplorer(country);
-  };
-
-  const handleOpenMap = () => {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    focusCountryOnMap(country, "explore");
-    router.push("/(tabs)/map");
-  };
-
-  const handleOpenCulture = () => {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    openCountryInCulture(country);
+  const warmDetail = () => {
+    warmCountryDetail(country);
   };
 
   const handleToggleSaved = () => {
@@ -188,8 +174,8 @@ export function ExploreSwipeCard({
               heroHeight={heroLayout.height}
               activeIndex={heroIndex}
               onIndexChange={setHeroIndex}
-              onImagePress={interactive ? openAiExplorer : undefined}
-              onImagePressIn={interactive ? warmAiExplorer : undefined}
+              onImagePress={interactive ? openDetail : undefined}
+              onImagePressIn={interactive ? warmDetail : undefined}
               onActiveImageLoadChange={setIsActiveHeroLoaded}
             />
           ) : null}
@@ -234,38 +220,6 @@ export function ExploreSwipeCard({
                   <View style={styles.actions} pointerEvents="box-none">
                     <Pressable
                       accessibilityRole="button"
-                      accessibilityLabel={`Watch culture for ${country.name}`}
-                      onPress={handleOpenCulture}
-                      style={({ pressed }) => [
-                        styles.actionButton,
-                        pressed && styles.actionButtonPressed,
-                      ]}
-                    >
-                      <Ionicons
-                        name="film-outline"
-                        size={EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE}
-                        color={EXPLORE_SWIPE_CARD_ACTION_ICON_COLOR}
-                      />
-                    </Pressable>
-
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={`View ${country.name} on the map`}
-                      onPress={handleOpenMap}
-                      style={({ pressed }) => [
-                        styles.actionButton,
-                        pressed && styles.actionButtonPressed,
-                      ]}
-                    >
-                      <Ionicons
-                        name="globe-outline"
-                        size={EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE}
-                        color={EXPLORE_SWIPE_CARD_ACTION_ICON_COLOR}
-                      />
-                    </Pressable>
-
-                    <Pressable
-                      accessibilityRole="button"
                       accessibilityLabel={
                         isSaved
                           ? `Unsave ${country.name}`
@@ -299,10 +253,10 @@ export function ExploreSwipeCard({
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={`Fun fact about ${country.name}`}
-                accessibilityHint="Opens the AI country profile"
+                accessibilityHint="Opens country detail"
                 disabled={!interactive}
-                onPress={interactive ? openAiExplorer : undefined}
-                onPressIn={interactive ? warmAiExplorer : undefined}
+                onPress={interactive ? openDetail : undefined}
+                onPressIn={interactive ? warmDetail : undefined}
                 style={({ pressed }) => [
                   styles.factSection,
                   pressed && interactive && styles.factSectionPressed,

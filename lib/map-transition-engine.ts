@@ -1,0 +1,181 @@
+import type { FlightPhase } from "@/hooks/use-map-flight";
+import type { MapCluster } from "@/lib/map-clusters";
+import {
+  buildDiscoveryPhases,
+  COUNTRY_DETAIL_FLIGHT_MS,
+} from "@/lib/map-discovery-flight";
+import type { SelectionSource } from "@/store/use-identity-store";
+import type { MapCountry } from "@/types/country";
+import type { Region } from "react-native-maps";
+
+/**
+ * Transition Decision Engine — single source of truth for map camera transitions.
+ *
+ * Owns animation policy, session memory, flight duration, and phase planning.
+ * The map screen executor only runs the returned plan.
+ */
+
+export type MapTransitionMemory = {
+  /** True after a countryDetail handoff resolved the camera at least once. */
+  countryDetailInitialized: boolean;
+  /** Last country resolved from country detail "View on map". */
+  lastCountryDetailResolvedName: string | null;
+};
+
+export type MapTransitionIntent = {
+  country: MapCountry;
+  mode: "focus" | "preview";
+  source: Exclude<SelectionSource, null>;
+};
+
+export type MapTransitionContext = {
+  cluster: MapCluster | null;
+  useGlobeCamera: boolean;
+};
+
+export type MapTransitionMemoryRecord = "onComplete" | "immediate" | "none";
+
+export type MapTransitionPlan = {
+  shouldAnimate: boolean;
+  flightDuration: number;
+  flightPhases: FlightPhase[];
+  targetRegion: Region | null;
+  /** When the executor should persist countryDetail session memory. */
+  memoryRecord: MapTransitionMemoryRecord;
+  metadata: {
+    source: Exclude<SelectionSource, null>;
+    isRepeatVisit: boolean;
+    reason: string;
+  };
+};
+
+export function createInitialTransitionMemory(): MapTransitionMemory {
+  return {
+    countryDetailInitialized: false,
+    lastCountryDetailResolvedName: null,
+  };
+}
+
+let transitionMemory: MapTransitionMemory = createInitialTransitionMemory();
+
+/** Read current session transition memory (map screen lifetime). */
+export function getTransitionMemory(): MapTransitionMemory {
+  return transitionMemory;
+}
+
+/** Record that a countryDetail handoff resolved the camera (animated or instant). */
+export function recordTransitionResolved(countryName: string): void {
+  transitionMemory = {
+    countryDetailInitialized: true,
+    lastCountryDetailResolvedName: countryName,
+  };
+}
+
+/** Test helper — reset session memory between cases. */
+export function resetTransitionMemoryForTests(): void {
+  transitionMemory = createInitialTransitionMemory();
+}
+
+function decideAnimation(
+  source: Exclude<SelectionSource, null>,
+  countryName: string,
+): boolean {
+  if (source !== "countryDetail") {
+    return true;
+  }
+
+  const memory = getTransitionMemory();
+
+  if (!memory.countryDetailInitialized) {
+    return true;
+  }
+
+  if (memory.lastCountryDetailResolvedName !== countryName) {
+    return true;
+  }
+
+  return false;
+}
+
+function resolveCountryDetailReason(countryName: string): string {
+  const memory = getTransitionMemory();
+
+  if (!memory.countryDetailInitialized) {
+    return "first countryDetail entry";
+  }
+
+  if (memory.lastCountryDetailResolvedName !== countryName) {
+    return "country changed from last countryDetail visit";
+  }
+
+  return "repeat visit to same country from detail";
+}
+
+function computeFlightDuration(
+  source: Exclude<SelectionSource, null>,
+  useGlobeCamera: boolean,
+  shouldAnimate: boolean,
+): number {
+  if (!shouldAnimate) {
+    return 0;
+  }
+  if (source === "explore" || source === "fab") {
+    return useGlobeCamera ? 1400 : 900;
+  }
+  if (source === "countryDetail") {
+    return useGlobeCamera ? 1100 : COUNTRY_DETAIL_FLIGHT_MS;
+  }
+  const baseDuration = source === "mapTap" ? (useGlobeCamera ? 450 : 500) : 650;
+  return useGlobeCamera ? Math.max(baseDuration, 1100) : baseDuration;
+}
+
+/**
+ * Resolves a fully specified camera transition plan from intent + runtime context.
+ */
+export function resolveMapTransition(
+  intent: MapTransitionIntent,
+  context: MapTransitionContext,
+): MapTransitionPlan {
+  const { country, mode, source } = intent;
+  const { cluster, useGlobeCamera } = context;
+
+  const shouldAnimate = decideAnimation(source, country.name);
+  const isRepeatVisit = source === "countryDetail" && !shouldAnimate;
+  const flightDuration = computeFlightDuration(
+    source,
+    useGlobeCamera,
+    shouldAnimate,
+  );
+
+  const flightPhases = buildDiscoveryPhases({
+    pick: country,
+    cluster,
+    source,
+    includeWorld: source === "search",
+    mode,
+  });
+  const targetRegion = flightPhases[flightPhases.length - 1]?.region ?? null;
+
+  let memoryRecord: MapTransitionMemoryRecord = "none";
+  if (source === "countryDetail") {
+    memoryRecord = shouldAnimate ? "onComplete" : "immediate";
+  }
+
+  const reason =
+    source === "countryDetail"
+      ? resolveCountryDetailReason(country.name)
+      : `${source} navigation`;
+
+  return {
+    shouldAnimate,
+    flightDuration,
+    flightPhases,
+    targetRegion,
+    memoryRecord,
+    metadata: {
+      source,
+      isRepeatVisit,
+      reason,
+    },
+  };
+}

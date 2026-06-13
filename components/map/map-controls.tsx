@@ -7,6 +7,7 @@ import { MapBoundaryControlsModal } from "@/components/map/map-boundary-controls
 import { MapCircularFab } from "@/components/map/map-circular-fab";
 import { applyBoundaryStyleDraft } from "@/constants/map-boundary-style";
 import { MAP_CONTROL_STACK } from "@/constants/map-chrome-styles";
+import { MAP_3D_ENABLED } from "@/constants/map-features";
 import type { CameraZoomTier } from "@/lib/map-camera-zoom";
 import type { MapViewTransition } from "@/lib/map-view-transition";
 import type { MapMode } from "@/store/use-map-store";
@@ -163,75 +164,79 @@ export function MapControls({
       >
         {isActionRailExpanded ? (
           <>
-            <View
-              style={styles.stack}
-              accessibilityRole="tablist"
-              accessibilityLabel="Map view mode"
-            >
-              <Pressable
-                accessibilityRole="tab"
-                accessibilityState={{
-                  selected: !is3d,
-                  disabled: isTransitioning,
-                }}
-                accessibilityLabel={
-                  isFlatLoading ? "Switching to flat map view" : "Flat map view"
-                }
-                disabled={isTransitioning}
-                onPress={() => {
-                  if (!is3d) return;
-                  handleMapModeToggle();
-                }}
-                style={({ pressed }) => [
-                  styles.control,
-                  !is3d && styles.modeControlActiveTop,
-                  isFlatLoading && styles.modeControlLoading,
-                  pressed &&
-                    !isTransitioning &&
-                    !is3d &&
-                    styles.modeControlPressedTop,
-                  pressed && !isTransitioning && is3d && styles.pressed,
-                ]}
+            {MAP_3D_ENABLED ? (
+              <View
+                style={styles.stack}
+                accessibilityRole="tablist"
+                accessibilityLabel="Map view mode"
               >
-                <Ionicons
-                  name={!is3d ? "map" : "map-outline"}
-                  size={20}
-                  color={!is3d ? "#0b132b" : "#ffffff"}
-                />
-              </Pressable>
-              <View style={styles.divider} />
-              <Pressable
-                accessibilityRole="tab"
-                accessibilityState={{
-                  selected: is3d,
-                  disabled: isTransitioning,
-                }}
-                accessibilityLabel={
-                  isGlobeLoading ? "Switching to globe view" : "Globe view"
-                }
-                disabled={isTransitioning}
-                onPress={() => {
-                  if (is3d) return;
-                  handleMapModeToggle();
-                }}
-                style={({ pressed }) => [
-                  styles.control,
-                  is3d && styles.modeControlActiveBottom,
-                  isGlobeLoading && styles.modeControlLoading,
-                  pressed &&
-                    !isTransitioning &&
-                    is3d &&
-                    styles.modeControlPressedBottom,
-                  pressed && !isTransitioning && !is3d && styles.pressed,
-                ]}
-              >
-                <Ionicons
-                  name={is3d ? "globe" : "globe-outline"}
-                  size={20}
-                  color={is3d ? "#0b132b" : "#ffffff"}
-                />
-              </Pressable>
-            </View>
+                <Pressable
+                  accessibilityRole="tab"
+                  accessibilityState={{
+                    selected: !is3d,
+                    disabled: isTransitioning,
+                  }}
+                  accessibilityLabel={
+                    isFlatLoading
+                      ? "Switching to flat map view"
+                      : "Flat map view"
+                  }
+                  disabled={isTransitioning}
+                  onPress={() => {
+                    if (!is3d) return;
+                    handleMapModeToggle();
+                  }}
+                  style={({ pressed }) => [
+                    styles.control,
+                    !is3d && styles.modeControlActiveTop,
+                    isFlatLoading && styles.modeControlLoading,
+                    pressed &&
+                      !isTransitioning &&
+                      !is3d &&
+                      styles.modeControlPressedTop,
+                    pressed && !isTransitioning && is3d && styles.pressed,
+                  ]}
+                >
+                  <Ionicons
+                    name={!is3d ? "map" : "map-outline"}
+                    size={20}
+                    color={!is3d ? "#0b132b" : "#ffffff"}
+                  />
+                </Pressable>
+                <View style={styles.divider} />
+                <Pressable
+                  accessibilityRole="tab"
+                  accessibilityState={{
+                    selected: is3d,
+                    disabled: isTransitioning,
+                  }}
+                  accessibilityLabel={
+                    isGlobeLoading ? "Switching to globe view" : "Globe view"
+                  }
+                  disabled={isTransitioning}
+                  onPress={() => {
+                    if (is3d) return;
+                    handleMapModeToggle();
+                  }}
+                  style={({ pressed }) => [
+                    styles.control,
+                    is3d && styles.modeControlActiveBottom,
+                    isGlobeLoading && styles.modeControlLoading,
+                    pressed &&
+                      !isTransitioning &&
+                      is3d &&
+                      styles.modeControlPressedBottom,
+                    pressed && !isTransitioning && !is3d && styles.pressed,
+                  ]}
+                >
+                  <Ionicons
+                    name={is3d ? "globe" : "globe-outline"}
+                    size={20}
+                    color={is3d ? "#0b132b" : "#ffffff"}
+                  />
+                </Pressable>
+              </View>
+            ) : null}
 
             {MAP_ZOOM_RESET_CONTROLS_ENABLED ? (
               <View style={styles.stack}>

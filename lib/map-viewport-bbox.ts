@@ -1,6 +1,7 @@
 import type { Region } from "react-native-maps";
 
 import { ZOOM_TIER_THRESHOLDS } from "@/constants/geo";
+import { CONTINENT_CONTEXT_LATITUDE_DELTA } from "@/constants/map-focus-tiers";
 import {
   FLAT_WORLD_LATITUDE_DELTA,
   resolveFlatZoomTier,
@@ -10,7 +11,6 @@ import {
   GLOBE_REGION_CAMERA_DISTANCE,
   GLOBE_WORLD_CAMERA_DISTANCE,
   MAP_COUNTRY_ZOOM_LATITUDE_DELTA,
-  REGION_FOCUS_INITIAL_DELTA,
   resolveGlobeZoomTier,
 } from "@/lib/map-region-markers";
 import type { BBox, ZoomTier } from "@/types/geo";
@@ -77,8 +77,10 @@ export function resolveLatitudeDeltaFromGlobeDistance(
     const span = GLOBE_WORLD_CAMERA_DISTANCE - GLOBE_REGION_CAMERA_DISTANCE;
     const t = (distance - GLOBE_REGION_CAMERA_DISTANCE) / span;
     return (
-      REGION_FOCUS_INITIAL_DELTA +
-      t * (ZOOM_TIER_THRESHOLDS.worldRegionDelta - REGION_FOCUS_INITIAL_DELTA)
+      CONTINENT_CONTEXT_LATITUDE_DELTA +
+      t *
+        (ZOOM_TIER_THRESHOLDS.worldRegionDelta -
+          CONTINENT_CONTEXT_LATITUDE_DELTA)
     );
   }
 
@@ -90,7 +92,7 @@ export function resolveLatitudeDeltaFromGlobeDistance(
   const t = (distance - GLOBE_DETAIL_CAMERA_DISTANCE) / span;
   return (
     MAP_COUNTRY_ZOOM_LATITUDE_DELTA +
-    t * (REGION_FOCUS_INITIAL_DELTA - MAP_COUNTRY_ZOOM_LATITUDE_DELTA)
+    t * (CONTINENT_CONTEXT_LATITUDE_DELTA - MAP_COUNTRY_ZOOM_LATITUDE_DELTA)
   );
 }
 

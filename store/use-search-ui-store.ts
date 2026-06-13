@@ -9,8 +9,15 @@ type SearchUiState = {
   submitNonce: number;
   query: string;
   region: string | null;
+  resumeSearchOnReturn: boolean;
   openSearch: (context?: SearchUiContext) => void;
   closeSearch: () => void;
+  /**
+   * Hide overlay but keep query/region for resume-on-back.
+   * Country detail covers the in-tab overlay via root stack — do not call on navigate.
+   */
+  hideSearchForDetail: () => void;
+  clearResumeSearchOnReturn: () => void;
   setQuery: (query: string) => void;
   setRegion: (region: string | null) => void;
   requestSearchSubmit: () => void;
@@ -23,6 +30,7 @@ export const useSearchUiStore = create<SearchUiState>((set) => ({
   submitNonce: 0,
   query: "",
   region: null,
+  resumeSearchOnReturn: false,
   openSearch: (context = "default") =>
     set((state) => ({
       isOpen: true,
@@ -35,7 +43,14 @@ export const useSearchUiStore = create<SearchUiState>((set) => ({
       context: "default",
       query: "",
       region: null,
+      resumeSearchOnReturn: false,
     }),
+  hideSearchForDetail: () =>
+    set({
+      isOpen: false,
+      resumeSearchOnReturn: true,
+    }),
+  clearResumeSearchOnReturn: () => set({ resumeSearchOnReturn: false }),
   setQuery: (query) => set({ query }),
   setRegion: (region) => set({ region }),
   requestSearchSubmit: () =>

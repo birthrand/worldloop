@@ -672,6 +672,13 @@ export function ExploreActionRail({
                 />
                 <View style={styles.menuDivider} />
                 <MoreMenuRow
+                  icon="globe-outline"
+                  label="View on map"
+                  subtitle={`Locate ${country.name} on the world map`}
+                  onPress={handleJumpToMap}
+                />
+                <View style={styles.menuDivider} />
+                <MoreMenuRow
                   icon="swap-vertical-outline"
                   label="Sort feed"
                   subtitle={currentSortSummary ?? "Shuffled order"}

@@ -3,7 +3,7 @@ import type { Region } from "react-native-maps";
 import { WORLD_INITIAL_REGION } from "@/constants/map-regions";
 import type { FlightPhase } from "@/hooks/use-map-flight";
 import type { MapCluster } from "@/lib/map-clusters";
-import { REGION_FOCUS_INITIAL_DELTA } from "@/lib/map-region-markers";
+import { resolveCountryFocusLatitudeDelta } from "@/lib/map-country-focus-zoom";
 import {
   flightRegionForClusterFocus,
   flightRegionForCountry,
@@ -44,12 +44,21 @@ const WORLD_VIEW_PAN_SOURCES = new Set<Exclude<SelectionSource, null>>([
   "fab",
 ]);
 
+export const COUNTRY_DETAIL_FLIGHT_MS = 900;
+
+const COUNTRY_DETAIL_SOURCES = new Set<Exclude<SelectionSource, null>>([
+  "countryDetail",
+]);
+
 /**
  * Builds camera phases for country navigation.
  * Marker density/UI derive separately from live zoom — phases only move the camera.
  *
- * Map tap and preview shuffle retarget in one continuous country-zoom flight from
- * the current viewport. Explore and the random FAB pan at world zoom.
+ * Two zoom intents:
+ * - **Context map** (explore / FAB): world-view pan — "where is this country?"
+ * - **Country focus** (detail / search / tap): Tier 1 framing — "show me THIS country"
+ *
+ * Map tap and preview shuffle retarget in one continuous flight from the current viewport.
  */
 export function buildDiscoveryPhases({
   pick,
@@ -58,11 +67,18 @@ export function buildDiscoveryPhases({
   includeWorld,
   mode = "focus",
 }: DiscoveryFlightParams): FlightPhase[] {
+  const countryFocusDelta = resolveCountryFocusLatitudeDelta(pick);
   const countryRegion = flightRegionForCountry(pick);
-  const continentOnCountry = flightRegionForCountry(
-    pick,
-    REGION_FOCUS_INITIAL_DELTA,
-  );
+  const countryFocusRegion = flightRegionForCountry(pick, countryFocusDelta);
+
+  if (COUNTRY_DETAIL_SOURCES.has(source)) {
+    return [
+      {
+        region: countryFocusRegion,
+        duration: COUNTRY_DETAIL_FLIGHT_MS,
+      },
+    ];
+  }
 
   if (WORLD_VIEW_PAN_SOURCES.has(source)) {
     return [
@@ -75,13 +91,13 @@ export function buildDiscoveryPhases({
 
   if (COUNTRY_RETARGET_SOURCES.has(source)) {
     const duration = source === "mapTap" ? COUNTRY_TAP_MS : COUNTRY_RETARGET_MS;
-    const region = mode === "preview" ? countryRegion : continentOnCountry;
+    const region = mode === "preview" ? countryRegion : countryFocusRegion;
     return [{ region, duration }];
   }
 
   const continentRegion: Region = cluster
     ? flightRegionForClusterFocus(cluster)
-    : flightRegionForCountry(pick, REGION_FOCUS_INITIAL_DELTA);
+    : countryFocusRegion;
 
   const phases: FlightPhase[] = [];
   if (includeWorld) {

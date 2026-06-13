@@ -22,9 +22,9 @@ import {
 } from "@/constants/explore-feed-layout";
 import { getAiFactByIndex, getCountryImages } from "@/lib/format-country";
 import {
-  openCountryAiExplorer,
-  warmCountryAiExplorer,
-} from "@/lib/open-country-ai-explorer";
+  openCountryDetail,
+  warmCountryDetail,
+} from "@/lib/open-country-detail";
 import { prefetchCountryProfile } from "@/lib/prefetch-country-profiles";
 import type { Country } from "@/types/country";
 
@@ -97,12 +97,12 @@ export function CountryFeedPage({
     setIsActiveHeroLoaded((prev) => (prev === loaded ? prev : loaded));
   }, []);
 
-  const warmAiExplorer = useCallback(() => {
-    warmCountryAiExplorer(country);
+  const warmDetail = useCallback(() => {
+    warmCountryDetail(country);
   }, [country]);
 
-  const openAiExplorer = useCallback(() => {
-    openCountryAiExplorer(country);
+  const openDetail = useCallback(() => {
+    openCountryDetail(country, { from: "explore" });
   }, [country]);
 
   return (
@@ -144,8 +144,8 @@ export function CountryFeedPage({
                     heroHeight={heroLayout.height}
                     activeIndex={heroIndex}
                     onIndexChange={onImageIndexChange}
-                    onImagePress={openAiExplorer}
-                    onImagePressIn={warmAiExplorer}
+                    onImagePress={openDetail}
+                    onImagePressIn={warmDetail}
                     onActiveImageLoadChange={onActiveHeroLoadChange}
                   />
                 ) : null}
@@ -172,8 +172,8 @@ export function CountryFeedPage({
               <ExploreCountryCard
                 country={country}
                 fact={getAiFactByIndex(country, heroIndex)}
-                onPress={openAiExplorer}
-                onPressIn={warmAiExplorer}
+                onPress={openDetail}
+                onPressIn={warmDetail}
               />
             </View>
           </View>

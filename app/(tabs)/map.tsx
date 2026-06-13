@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -12,10 +12,13 @@ import {
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { TAB_BAR_CONTENT_HEIGHT } from "@/components/bottom-tab-bar";
 import { MapCanvas, type MapCanvasHandle } from "@/components/map/map-canvas";
 import { MapControls } from "@/components/map/map-controls";
-import { MapCountryFocusPill } from "@/components/map/map-country-focus-pill";
+import { MapCountryFocusHeader } from "@/components/map/map-country-focus-header";
+import {
+  MAP_COUNTRY_FOCUS_PILL_HEIGHT,
+  MapCountryFocusPill,
+} from "@/components/map/map-country-focus-pill";
 import { MapCountryPreviewCard } from "@/components/map/map-country-preview-card";
 import { MapDiscoveryChrome } from "@/components/map/map-discovery-chrome";
 import { MapOnboardingSheet } from "@/components/map/map-onboarding-sheet";
@@ -28,23 +31,25 @@ import {
 } from "@/components/map/map-top-chrome";
 import { MapTopChromeScrim } from "@/components/map/map-top-chrome-scrim";
 import { WORLDLOOP_HEADER_TOP_PADDING } from "@/components/worldloop-header";
+import {
+  MAP_COUNTRY_PREVIEW_SCRIM_GRADIENT_COLORS,
+  MAP_COUNTRY_PREVIEW_SCRIM_GRADIENT_LOCATIONS,
+  MAP_LEGAL_ATTRIBUTION_CLEARANCE,
+} from "@/constants/map-chrome-styles";
 import { continentDisplayLabel } from "@/constants/regions";
 import { useMapLogic } from "@/hooks/use-map-logic";
 import { resolveGlobeAutoRotateEnabled } from "@/lib/globe-rotation";
 import type { MapCluster } from "@/lib/map-clusters";
+import { navigateBackFromMap } from "@/lib/navigate-back-from-map";
 import { openExploreHere, openExploreRegion } from "@/lib/open-explore-here";
 import { useSearchUiStore } from "@/store/use-search-ui-store";
 import { useSpatialContextStore } from "@/store/use-spatial-context-store";
-
-/** Preview card "back to continent" action — off until UX is finalized. */
-const PREVIEW_CONTINENT_BACK_ENABLED = false;
 
 /** Keep chrome hidden until preview exit animation finishes (~spring settle). */
 const PREVIEW_EXIT_MS = 320;
 
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
-  const tabBarHeight = useBottomTabBarHeight();
   const mapRef = useRef<MapCanvasHandle>(null);
 
   const map = useMapLogic(mapRef);
@@ -56,8 +61,6 @@ export default function MapScreen() {
   );
   const discoveryTier = useSpatialContextStore((s) => s.discoveryScope.tier);
   const [previewExitHold, setPreviewExitHold] = useState(false);
-  const [discoveryChromeFromFocus, setDiscoveryChromeFromFocus] =
-    useState(false);
   const [discoveryChromeFromRegion, setDiscoveryChromeFromRegion] =
     useState(false);
   const wasPreviewOpenRef = useRef(false);
@@ -83,20 +86,15 @@ export default function MapScreen() {
   }, [map.isPreviewOpen]);
 
   useEffect(() => {
-    if (!map.showCountryFocusPill) {
-      setDiscoveryChromeFromFocus(false);
-    }
-  }, [map.showCountryFocusPill]);
-
-  useEffect(() => {
     if (!map.showRegionChrome) {
       setDiscoveryChromeFromRegion(false);
     }
   }, [map.showRegionChrome]);
 
   const regionChromeBottom = Math.max(insets.bottom, 16);
-  const countryFocusPillBottom = 34;
-  const countryChromeHeight = 44;
+  const countryFocusPillBottom =
+    Math.max(insets.bottom, 16) + MAP_LEGAL_ATTRIBUTION_CLEARANCE;
+  const countryChromeHeight = MAP_COUNTRY_FOCUS_PILL_HEIGHT;
   const countryChromeGap = 24;
   const mapFabClearance = map.showRegionChrome ? 68 : 56;
   const mapFabBottom = map.showCountryFocusPill
@@ -144,13 +142,16 @@ export default function MapScreen() {
     !previewOverlayActive &&
     discoveryChromeCount > 0 &&
     (discoveryChromeFromRegionActive ||
-      discoveryChromeFromFocus ||
       (discoveryTier !== "world" &&
         (map.cameraTier !== "world" || !!map.focusedRegion)));
   const showDiscoveryChrome =
     showDiscoveryChromeEligible &&
     (!map.showRegionChrome || discoveryChromeFromRegion) &&
-    (!map.showCountryFocusPill || discoveryChromeFromFocus);
+    !map.showCountryFocusPill;
+  const showCountryFocusHeader =
+    !!map.activeCountry &&
+    !isMapSearchOpen &&
+    (map.showCountryFocusPill || map.isPreviewOpen);
   const onboardingBottom = Math.max(insets.bottom, 16) + 88;
 
   return (
@@ -197,12 +198,26 @@ export default function MapScreen() {
           <Animated.View
             entering={FadeIn.duration(220)}
             exiting={FadeOut.duration(180)}
-            style={styles.previewDim}
+            style={styles.previewScrimWrap}
             pointerEvents="none"
-          />
+          >
+            <LinearGradient
+              colors={[...MAP_COUNTRY_PREVIEW_SCRIM_GRADIENT_COLORS]}
+              locations={[...MAP_COUNTRY_PREVIEW_SCRIM_GRADIENT_LOCATIONS]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+          </Animated.View>
         ) : null}
 
-        {!previewOverlayActive ? (
+        {showCountryFocusHeader ? (
+          <MapCountryFocusHeader
+            countryName={map.activeCountry!.name}
+            onBack={navigateBackFromMap}
+            dimmed={map.isPreviewOpen}
+          />
+        ) : !previewOverlayActive ? (
           <>
             <MapTopChromeScrim
               paddingTop={insets.top + WORLDLOOP_HEADER_TOP_PADDING}
@@ -257,24 +272,8 @@ export default function MapScreen() {
           <View style={styles.previewWrap} pointerEvents="box-none">
             <MapCountryPreviewCard
               country={map.activeCountry}
-              bottomInset={
-                tabBarHeight || TAB_BAR_CONTENT_HEIGHT + insets.bottom
-              }
+              bottomInset={insets.bottom}
               onDismiss={map.dismissCountryPreview}
-              onBackToContinent={
-                PREVIEW_CONTINENT_BACK_ENABLED &&
-                map.previewDismissToContinent &&
-                map.focusedRegion
-                  ? map.exitCountryPreviewToContinent
-                  : undefined
-              }
-              backToRegionLabel={
-                PREVIEW_CONTINENT_BACK_ENABLED && map.focusedRegion
-                  ? continentDisplayLabel(map.focusedRegion)
-                  : undefined
-              }
-              onNextCountry={() => void map.handleNextCountry()}
-              isNextCountryLoading={map.isPreviewShufflePending}
             />
           </View>
         ) : map.showOnboarding ? (
@@ -303,11 +302,6 @@ export default function MapScreen() {
             country={map.activeCountry}
             bottom={countryFocusPillBottom}
             onOpenDetails={map.openCountryPreview}
-            onShowDiscovery={() =>
-              setDiscoveryChromeFromFocus((visible) => !visible)
-            }
-            discoveryChromeVisible={discoveryChromeFromFocus}
-            onDismiss={map.clearCountryFocus}
           />
         ) : null}
 
@@ -319,7 +313,9 @@ export default function MapScreen() {
           />
         ) : null}
 
-        {!previewOverlayActive && !isMapSearchOpen ? (
+        {!previewOverlayActive &&
+        !isMapSearchOpen &&
+        !map.showCountryFocusPill ? (
           <MapControls
             mapMode={map.mapMode}
             mapViewTransition={map.mapViewTransition}
@@ -391,9 +387,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  previewDim: {
+  previewScrimWrap: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(11, 19, 43, 0.45)",
   },
   previewWrap: {
     position: "absolute",

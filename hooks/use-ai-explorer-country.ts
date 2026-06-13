@@ -77,19 +77,17 @@ export function useAiExplorerCountry(): UseAiExplorerCountryResult {
     typeof name === "string" ? decodeURIComponent(name).trim() : "";
 
   const feedCountries = useCountryFeedStore((s) => s.countries);
-  const currentCountry = useCountryFeedStore((s) => s.getCurrentCountry());
 
   const feedMatch = useMemo(() => {
-    if (!routeName) return currentCountry;
+    if (!routeName) return null;
     return (
       feedCountries.find(
         (item) => item.name.toLowerCase() === routeName.toLowerCase(),
-      ) ?? currentCountry
+      ) ?? null
     );
-  }, [currentCountry, feedCountries, routeName]);
+  }, [feedCountries, routeName]);
 
-  const targetName =
-    routeName || feedMatch?.name || NIGERIA_FALLBACK_COUNTRY.name;
+  const targetName = routeName || NIGERIA_FALLBACK_COUNTRY.name;
 
   const initial = useMemo(
     () => resolveInitialProfile(targetName, feedMatch),

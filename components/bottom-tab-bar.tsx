@@ -41,18 +41,6 @@ const TAB_ITEMS: TabItem[] = [
     iconFocused: "compass",
   },
   {
-    routeName: "culture",
-    label: "Culture",
-    icon: "film-outline",
-    iconFocused: "film",
-  },
-  {
-    routeName: "map",
-    label: "Map",
-    icon: "globe-outline",
-    iconFocused: "globe",
-  },
-  {
     routeName: "saved",
     label: "Saved",
     icon: "bookmark-outline",
@@ -69,6 +57,11 @@ const TAB_ITEMS: TabItem[] = [
 export function BottomTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const onTabBarHeightChange = useContext(BottomTabBarHeightCallbackContext);
+  const activeRouteName = state.routes[state.index]?.name;
+
+  if (activeRouteName === "map") {
+    return null;
+  }
 
   const handlePress = (
     route: (typeof state.routes)[number],

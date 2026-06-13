@@ -9,12 +9,12 @@ export const CENTROID_FALLBACK_PADDING_DEGREES = 2;
 
 /**
  * Zoom tier thresholds (approximate map region deltas / globe distance).
- * Used by spatial context in step 15b — defined here for shared vocabulary.
+ * See `constants/map-focus-tiers.ts` for the semantic focus-tier model.
  */
 export const ZOOM_TIER_THRESHOLDS = {
-  /** Above this delta → world tier (continent clusters). */
+  /** Above this delta → Tier 0 world view (continent clusters). */
   worldRegionDelta: 120,
-  /** Below this delta → country tier when a country is focused. */
+  /** Below this delta → Tier 2 detail when a country is focused. */
   countryRegionDelta: 8,
 } as const;
 

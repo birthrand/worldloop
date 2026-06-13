@@ -1,49 +1,54 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-import Animated, { SlideInDown, SlideOutDown } from "react-native-reanimated";
+import * as Haptics from "expo-haptics";
+import { useEffect, useMemo } from "react";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, {
+  runOnJS,
+  SlideInDown,
+  SlideOutDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 
+import { Divider } from "@/components/ai-explorer/divider";
+import { StatItem } from "@/components/ai-explorer/stat-item";
 import { FlagBadge } from "@/components/explore/flag-badge";
-import { AI_EXPLORER_THEME } from "@/constants/ai-explorer-theme";
-import { CLIENT_CACHE_KEYS, CLIENT_CACHE_TTL } from "@/constants/client-cache";
-import { continentDisplayLabel } from "@/constants/regions";
-import { fetchCountryByName } from "@/lib/api";
-import { getClientCache, staleWhileRevalidate } from "@/lib/client-cache";
-import { formatPopulation } from "@/lib/format-country";
-import { mapCountryToCountry } from "@/lib/map-country";
+import { COUNTRY_DETAIL_MODULE_BG } from "@/constants/country-detail-layout";
 import {
-  openCountryAiExplorer,
-  warmCountryAiExplorer,
-} from "@/lib/open-country-ai-explorer";
-import { openCountryInExplore } from "@/lib/open-country-in-explore";
-import { prefetchCountryProfile } from "@/lib/prefetch-country-profiles";
-import { useSpatialContextStore } from "@/store/use-spatial-context-store";
-import type { Country, MapCountry } from "@/types/country";
+  EXPLORE_SWIPE_ACCENT_COLOR,
+  EXPLORE_SWIPE_CARD_ACTION_ICON_COLOR,
+  EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE,
+  EXPLORE_SWIPE_CARD_INFO_BORDER,
+  EXPLORE_SWIPE_CARD_TITLE_COLOR,
+  EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING,
+  EXPLORE_SWIPE_SCREEN_BG,
+  EXPLORE_SWIPE_TEXT_HEADER,
+  EXPLORE_SWIPE_TEXT_HEADER_LINE_HEIGHT,
+  EXPLORE_SWIPE_TOUCH_TARGET,
+} from "@/constants/explore-swipe-layout";
+import { continentDisplayLabel } from "@/constants/regions";
+import {
+  formatOfficialLanguages,
+  formatPopulation,
+} from "@/lib/format-country";
+import { cca2FromFlagUrl, mapCountryToCountry } from "@/lib/map-country";
+import { useSavedCountriesStore } from "@/store/use-saved-countries-store";
+import type { MapCountry } from "@/types/country";
 
 type MapCountryPreviewCardProps = {
   country: MapCountry;
-  onNextCountry?: () => void;
-  isNextCountryLoading?: boolean;
   onDismiss: () => void;
-  onBackToContinent?: () => void;
-  backToRegionLabel?: string;
   bottomInset?: number;
 };
 
-const FLAG_WIDTH = 56;
-const FLAG_HEIGHT = 38;
-const COUNTRY_NAME_FONT_SIZE = 17;
-const COUNTRY_NAME_LINE_HEIGHT = 20;
-const COUNTRY_NAME_MIN_FONT_SIZE = 14;
-const ACCENT = "#fbbf24";
-const ACCENT_DARK = "#0b132b";
+const COUNTRY_NAME_FONT_SIZE = EXPLORE_SWIPE_TEXT_HEADER;
+const COUNTRY_NAME_LINE_HEIGHT = EXPLORE_SWIPE_TEXT_HEADER_LINE_HEIGHT;
+const COUNTRY_NAME_MIN_FONT_SIZE = 15;
+const FLAG_WIDTH = 32;
+const FLAG_HEIGHT = 22;
 
 const PREVIEW_CARD_ENTER = SlideInDown.springify()
   .damping(20)
@@ -55,109 +60,106 @@ const PREVIEW_CARD_EXIT = SlideOutDown.springify()
   .stiffness(200)
   .mass(0.75);
 
+const PREVIEW_DISMISS_DRAG_PX = 88;
+const PREVIEW_DISMISS_VELOCITY = 900;
+const PREVIEW_DISMISS_EXIT_PX = 420;
+/** Space between country title row and stats panel. */
+const PREVIEW_HEADER_STATS_GAP = 18;
+/** Extra space below stats — above safe area inset from parent. */
+const PREVIEW_CARD_CONTENT_BOTTOM_PADDING = 48;
+
 export function MapCountryPreviewCard({
   country,
-  onNextCountry,
-  isNextCountryLoading = false,
   onDismiss,
-  onBackToContinent,
-  backToRegionLabel,
   bottomInset = 0,
 }: MapCountryPreviewCardProps) {
-  const discoveryScopeMode = useSpatialContextStore(
-    (s) => s.discoveryScope.mode,
-  );
-  const queueLength = useSpatialContextStore((s) => s.queue.length);
-  const [detail, setDetail] = useState<Country | null>(null);
-  const [detailStatus, setDetailStatus] = useState<
-    "idle" | "loading" | "error"
-  >("idle");
-  const [detailError, setDetailError] = useState<string | null>(null);
+  const translateY = useSharedValue(0);
+  const isDismissing = useSharedValue(false);
+  const cca2 = cca2FromFlagUrl(country.flag);
+  const regionLabel = continentDisplayLabel(country.region);
+  const toggleSaved = useSavedCountriesStore((s) => s.toggleSaved);
+  const isSaved = useSavedCountriesStore((s) => s.isSaved(country.name));
+  const countryForSave = useMemo(() => mapCountryToCountry(country), [country]);
+
+  const handleToggleSaved = () => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    toggleSaved(countryForSave);
+  };
 
   useEffect(() => {
-    let cancelled = false;
-
-    const loadDetail = async () => {
-      setDetailError(null);
-
-      const cacheKey = CLIENT_CACHE_KEYS.countryDetail(country.name);
-      const diskCache = await getClientCache<Country>(cacheKey);
-
-      if (cancelled) return;
-
-      if (diskCache.data) {
-        setDetail(diskCache.data);
-        setDetailStatus("idle");
-      } else {
-        setDetail(null);
-        setDetailStatus("loading");
-      }
-
-      try {
-        await staleWhileRevalidate({
-          key: cacheKey,
-          ttlSeconds: CLIENT_CACHE_TTL.countryDetail,
-          fetcher: () => fetchCountryByName(country.name),
-          onCached: (data) => {
-            if (cancelled) return;
-            setDetail(data);
-            setDetailStatus("idle");
-          },
-          onFetched: (data) => {
-            if (cancelled) return;
-            setDetail(data);
-            setDetailStatus("idle");
-          },
-        });
-      } catch (err) {
-        if (cancelled) return;
-        if (!diskCache.data) {
-          setDetailStatus("error");
-          setDetailError(
-            err instanceof Error ? err.message : "Could not load fun fact",
-          );
-        }
-      }
-    };
-
-    void loadDetail();
-    void prefetchCountryProfile(country.name);
-
-    return () => {
-      cancelled = true;
-    };
+    translateY.value = 0;
+    isDismissing.value = false;
   }, [country.name]);
 
-  const detailMatchesCountry = detail?.name === country.name;
-  const countryForActions = mapCountryToCountry(
-    country,
-    detailMatchesCountry ? detail : null,
+  const panGesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .activeOffsetY(8)
+        .failOffsetX([-24, 24])
+        .onUpdate((event) => {
+          if (isDismissing.value) return;
+          translateY.value = Math.max(0, event.translationY);
+        })
+        .onEnd((event) => {
+          if (isDismissing.value) return;
+
+          const shouldDismiss =
+            event.translationY > PREVIEW_DISMISS_DRAG_PX ||
+            event.velocityY > PREVIEW_DISMISS_VELOCITY;
+
+          if (!shouldDismiss) {
+            translateY.value = withSpring(0, { damping: 20, stiffness: 220 });
+            return;
+          }
+
+          isDismissing.value = true;
+          translateY.value = withTiming(
+            PREVIEW_DISMISS_EXIT_PX,
+            { duration: 200 },
+            (finished) => {
+              if (finished) {
+                runOnJS(onDismiss)();
+              }
+            },
+          );
+        }),
+    [isDismissing, onDismiss, translateY],
   );
 
-  const funFact =
-    (detailMatchesCountry ? detail?.ai?.fact?.trim() : undefined) ||
-    (detailStatus === "loading"
-      ? detailMatchesCountry || !detail
-        ? "Loading…"
-        : "Updating…"
-      : detailStatus === "error"
-        ? (detailError ?? "Unavailable right now")
-        : "Updating…");
+  const dragStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
 
   return (
-    <Animated.View
-      entering={PREVIEW_CARD_ENTER}
-      exiting={PREVIEW_CARD_EXIT}
-      style={[
-        styles.card,
-        { paddingBottom: bottomInset > 0 ? bottomInset : 16 },
-      ]}
-    >
-      <View style={styles.topRow}>
-        <View style={styles.titleTextWrap}>
+    <GestureDetector gesture={panGesture}>
+      <Animated.View
+        entering={PREVIEW_CARD_ENTER}
+        exiting={PREVIEW_CARD_EXIT}
+        style={[
+          styles.card,
+          dragStyle,
+          {
+            paddingBottom: bottomInset + PREVIEW_CARD_CONTENT_BOTTOM_PADDING,
+          },
+        ]}
+        accessibilityRole="adjustable"
+        accessibilityLabel={`${country.name} preview`}
+        accessibilityHint="Swipe down to close"
+      >
+        <View style={styles.handleWrap}>
+          <View style={styles.handleBar} />
+        </View>
+
+        <View style={styles.header}>
+          <FlagBadge
+            flag={country.flag}
+            iso2={cca2}
+            width={FLAG_WIDTH}
+            height={FLAG_HEIGHT}
+          />
           <Text
             style={styles.countryName}
-            numberOfLines={3}
+            numberOfLines={2}
             ellipsizeMode="tail"
             adjustsFontSizeToFit
             minimumFontScale={
@@ -166,216 +168,77 @@ export function MapCountryPreviewCard({
           >
             {country.name}
           </Text>
-        </View>
-
-        <View style={styles.closeSlot}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Close country preview"
-            onPress={onDismiss}
-            hitSlop={12}
+            accessibilityLabel={
+              isSaved ? `Unsave ${country.name}` : `Save ${country.name}`
+            }
+            accessibilityHint={
+              isSaved
+                ? "Removes this country from your saved list"
+                : "Adds this country to your saved list"
+            }
+            onPress={handleToggleSaved}
             style={({ pressed }) => [
-              styles.closeButton,
-              pressed && styles.closeButtonPressed,
+              styles.saveButton,
+              pressed && styles.saveButtonPressed,
             ]}
           >
-            <Ionicons name="close" size={18} color="#64748b" />
+            <Ionicons
+              name={isSaved ? "bookmark" : "bookmark-outline"}
+              size={EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE}
+              color={
+                isSaved
+                  ? EXPLORE_SWIPE_ACCENT_COLOR
+                  : EXPLORE_SWIPE_CARD_ACTION_ICON_COLOR
+              }
+            />
           </Pressable>
         </View>
-      </View>
 
-      <View style={styles.sectionDivider} />
-
-      <View style={styles.metaRow}>
-        <View style={styles.flagWrap}>
-          <FlagBadge
-            flag={country.flag}
-            width={FLAG_WIDTH}
-            height={FLAG_HEIGHT}
-          />
+        <View style={styles.statsPanel}>
+          <View style={styles.statsRow}>
+            <StatItem
+              tile
+              align="start"
+              label="Population"
+              value={formatPopulation(country.population)}
+            />
+            <Divider vertical />
+            <StatItem
+              tile
+              align="start"
+              label="Capital"
+              value={country.capital || "—"}
+            />
+          </View>
+          <Divider />
+          <View style={styles.statsRow}>
+            <StatItem tile align="start" label="Region" value={regionLabel} />
+            <Divider vertical />
+            <StatItem
+              tile
+              align="start"
+              label="Language"
+              value={formatOfficialLanguages(undefined)}
+            />
+          </View>
         </View>
-
-        <View style={styles.statDivider} />
-
-        <View style={styles.statsRow}>
-          <Stat
-            caption="Population"
-            value={formatPopulation(country.population)}
-            valueLines={1}
-          />
-          <View style={styles.statDivider} />
-          <Stat
-            caption="Capital"
-            value={country.capital || "—"}
-            flex={1.4}
-            valueLines={3}
-          />
-          <View style={styles.statDivider} />
-          <Stat
-            caption="Continent"
-            value={continentDisplayLabel(country.region)}
-            valueLines={2}
-          />
-        </View>
-      </View>
-
-      <View style={styles.sectionDivider} />
-
-      <View style={styles.factBlock}>
-        <View style={styles.factLabelRow}>
-          <Text style={styles.factLabel}>Fun fact</Text>
-          {detailStatus === "loading" ? (
-            <ActivityIndicator size="small" color="#94a3b8" />
-          ) : null}
-        </View>
-        <Text
-          style={[
-            styles.factText,
-            detailStatus === "error" && styles.factTextMuted,
-          ]}
-        >
-          {funFact}
-        </Text>
-      </View>
-
-      <View style={styles.sectionDivider} />
-
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`Open AI insights for ${country.name}`}
-        onPressIn={() => warmCountryAiExplorer(countryForActions)}
-        onPress={() => openCountryAiExplorer(countryForActions)}
-        style={({ pressed }) => [
-          styles.insightsButton,
-          pressed && styles.insightsButtonPressed,
-        ]}
-      >
-        <Ionicons name="sparkles" size={16} color={AI_EXPLORER_THEME.accent} />
-        <Text style={styles.insightsLabel}>AI Country Explorer</Text>
-        <Ionicons
-          name="chevron-forward"
-          size={16}
-          color={AI_EXPLORER_THEME.textMuted}
-        />
-      </Pressable>
-
-      <View style={styles.actionStack}>
-        {onBackToContinent ? (
-          <>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={
-                backToRegionLabel
-                  ? `Back to ${backToRegionLabel}`
-                  : "Back to continent"
-              }
-              onPress={onBackToContinent}
-              style={({ pressed }) => [
-                styles.actionSegment,
-                styles.backSegment,
-                pressed && styles.pressed,
-              ]}
-            >
-              <Ionicons name="arrow-back" size={16} color="#ffffff" />
-              {backToRegionLabel ? (
-                <Text style={styles.actionLabel} numberOfLines={1}>
-                  {backToRegionLabel}
-                </Text>
-              ) : null}
-            </Pressable>
-            <View style={styles.actionDivider} />
-          </>
-        ) : null}
-
-        {onNextCountry ? (
-          <>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Shuffle to another country"
-              accessibilityHint="Picks another country in this region and flies the map there"
-              accessibilityState={{ disabled: isNextCountryLoading }}
-              disabled={isNextCountryLoading}
-              onPress={onNextCountry}
-              style={({ pressed }) => [
-                styles.actionSegment,
-                isNextCountryLoading && styles.actionLoading,
-                pressed && !isNextCountryLoading && styles.pressed,
-              ]}
-            >
-              <Ionicons name="shuffle" size={18} color="#ffffff" />
-              <Text style={styles.actionLabel}>Shuffle</Text>
-            </Pressable>
-            <View style={styles.actionDivider} />
-          </>
-        ) : null}
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Open ${country.name} in Explore`}
-          onPress={() =>
-            openCountryInExplore(
-              countryForActions,
-              discoveryScopeMode === "here"
-                ? {
-                    mode: "here",
-                    preserveHereMode: true,
-                    preserveQueue: queueLength > 0,
-                  }
-                : undefined,
-            )
-          }
-          style={({ pressed }) => [
-            styles.actionSegment,
-            styles.exploreSegment,
-            pressed && styles.explorePressed,
-          ]}
-        >
-          <Text style={styles.exploreLabel}>Explore</Text>
-          <Ionicons name="arrow-forward" size={16} color={ACCENT_DARK} />
-        </Pressable>
-      </View>
-    </Animated.View>
-  );
-}
-
-function Stat({
-  caption,
-  value,
-  flex = 1,
-  valueLines = 1,
-}: {
-  caption: string;
-  value: string;
-  flex?: number;
-  valueLines?: number;
-}) {
-  return (
-    <View style={[styles.stat, { flex }]}>
-      <Text style={styles.statCaption} numberOfLines={1} ellipsizeMode="tail">
-        {caption}
-      </Text>
-      <Text
-        style={styles.statValue}
-        numberOfLines={valueLines}
-        ellipsizeMode="tail"
-      >
-        {value}
-      </Text>
-    </View>
+      </Animated.View>
+    </GestureDetector>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    paddingTop: 14,
-    marginBottom: -80,
-    paddingHorizontal: 16,
-    gap: 10,
+    paddingTop: 8,
+    paddingHorizontal: EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING,
+    gap: 0,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    backgroundColor: "#121826",
-    borderTopWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
+    backgroundColor: EXPLORE_SWIPE_SCREEN_BG,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: EXPLORE_SWIPE_CARD_INFO_BORDER,
     ...Platform.select({
       ios: {
         shadowColor: "#000000",
@@ -389,185 +252,54 @@ const styles = StyleSheet.create({
       default: {},
     }),
   },
-  sectionDivider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
-    // marginVertical: 4,
+  handleWrap: {
+    alignItems: "center",
+    paddingBottom: 8,
   },
-  topRow: {
+  handleBar: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(255, 255, 255, 0.22)",
+  },
+  header: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 4,
-  },
-  titleTextWrap: {
-    flex: 1,
-    flexGrow: 1,
-    flexShrink: 1,
-    minWidth: 0,
+    alignItems: "center",
+    gap: 12,
   },
   countryName: {
+    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
+    fontFamily: "Poppins-SemiBold",
     fontSize: COUNTRY_NAME_FONT_SIZE,
     lineHeight: COUNTRY_NAME_LINE_HEIGHT,
-    fontFamily: "Poppins-SemiBold",
-    color: "#ffffff",
+    letterSpacing: -0.2,
+    color: EXPLORE_SWIPE_CARD_TITLE_COLOR,
   },
-  closeSlot: {
-    height: COUNTRY_NAME_LINE_HEIGHT,
-    width: 28,
+  saveButton: {
+    width: EXPLORE_SWIPE_TOUCH_TARGET,
+    height: EXPLORE_SWIPE_TOUCH_TARGET,
     flexShrink: 0,
     alignItems: "center",
     justifyContent: "center",
   },
-  closeButton: {
-    width: COUNTRY_NAME_LINE_HEIGHT,
-    height: COUNTRY_NAME_LINE_HEIGHT,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 10,
+  saveButtonPressed: {
+    opacity: 0.78,
   },
-  closeButtonPressed: {
-    backgroundColor: "rgba(255, 255, 255, 0.06)",
-    opacity: 0.85,
-  },
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    // marginVertical: 4,
-  },
-  flagWrap: {
-    flexShrink: 0,
-    marginTop: 1,
+  statsPanel: {
+    marginTop: PREVIEW_HEADER_STATS_GAP,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: COUNTRY_DETAIL_MODULE_BG,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: EXPLORE_SWIPE_CARD_INFO_BORDER,
+    gap: 10,
   },
   statsRow: {
-    flex: 1,
-    flexShrink: 1,
     flexDirection: "row",
     alignItems: "stretch",
-    minWidth: 0,
-  },
-  statDivider: {
-    width: 1,
-    flexShrink: 0,
-    alignSelf: "stretch",
-    marginHorizontal: 8,
-    backgroundColor: "rgba(255, 255, 255, 0.12)",
-  },
-  stat: {
-    flexBasis: 0,
-    flexShrink: 1,
-    minWidth: 0,
-    gap: 2,
-    overflow: "hidden",
-  },
-  statCaption: {
-    fontSize: 11,
-    lineHeight: 13,
-    fontFamily: "Poppins-Regular",
-    color: "#94a3b8",
-  },
-  statValue: {
-    fontSize: 14,
-    lineHeight: 17,
-    fontFamily: "Poppins-Regular",
-    color: "#ffffff",
-    flexShrink: 1,
-  },
-  factBlock: {
-    gap: 4,
-  },
-  factLabelRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  factLabel: {
-    fontSize: 12,
-    fontFamily: "Poppins-Medium",
-    color: "#94a3b8",
-    textTransform: "uppercase",
-    letterSpacing: 0.4,
-  },
-  factText: {
-    fontSize: 14,
-    lineHeight: 19,
-    fontFamily: "Poppins-Regular",
-    color: "rgba(255, 255, 255, 0.9)",
-  },
-  factTextMuted: {
-    color: "#94a3b8",
-  },
-  insightsButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    minHeight: 44,
-    paddingHorizontal: 14,
-    borderRadius: 14,
-    backgroundColor: AI_EXPLORER_THEME.surfaceRaised,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: AI_EXPLORER_THEME.divider,
-  },
-  insightsButtonPressed: {
-    opacity: 0.92,
-    backgroundColor: "rgba(255, 255, 255, 0.06)",
-  },
-  insightsLabel: {
-    flex: 1,
-    fontSize: 14,
-    fontFamily: "Poppins-Medium",
-    color: AI_EXPLORER_THEME.textPrimary,
-  },
-  actionStack: {
-    flexDirection: "row",
-    alignItems: "stretch",
-    marginTop: 4,
-    minHeight: 48,
-    borderRadius: 12,
-    backgroundColor: "#101828",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
-    overflow: "hidden",
-  },
-  actionSegment: {
-    flex: 1,
-    minHeight: 40,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 5,
-    paddingHorizontal: 10,
-  },
-  backSegment: {
-    flex: 0.85,
-    minWidth: 44,
-  },
-  actionDivider: {
-    width: 1,
-    alignSelf: "stretch",
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-  },
-  actionLabel: {
-    fontSize: 13,
-    fontFamily: "Poppins-Medium",
-    color: "#ffffff",
-  },
-  exploreSegment: {
-    backgroundColor: ACCENT,
-  },
-  exploreLabel: {
-    fontSize: 13,
-    fontFamily: "Poppins-SemiBold",
-    color: ACCENT_DARK,
-  },
-  explorePressed: {
-    opacity: 0.88,
-    backgroundColor: "#f59e0b",
-  },
-  actionLoading: {
-    opacity: 0.45,
-  },
-  pressed: {
-    opacity: 0.95,
-    backgroundColor: "#29303C",
+    gap: 10,
   },
 });

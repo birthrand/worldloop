@@ -1,20 +1,13 @@
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { TAB_BAR_CONTENT_HEIGHT } from "@/components/bottom-tab-bar";
+import { SavedCountriesList } from "@/components/saved/saved-countries-list";
 import { SavedEmptyState } from "@/components/saved/saved-empty-state";
-import { SavedPlanetDetail } from "@/components/saved/saved-planet-detail";
 import { SavedSpaceBackground } from "@/components/saved/saved-space-background";
 import { SavedSpaceHeader } from "@/components/saved/saved-space-header";
-import { SavedSpaceLegend } from "@/components/saved/saved-space-legend";
-import { SavedSpaceMap } from "@/components/saved/saved-space-map";
-import { getRecentlySavedNames } from "@/lib/saved-space-layout";
 import { useCountryFeedStore } from "@/store/use-country-feed-store";
 import { useSavedCountriesStore } from "@/store/use-saved-countries-store";
 import type { Country } from "@/types/country";
@@ -34,17 +27,12 @@ function sortBySavedAt(
 export default function SavedScreen() {
   const savedCountries = useSavedCountriesStore((s) => s.savedCountries);
   const savedAtByName = useSavedCountriesStore((s) => s.savedAtByName);
-  const categoryByName = useSavedCountriesStore((s) => s.categoryByName);
   const seedIfEmpty = useSavedCountriesStore((s) => s.seedIfEmpty);
   const enrichFromFeed = useSavedCountriesStore((s) => s.enrichFromFeed);
 
   const feedCountries = useCountryFeedStore((s) => s.countries);
   const feedStatus = useCountryFeedStore((s) => s.status);
   const loadInitialFeed = useCountryFeedStore((s) => s.loadInitialFeed);
-
-  const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
-  const insets = useSafeAreaInsets();
-  const mapChromeBottom = TAB_BAR_CONTENT_HEIGHT + insets.bottom;
 
   useEffect(() => {
     const finishHydration = useSavedCountriesStore.persist.onFinishHydration(
@@ -68,35 +56,19 @@ export default function SavedScreen() {
     enrichFromFeed(feedCountries);
   }, [feedCountries, enrichFromFeed]);
 
-  const mapCountries = useMemo(
-    () => sortBySavedAt(savedCountries, savedAtByName, "asc"),
-    [savedCountries, savedAtByName],
-  );
-
-  const detailCountries = useMemo(
+  const listCountries = useMemo(
     () => sortBySavedAt(savedCountries, savedAtByName, "desc"),
     [savedCountries, savedAtByName],
   );
 
-  const recentlySavedNames = useMemo(
-    () => getRecentlySavedNames(mapCountries, savedAtByName),
-    [mapCountries, savedAtByName],
-  );
-
-  const isEmpty = mapCountries.length === 0;
-  const selectedIndex = selectedCountry
-    ? detailCountries.findIndex(
-        (country) => country.name === selectedCountry.name,
-      )
-    : -1;
-  const isMapView = !isEmpty && selectedIndex < 0;
+  const isEmpty = listCountries.length === 0;
 
   return (
     <SafeAreaView style={styles.screen}>
       <StatusBar style="light" />
       <SavedSpaceBackground />
 
-      <View style={[styles.content, isMapView && styles.contentMap]}>
+      <View style={styles.content}>
         {isEmpty ? (
           <Animated.View
             entering={FadeIn.duration(320)}
@@ -109,49 +81,17 @@ export default function SavedScreen() {
               showExploreCta
             />
           </Animated.View>
-        ) : selectedIndex >= 0 ? (
-          <Animated.View
-            entering={FadeIn.duration(320)}
-            exiting={FadeOut.duration(200)}
-            style={styles.detailWrap}
-          >
-            <SavedPlanetDetail
-              countries={detailCountries}
-              selectedIndex={selectedIndex}
-              categoryByName={categoryByName}
-              recentlySavedNames={recentlySavedNames}
-              onReturn={() => setSelectedCountry(null)}
-              onSelectedIndexChange={(index) => {
-                const nextCountry = detailCountries[index];
-                if (nextCountry) setSelectedCountry(nextCountry);
-              }}
-            />
-          </Animated.View>
         ) : (
           <Animated.View
             entering={FadeIn.duration(320)}
             exiting={FadeOut.duration(200)}
-            style={styles.mapWrap}
+            style={styles.listWrap}
           >
             <SavedSpaceHeader />
-            <SavedSpaceMap
-              countries={mapCountries}
-              categoryByName={categoryByName}
-              savedAtByName={savedAtByName}
-              onSelectCountry={setSelectedCountry}
-            />
+            <SavedCountriesList countries={listCountries} />
           </Animated.View>
         )}
       </View>
-
-      {isMapView ? (
-        <View
-          pointerEvents="none"
-          style={[styles.floatingLegend, { bottom: mapChromeBottom + 12 }]}
-        >
-          <SavedSpaceLegend variant="floating" />
-        </View>
-      ) : null}
     </SafeAreaView>
   );
 }
@@ -167,25 +107,13 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 112,
   },
-  contentMap: {
-    paddingBottom: 0,
-  },
-  mapWrap: {
+  listWrap: {
     flex: 1,
-    gap: 8,
-    marginHorizontal: -24,
-  },
-  detailWrap: {
-    flex: 1,
+    gap: 16,
   },
   emptyWrap: {
     flex: 1,
     gap: 24,
     justifyContent: "center",
-  },
-  floatingLegend: {
-    position: "absolute",
-    left: 24,
-    zIndex: 10,
   },
 });

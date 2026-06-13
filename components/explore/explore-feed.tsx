@@ -58,7 +58,7 @@ export function ExploreFeed() {
         style={[
           styles.deckRegion,
           {
-            paddingBottom: EXPLORE_SWIPE_DECK_VERTICAL_GAP + 4,
+            paddingBottom: EXPLORE_SWIPE_DECK_VERTICAL_GAP + 24,
           },
         ]}
       >

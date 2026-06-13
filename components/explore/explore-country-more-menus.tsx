@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import { useState } from "react";
 import {
   Alert,
@@ -12,6 +13,7 @@ import {
 import Animated, { SlideInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { focusCountryOnMap } from "@/lib/open-country-on-map";
 import {
   DEFAULT_FEED_SORT_FIELD,
   DEFAULT_FEED_SORT_ORDER,
@@ -281,6 +283,13 @@ export function ExploreCountryMoreMenus({
     void handleShare();
   };
 
+  const handleViewOnMap = () => {
+    if (!country) return;
+    onCloseMoreMenu();
+    focusCountryOnMap(country, "explore");
+    router.push("/(tabs)/map");
+  };
+
   return (
     <>
       <Modal
@@ -327,6 +336,13 @@ export function ExploreCountryMoreMenus({
                 label="Share"
                 subtitle={`Share ${countryName} with friends`}
                 onPress={handleShareFromMenu}
+              />
+              <View style={styles.menuDivider} />
+              <MoreMenuRow
+                icon="globe-outline"
+                label="View on map"
+                subtitle={`Locate ${countryName} on the world map`}
+                onPress={handleViewOnMap}
               />
               <View style={styles.menuDivider} />
               <MoreMenuRow

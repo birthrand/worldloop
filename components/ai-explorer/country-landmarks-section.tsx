@@ -4,7 +4,12 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ProfileSection } from "@/components/ai-explorer/profile-section";
 import { prefetchCountryImage } from "@/components/explore/country-image";
-import { AI_EXPLORER_THEME } from "@/constants/ai-explorer-theme";
+import { COUNTRY_DETAIL_MODULE_BG } from "@/constants/country-detail-layout";
+import {
+  EXPLORE_SWIPE_ACCENT_COLOR,
+  EXPLORE_SWIPE_CARD_FACT_TEXT_COLOR,
+  EXPLORE_SWIPE_CARD_TITLE_COLOR,
+} from "@/constants/explore-swipe-layout";
 import { images as appImages } from "@/constants/images";
 import type { CountryLandmark } from "@/lib/api";
 import { formatLandmarkDescription } from "@/lib/format-country";
@@ -193,7 +198,7 @@ const styles = StyleSheet.create({
     height: 200,
     borderRadius: 10,
     overflow: "hidden",
-    backgroundColor: "rgba(30, 41, 59, 0.6)",
+    backgroundColor: COUNTRY_DETAIL_MODULE_BG,
   },
   imageStack: {
     ...StyleSheet.absoluteFillObject,
@@ -212,19 +217,19 @@ const styles = StyleSheet.create({
     bottom: 0,
     paddingHorizontal: 10,
     paddingVertical: 8,
-    backgroundColor: "rgba(15, 23, 42, 0.72)",
+    backgroundColor: "rgba(0, 0, 0, 0.72)",
   },
   name: {
     fontFamily: "Poppins-Medium",
     fontSize: 14,
     lineHeight: 18,
-    color: AI_EXPLORER_THEME.textPrimary,
+    color: EXPLORE_SWIPE_CARD_TITLE_COLOR,
   },
   description: {
     fontFamily: "Poppins-Regular",
     fontSize: 13,
     lineHeight: 20,
-    color: AI_EXPLORER_THEME.textSecondary,
+    color: EXPLORE_SWIPE_CARD_FACT_TEXT_COLOR,
   },
   toggleRow: {
     alignSelf: "flex-start",
@@ -233,6 +238,6 @@ const styles = StyleSheet.create({
   toggleText: {
     fontFamily: "Poppins-Medium",
     fontSize: 13,
-    color: AI_EXPLORER_THEME.accent,
+    color: EXPLORE_SWIPE_ACCENT_COLOR,
   },
 });

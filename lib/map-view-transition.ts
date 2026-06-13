@@ -1,3 +1,5 @@
+import { MAP_3D_ENABLED } from "@/constants/map-features";
+
 /** Visual crossfade phase when switching 2D map ↔ 3D globe (not persisted). */
 export type MapViewTransition =
   | "idle"
@@ -12,6 +14,7 @@ export const MAP_DIM_HOLD_MS = 200;
 export function resolveStableMapViewTransition(
   mapMode: "2d" | "3d",
 ): MapViewTransition {
+  if (!MAP_3D_ENABLED) return "idle";
   return mapMode === "3d" ? "ready" : "idle";
 }
 
@@ -41,6 +44,7 @@ export function shouldShowGlobeLayer(
   mapMode: "2d" | "3d",
   transition: MapViewTransition,
 ): boolean {
+  if (!MAP_3D_ENABLED) return false;
   return (
     mapMode === "3d" ||
     transition === "enteringGlobe" ||
@@ -53,7 +57,7 @@ export function isGlobeMapUi(
   mapMode: "2d" | "3d",
   transition: MapViewTransition,
 ): boolean {
-  return mapMode === "3d" && transition === "ready";
+  return MAP_3D_ENABLED && mapMode === "3d" && transition === "ready";
 }
 
 /** True when 2D map data/chrome should drive the experience (incl. crossfade back from globe). */

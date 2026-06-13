@@ -14,7 +14,8 @@ import type { MapPresentationMode } from "@/types/map-presentation";
  * Map screen signal sources — use the right input for each decision:
  *
  * **Live camera** (`cameraTier`, `latitudeDelta`, `globeDistance`):
- * zoom tier, marker density, UI scaling, explore-vs-world behavior.
+ * focus tiers (see `constants/map-focus-tiers.ts`), marker density, UI scaling.
+ * Camera tier strings: `world` = Tier 0, `region` = Tier 1 Country Focus, `country` = Tier 2 Detail.
  *
  * **`focusedRegion`** + **`presentationMode`** / active country:
  * tap routing, what is selected, continent navigation targets.

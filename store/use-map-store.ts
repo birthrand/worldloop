@@ -1,10 +1,12 @@
 import { create } from "zustand";
 
 import { CLIENT_CACHE_KEYS, CLIENT_CACHE_TTL } from "@/constants/client-cache";
+import { MAP_3D_ENABLED } from "@/constants/map-features";
 import { fetchMapCountries } from "@/lib/api";
 import { normalizeCountryRegion } from "@/lib/app-region";
 import { getClientCache, staleWhileRevalidate } from "@/lib/client-cache";
 import { countryToMapCountry, isValidLatLng } from "@/lib/map-country";
+import { createMapPresentationIntent } from "@/lib/map-navigation-intent";
 import { prefetchMapCountryDetails } from "@/lib/prefetch-country-details";
 import {
   useIdentityStore,
@@ -218,13 +220,13 @@ export const useMapStore = create<MapState>()((set, get) => ({
 
     set({
       countries,
-      pendingMapIntent: {
+      pendingMapIntent: createMapPresentationIntent({
         countryName: trimmed,
         mode: "focus",
         source,
         discoveryScope,
         scopeMode: discoveryScope.mode,
-      },
+      }),
     });
   },
 
@@ -237,11 +239,11 @@ export const useMapStore = create<MapState>()((set, get) => ({
     const pick = visible[Math.floor(Math.random() * visible.length)] ?? null;
     if (pick) {
       set({
-        pendingMapIntent: {
+        pendingMapIntent: createMapPresentationIntent({
           countryName: pick.name,
           mode: "focus",
           source: "shuffle",
-        },
+        }),
       });
     }
     return pick;
@@ -249,12 +251,15 @@ export const useMapStore = create<MapState>()((set, get) => ({
 
   setActiveChip: (chip) => set({ activeChip: chip }),
 
-  setMapMode: (mode) => set({ mapMode: mode }),
+  setMapMode: (mode) =>
+    set({ mapMode: mode === "3d" && !MAP_3D_ENABLED ? "2d" : mode }),
 
-  toggleMapMode: () =>
+  toggleMapMode: () => {
+    if (!MAP_3D_ENABLED) return;
     set((state) => ({
       mapMode: state.mapMode === "3d" ? "2d" : "3d",
-    })),
+    }));
+  },
 
   registerGlobeCamera: (handle) => {
     set({ globeCamera: handle });

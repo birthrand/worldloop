@@ -6,9 +6,17 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
   type NativeSyntheticEvent,
   type TextLayoutEventData,
 } from "react-native";
+import AnimatedReanimated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedStyle,
+  type SharedValue,
+} from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CountryHeroCarousel } from "@/components/ai-explorer/country-hero-carousel";
 import { CountryLandmarksSection } from "@/components/ai-explorer/country-landmarks-section";
@@ -17,7 +25,29 @@ import { Divider } from "@/components/ai-explorer/divider";
 import { ProfileSection } from "@/components/ai-explorer/profile-section";
 import { StatItem } from "@/components/ai-explorer/stat-item";
 import { FlagBadge } from "@/components/explore/flag-badge";
-import { AI_EXPLORER_THEME } from "@/constants/ai-explorer-theme";
+import {
+  COUNTRY_DETAIL_MODULE_BG,
+  COUNTRY_DETAIL_TITLE_CROSSFADE_RANGE,
+  getCountryDetailContentGap,
+  getCountryDetailContentOverlap,
+  getCountryDetailContentPaddingBottom,
+  getCountryDetailContentPaddingTop,
+  getCountryDetailProfileSectionsOffset,
+  getCountryDetailTitleCollapseThreshold,
+} from "@/constants/country-detail-layout";
+import {
+  EXPLORE_SWIPE_ACCENT_COLOR,
+  EXPLORE_SWIPE_CARD_FACT_TEXT_COLOR,
+  EXPLORE_SWIPE_CARD_INFO_BORDER,
+  EXPLORE_SWIPE_CARD_SUBTITLE_COLOR,
+  EXPLORE_SWIPE_CARD_TITLE_COLOR,
+  EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING,
+  EXPLORE_SWIPE_SCREEN_BG,
+  EXPLORE_SWIPE_TEXT_BODY,
+  EXPLORE_SWIPE_TEXT_BODY_LINE_HEIGHT,
+  EXPLORE_SWIPE_TEXT_HEADER,
+  EXPLORE_SWIPE_TEXT_HEADER_LINE_HEIGHT,
+} from "@/constants/explore-swipe-layout";
 import { continentDisplayLabel } from "@/constants/regions";
 import type { CountryLandmark, CountryWikipediaSummary } from "@/lib/api";
 import {
@@ -39,9 +69,9 @@ const DESCRIPTION_COLLAPSED_LINES = 3;
 const DESCRIPTION_READ_MORE_CHAR_THRESHOLD = 200;
 const OVERVIEW_LINE_HEIGHT = 22;
 const OVERVIEW_SKELETON_LINE_WIDTHS = ["100%", "94%", "78%"] as const;
-const COUNTRY_NAME_FONT_SIZE = 19;
+const COUNTRY_NAME_FONT_SIZE = EXPLORE_SWIPE_TEXT_HEADER;
 const COUNTRY_NAME_MIN_FONT_SIZE = 15;
-const COUNTRY_NAME_LINE_HEIGHT = 24;
+const COUNTRY_NAME_LINE_HEIGHT = EXPLORE_SWIPE_TEXT_HEADER_LINE_HEIGHT;
 
 function buildOverviewPreview(
   lines: TextLayoutEventData["lines"],
@@ -70,7 +100,7 @@ type CountryProfileCardProps = {
   wikipedia: CountryWikipediaSummary | null;
   landmarks: CountryLandmark[];
   overviewLoading?: boolean;
-  onBack: () => void;
+  scrollY: SharedValue<number>;
   onShowMap: () => void;
 };
 
@@ -233,9 +263,38 @@ export function CountryProfileCard({
   wikipedia,
   landmarks,
   overviewLoading = false,
-  onBack,
+  scrollY,
   onShowMap,
 }: CountryProfileCardProps) {
+  const insets = useSafeAreaInsets();
+  const { height: screenHeight } = useWindowDimensions();
+  const contentOverlap = getCountryDetailContentOverlap(screenHeight);
+  const contentPaddingTop = getCountryDetailContentPaddingTop(screenHeight);
+  const contentGap = getCountryDetailContentGap(screenHeight);
+  const contentPaddingBottom =
+    getCountryDetailContentPaddingBottom(screenHeight);
+  const profileSectionsOffset =
+    getCountryDetailProfileSectionsOffset(screenHeight);
+  const collapseThreshold = getCountryDetailTitleCollapseThreshold(
+    screenHeight,
+    insets.top,
+  );
+  const fadeStart = Math.max(
+    0,
+    collapseThreshold - COUNTRY_DETAIL_TITLE_CROSSFADE_RANGE,
+  );
+
+  const contentTitleStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(
+      scrollY.value,
+      [fadeStart, collapseThreshold],
+      [1, 0],
+      Extrapolation.CLAMP,
+    );
+
+    return { opacity };
+  });
+
   const [overviewExpanded, setOverviewExpanded] = useState(false);
   const [overviewOverflows, setOverviewOverflows] = useState(false);
 
@@ -294,16 +353,22 @@ export function CountryProfileCard({
 
   return (
     <View style={styles.root}>
-      <CountryHeroCarousel
-        images={images}
-        countryName={country.name}
-        onBack={onBack}
-      />
+      <CountryHeroCarousel images={images} countryName={country.name} />
 
-      <View style={styles.content}>
+      <View
+        style={[
+          styles.content,
+          {
+            marginTop: -contentOverlap,
+            paddingTop: contentPaddingTop,
+            paddingBottom: contentPaddingBottom,
+            gap: contentGap,
+          },
+        ]}
+      >
         <View style={styles.header}>
-          <Text
-            style={styles.countryName}
+          <AnimatedReanimated.Text
+            style={[styles.countryName, contentTitleStyle]}
             numberOfLines={2}
             ellipsizeMode="tail"
             adjustsFontSizeToFit
@@ -312,7 +377,7 @@ export function CountryProfileCard({
             }
           >
             {country.name}
-          </Text>
+          </AnimatedReanimated.Text>
           <View style={styles.flagChip}>
             <FlagBadge
               flag={country.flag}
@@ -332,7 +397,9 @@ export function CountryProfileCard({
           language={languagesLabel}
         />
 
-        <View style={styles.profileSections}>
+        <View
+          style={[styles.profileSections, { marginTop: profileSectionsOffset }]}
+        >
           <SectionDivider />
           <ProfileSection title="Location">
             <CountryLocationMap country={country} onPress={onShowMap} />
@@ -340,52 +407,57 @@ export function CountryProfileCard({
 
           <SectionDivider />
           <ProfileSection title="Overview">
-            {overviewLoading && !wikipediaExtract ? (
-              <OverviewTextSkeleton />
-            ) : (
-              <>
-                <View style={styles.overviewBody}>
-                  <Text
-                    key={overviewText}
-                    style={styles.overviewMeasure}
-                    onTextLayout={handleOverviewMeasure}
-                  >
-                    {overviewText}
-                  </Text>
-                  <Text
-                    style={styles.bodyText}
-                    numberOfLines={
-                      overviewExpanded ? undefined : DESCRIPTION_COLLAPSED_LINES
-                    }
-                  >
-                    {overviewText}
-                  </Text>
-                </View>
-                {showReadMoreControl ? (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={
-                      overviewExpanded ? "Read less" : "Read more"
-                    }
-                    onPress={() => setOverviewExpanded((value) => !value)}
-                    style={styles.readMoreRow}
-                  >
-                    <Text style={styles.linkText}>
-                      {overviewExpanded ? "Read less" : "Read more"}
+            <View style={styles.overviewModule}>
+              {overviewLoading && !wikipediaExtract ? (
+                <OverviewTextSkeleton />
+              ) : (
+                <>
+                  <View style={styles.overviewBody}>
+                    <Text
+                      key={overviewText}
+                      style={styles.overviewMeasure}
+                      onTextLayout={handleOverviewMeasure}
+                    >
+                      {overviewText}
                     </Text>
-                  </Pressable>
-                ) : null}
-              </>
-            )}
+                    <Text
+                      style={styles.bodyText}
+                      numberOfLines={
+                        overviewExpanded
+                          ? undefined
+                          : DESCRIPTION_COLLAPSED_LINES
+                      }
+                    >
+                      {overviewText}
+                    </Text>
+                  </View>
+                  {showReadMoreControl ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={
+                        overviewExpanded ? "Read less" : "Read more"
+                      }
+                      onPress={() => setOverviewExpanded((value) => !value)}
+                      style={styles.readMoreRow}
+                    >
+                      <Text style={styles.linkText}>
+                        {overviewExpanded ? "Read less" : "Read more"}
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                </>
+              )}
+            </View>
           </ProfileSection>
 
           {featuredFact ? (
             <>
               <SectionDivider />
-              <View style={styles.factCallout}>
-                <Text style={styles.factCalloutLabel}>Did you know?</Text>
-                <Text style={styles.factCalloutText}>{featuredFact}</Text>
-              </View>
+              <ProfileSection title="Did you know?">
+                <View style={styles.factCallout}>
+                  <Text style={styles.factCalloutText}>{featuredFact}</Text>
+                </View>
+              </ProfileSection>
             </>
           ) : null}
 
@@ -431,18 +503,13 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   content: {
-    marginTop: -36,
-    marginHorizontal: 14,
-    paddingHorizontal: 18,
-    paddingTop: 20,
-    paddingBottom: 24,
-    gap: 20,
+    marginHorizontal: EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING,
+    paddingHorizontal: EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     overflow: "hidden",
-    backgroundColor: AI_EXPLORER_THEME.surface,
+    backgroundColor: EXPLORE_SWIPE_SCREEN_BG,
     zIndex: 1,
-    elevation: 2,
   },
   header: {
     flexDirection: "row",
@@ -454,11 +521,11 @@ const styles = StyleSheet.create({
     flex: 1,
     flexShrink: 1,
     minWidth: 0,
-    fontFamily: "Poppins-Medium",
+    fontFamily: "Poppins-SemiBold",
     fontSize: COUNTRY_NAME_FONT_SIZE,
     lineHeight: COUNTRY_NAME_LINE_HEIGHT,
     letterSpacing: -0.2,
-    color: AI_EXPLORER_THEME.textPrimary,
+    color: EXPLORE_SWIPE_CARD_TITLE_COLOR,
   },
   flagChip: {
     flexDirection: "row",
@@ -470,9 +537,9 @@ const styles = StyleSheet.create({
     paddingRight: 10,
     paddingVertical: 4,
     borderRadius: 999,
-    backgroundColor: AI_EXPLORER_THEME.surfaceRaised,
+    backgroundColor: COUNTRY_DETAIL_MODULE_BG,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: AI_EXPLORER_THEME.divider,
+    borderColor: EXPLORE_SWIPE_CARD_INFO_BORDER,
   },
   flagLabel: {
     flexShrink: 1,
@@ -480,15 +547,15 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 0.4,
     textTransform: "uppercase",
-    color: AI_EXPLORER_THEME.textSecondary,
+    color: EXPLORE_SWIPE_CARD_SUBTITLE_COLOR,
   },
   statsPanel: {
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: AI_EXPLORER_THEME.surfaceRaised,
+    backgroundColor: COUNTRY_DETAIL_MODULE_BG,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: AI_EXPLORER_THEME.divider,
+    borderColor: EXPLORE_SWIPE_CARD_INFO_BORDER,
     gap: 10,
   },
   statsRow: {
@@ -501,7 +568,15 @@ const styles = StyleSheet.create({
   },
   profileSections: {
     gap: 8,
-    marginTop: -12,
+  },
+  overviewModule: {
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: COUNTRY_DETAIL_MODULE_BG,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: EXPLORE_SWIPE_CARD_INFO_BORDER,
   },
   overviewSkeleton: {
     width: "100%",
@@ -531,9 +606,9 @@ const styles = StyleSheet.create({
   bodyText: {
     flex: 1,
     fontFamily: "Poppins-Regular",
-    fontSize: 14,
-    lineHeight: 22,
-    color: AI_EXPLORER_THEME.textSecondary,
+    fontSize: EXPLORE_SWIPE_TEXT_BODY,
+    lineHeight: EXPLORE_SWIPE_TEXT_BODY_LINE_HEIGHT,
+    color: EXPLORE_SWIPE_CARD_FACT_TEXT_COLOR,
   },
   readMoreRow: {
     alignSelf: "flex-start",
@@ -542,29 +617,21 @@ const styles = StyleSheet.create({
   linkText: {
     fontFamily: "Poppins-Medium",
     fontSize: 13,
-    color: AI_EXPLORER_THEME.accent,
+    color: EXPLORE_SWIPE_ACCENT_COLOR,
   },
   factCallout: {
-    gap: 8,
     paddingHorizontal: 14,
     paddingVertical: 14,
     borderRadius: 14,
-    backgroundColor: AI_EXPLORER_THEME.surfaceRaised,
+    backgroundColor: COUNTRY_DETAIL_MODULE_BG,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: AI_EXPLORER_THEME.divider,
-  },
-  factCalloutLabel: {
-    fontFamily: "Poppins-Medium",
-    fontSize: 11,
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
-    color: AI_EXPLORER_THEME.textMuted,
+    borderColor: EXPLORE_SWIPE_CARD_INFO_BORDER,
   },
   factCalloutText: {
     fontFamily: "Poppins-Regular",
-    fontSize: 14,
-    lineHeight: 22,
-    color: AI_EXPLORER_THEME.textSecondary,
+    fontSize: EXPLORE_SWIPE_TEXT_BODY,
+    lineHeight: EXPLORE_SWIPE_TEXT_BODY_LINE_HEIGHT,
+    color: EXPLORE_SWIPE_CARD_FACT_TEXT_COLOR,
   },
   wikipediaButton: {
     alignSelf: "flex-start",

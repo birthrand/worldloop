@@ -1,5 +1,11 @@
-import { ExplorerBackButton } from "@/components/ai-explorer/explorer-back-button";
 import { AI_EXPLORER_THEME } from "@/constants/ai-explorer-theme";
+import {
+  COUNTRY_DETAIL_HERO_BOTTOM_SCRIM_RATIO,
+  getCountryDetailHeroDotsBottom,
+  getCountryDetailHeroHeight,
+  getCountryDetailHeroTopScrimHeight,
+} from "@/constants/country-detail-layout";
+import { EXPLORE_SWIPE_SCREEN_BG } from "@/constants/explore-swipe-layout";
 import { images as appImages } from "@/constants/images";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
@@ -13,21 +19,40 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-/** Share of screen height for the edge-to-edge hero (reduced so facts appear sooner). */
-const HERO_HEIGHT_RATIO = 0.4;
-
-const HERO_BOTTOM_SCRIM_COLORS = [
-  AI_EXPLORER_THEME.surface,
-  "rgba(15, 23, 42, 0.88)",
-  "rgba(15, 23, 42, 0.45)",
-  "rgba(15, 23, 42, 0)",
+const HERO_TOP_SCRIM_COLORS = [
+  "rgba(0, 0, 0, 0.72)",
+  "rgba(0, 0, 0, 0.42)",
+  "rgba(0, 0, 0, 0)",
 ] as const;
 
-const HERO_BOTTOM_SCRIM_LOCATIONS = [0, 0.28, 0.58, 1] as const;
+const HERO_TOP_SCRIM_LOCATIONS = [0, 0.45, 1] as const;
 
-function HeroBottomScrim() {
+const HERO_BOTTOM_SCRIM_COLORS = [
+  EXPLORE_SWIPE_SCREEN_BG,
+  EXPLORE_SWIPE_SCREEN_BG,
+  "rgba(0, 0, 0, 0.92)",
+  "rgba(0, 0, 0, 0.62)",
+  "rgba(0, 0, 0, 0.28)",
+  "rgba(0, 0, 0, 0)",
+] as const;
+
+const HERO_BOTTOM_SCRIM_LOCATIONS = [0, 0.14, 0.32, 0.52, 0.76, 1] as const;
+
+function HeroTopScrim({ height }: { height: number }) {
+  return (
+    <LinearGradient
+      pointerEvents="none"
+      colors={[...HERO_TOP_SCRIM_COLORS]}
+      locations={[...HERO_TOP_SCRIM_LOCATIONS]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      style={[styles.topScrim, { height }]}
+    />
+  );
+}
+
+function HeroBottomScrim({ heightRatio }: { heightRatio: number }) {
   return (
     <LinearGradient
       pointerEvents="none"
@@ -35,7 +60,7 @@ function HeroBottomScrim() {
       locations={[...HERO_BOTTOM_SCRIM_LOCATIONS]}
       start={{ x: 0, y: 1 }}
       end={{ x: 0, y: 0 }}
-      style={styles.bottomScrim}
+      style={[styles.bottomScrim, { height: `${heightRatio * 100}%` }]}
     />
   );
 }
@@ -43,17 +68,16 @@ function HeroBottomScrim() {
 type CountryHeroCarouselProps = {
   images: string[];
   countryName: string;
-  onBack: () => void;
 };
 
 export function CountryHeroCarousel({
   images,
   countryName,
-  onBack,
 }: CountryHeroCarouselProps) {
-  const insets = useSafeAreaInsets();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
-  const heroHeight = Math.round(screenHeight * HERO_HEIGHT_RATIO);
+  const heroHeight = getCountryDetailHeroHeight(screenHeight);
+  const topScrimHeight = getCountryDetailHeroTopScrimHeight(screenHeight);
+  const dotsBottom = getCountryDetailHeroDotsBottom(screenHeight);
   const fallbackWidth = screenWidth;
 
   const [carouselWidth, setCarouselWidth] = useState(fallbackWidth);
@@ -88,8 +112,6 @@ export function CountryHeroCarousel({
     }
   };
 
-  const backButtonTop = insets.top + 8;
-
   if (slides.length === 0) {
     return (
       <View
@@ -106,10 +128,8 @@ export function CountryHeroCarousel({
             accessibilityLabel={`${countryName} placeholder`}
           />
         </View>
-        <View style={[styles.backOverlay, { top: backButtonTop }]}>
-          <ExplorerBackButton onPress={onBack} />
-        </View>
-        <HeroBottomScrim />
+        <HeroTopScrim height={topScrimHeight} />
+        <HeroBottomScrim heightRatio={COUNTRY_DETAIL_HERO_BOTTOM_SCRIM_RATIO} />
       </View>
     );
   }
@@ -150,15 +170,12 @@ export function CountryHeroCarousel({
         )}
       />
 
-      <View style={[styles.backOverlay, { top: backButtonTop }]}>
-        <ExplorerBackButton onPress={onBack} />
-      </View>
-
-      <HeroBottomScrim />
+      <HeroTopScrim height={topScrimHeight} />
+      <HeroBottomScrim heightRatio={COUNTRY_DETAIL_HERO_BOTTOM_SCRIM_RATIO} />
 
       {slides.length > 1 ? (
         <View
-          style={styles.paginationDots}
+          style={[styles.paginationDots, { bottom: dotsBottom }]}
           accessibilityLabel={`Image ${activeIndex + 1} of ${slides.length}`}
         >
           {slides.map((_, index) => {
@@ -205,29 +222,29 @@ const styles = StyleSheet.create({
   },
   placeholder: {
     flex: 1,
-    backgroundColor: "rgba(30, 41, 59, 0.6)",
+    backgroundColor: "rgba(0, 0, 0, 0.55)",
     overflow: "hidden",
   },
   placeholderImage: {
     ...StyleSheet.absoluteFillObject,
     opacity: 0.35,
   },
-  backOverlay: {
-    position: "absolute",
-    left: 16,
-    zIndex: 3,
-  },
   bottomScrim: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    height: "55%",
+    zIndex: 1,
+  },
+  topScrim: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
     zIndex: 1,
   },
   paginationDots: {
     position: "absolute",
-    bottom: 48,
     left: 0,
     right: 0,
     zIndex: 2,
