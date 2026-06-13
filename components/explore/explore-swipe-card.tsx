@@ -11,7 +11,11 @@ import {
   type LayoutChangeEvent,
 } from "react-native";
 
-import { prefetchCountryImage } from "@/components/explore/country-image";
+import {
+  isCountryImageReady,
+  prefetchCountryImage,
+} from "@/components/explore/country-image";
+import { ExploreSwipeCardInfoSkeleton } from "@/components/explore/explore-swipe-card-info-skeleton";
 import { HeroImagePager } from "@/components/explore/hero-image-pager";
 import { MediaCarousel } from "@/components/explore/media-carousel";
 import {
@@ -65,6 +69,12 @@ const CARD_ACTION_RAIL_WIDTH =
 const CARD_ACTION_OPTICAL_INSET =
   (EXPLORE_SWIPE_ACTION_BUTTON_SIZE - EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE) / 2;
 
+function isCountryHeroReady(images: string[]): boolean {
+  const heroUri = images[0];
+  if (!heroUri) return true;
+  return isCountryImageReady(heroUri);
+}
+
 type ExploreSwipeCardProps = {
   country: Country;
   width: number;
@@ -90,7 +100,9 @@ export function ExploreSwipeCard({
 
   const [heroIndex, setHeroIndex] = useState(0);
   const [heroLayout, setHeroLayout] = useState({ width: 0, height: 0 });
-  const [isActiveHeroLoaded, setIsActiveHeroLoaded] = useState(false);
+  const [isActiveHeroLoaded, setIsActiveHeroLoaded] = useState(() =>
+    isCountryHeroReady(images),
+  );
 
   const fact = useMemo(
     () => getAiFactByIndex(country, heroIndex),
@@ -99,8 +111,8 @@ export function ExploreSwipeCard({
 
   useEffect(() => {
     setHeroIndex(0);
-    setIsActiveHeroLoaded(false);
-  }, [country.name]);
+    setIsActiveHeroLoaded(isCountryHeroReady(images));
+  }, [country.name, images]);
 
   useEffect(() => {
     onHeroIndexChange?.(heroIndex);
@@ -182,13 +194,13 @@ export function ExploreSwipeCard({
             />
           ) : null}
 
-          {images.length > 1 ? (
+          {images.length > 1 && isActiveHeroLoaded ? (
             <View style={styles.carouselOverlay} pointerEvents="box-none">
               <MediaCarousel
                 images={images}
                 activeIndex={heroIndex}
                 onImageIndexChange={setHeroIndex}
-                disabled={!isActiveHeroLoaded || !interactive}
+                disabled={!interactive}
                 variant="segments"
               />
             </View>
@@ -196,107 +208,115 @@ export function ExploreSwipeCard({
         </View>
 
         <View style={styles.infoRegion}>
-          <View style={styles.infoTopRow}>
-            <View
-              style={[
-                styles.infoText,
-                interactive && styles.infoTextWithActions,
-              ]}
-            >
-              <Text
-                style={styles.countryName}
-                numberOfLines={EXPLORE_SWIPE_CARD_TITLE_MAX_LINES}
-              >
-                {country.name}
-              </Text>
-              <Text style={styles.subtitle} numberOfLines={1}>
-                {regionLabel} · {capital}
-              </Text>
-            </View>
-
-            {interactive ? (
-              <View style={styles.actions} pointerEvents="box-none">
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Watch culture for ${country.name}`}
-                  onPress={handleOpenCulture}
-                  style={({ pressed }) => [
-                    styles.actionButton,
-                    pressed && styles.actionButtonPressed,
+          {!isActiveHeroLoaded ? (
+            <ExploreSwipeCardInfoSkeleton interactive={interactive} />
+          ) : (
+            <>
+              <View style={styles.infoTopRow}>
+                <View
+                  style={[
+                    styles.infoText,
+                    interactive && styles.infoTextWithActions,
                   ]}
                 >
-                  <Ionicons
-                    name="film-outline"
-                    size={EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE}
-                    color={EXPLORE_SWIPE_CARD_ACTION_ICON_COLOR}
-                  />
-                </Pressable>
+                  <Text
+                    style={styles.countryName}
+                    numberOfLines={EXPLORE_SWIPE_CARD_TITLE_MAX_LINES}
+                  >
+                    {country.name}
+                  </Text>
+                  <Text style={styles.subtitle} numberOfLines={1}>
+                    {regionLabel} · {capital}
+                  </Text>
+                </View>
 
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`View ${country.name} on the map`}
-                  onPress={handleOpenMap}
-                  style={({ pressed }) => [
-                    styles.actionButton,
-                    pressed && styles.actionButtonPressed,
-                  ]}
-                >
-                  <Ionicons
-                    name="globe-outline"
-                    size={EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE}
-                    color={EXPLORE_SWIPE_CARD_ACTION_ICON_COLOR}
-                  />
-                </Pressable>
+                {interactive ? (
+                  <View style={styles.actions} pointerEvents="box-none">
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Watch culture for ${country.name}`}
+                      onPress={handleOpenCulture}
+                      style={({ pressed }) => [
+                        styles.actionButton,
+                        pressed && styles.actionButtonPressed,
+                      ]}
+                    >
+                      <Ionicons
+                        name="film-outline"
+                        size={EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE}
+                        color={EXPLORE_SWIPE_CARD_ACTION_ICON_COLOR}
+                      />
+                    </Pressable>
 
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    isSaved ? `Unsave ${country.name}` : `Save ${country.name}`
-                  }
-                  accessibilityHint={
-                    isSaved
-                      ? "Removes this country from your saved list"
-                      : "Adds this country to your saved list"
-                  }
-                  onPress={handleToggleSaved}
-                  style={({ pressed }) => [
-                    styles.actionButton,
-                    pressed && styles.actionButtonPressed,
-                  ]}
-                >
-                  <Ionicons
-                    name={isSaved ? "bookmark" : "bookmark-outline"}
-                    size={EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE}
-                    color={
-                      isSaved
-                        ? EXPLORE_SWIPE_ACCENT_COLOR
-                        : EXPLORE_SWIPE_CARD_ACTION_ICON_COLOR
-                    }
-                  />
-                </Pressable>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`View ${country.name} on the map`}
+                      onPress={handleOpenMap}
+                      style={({ pressed }) => [
+                        styles.actionButton,
+                        pressed && styles.actionButtonPressed,
+                      ]}
+                    >
+                      <Ionicons
+                        name="globe-outline"
+                        size={EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE}
+                        color={EXPLORE_SWIPE_CARD_ACTION_ICON_COLOR}
+                      />
+                    </Pressable>
+
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={
+                        isSaved
+                          ? `Unsave ${country.name}`
+                          : `Save ${country.name}`
+                      }
+                      accessibilityHint={
+                        isSaved
+                          ? "Removes this country from your saved list"
+                          : "Adds this country to your saved list"
+                      }
+                      onPress={handleToggleSaved}
+                      style={({ pressed }) => [
+                        styles.actionButton,
+                        pressed && styles.actionButtonPressed,
+                      ]}
+                    >
+                      <Ionicons
+                        name={isSaved ? "bookmark" : "bookmark-outline"}
+                        size={EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE}
+                        color={
+                          isSaved
+                            ? EXPLORE_SWIPE_ACCENT_COLOR
+                            : EXPLORE_SWIPE_CARD_ACTION_ICON_COLOR
+                        }
+                      />
+                    </Pressable>
+                  </View>
+                ) : null}
               </View>
-            ) : null}
-          </View>
 
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Fun fact about ${country.name}`}
-            accessibilityHint="Opens the AI country profile"
-            disabled={!interactive}
-            onPress={interactive ? openAiExplorer : undefined}
-            onPressIn={interactive ? warmAiExplorer : undefined}
-            style={({ pressed }) => [
-              styles.factSection,
-              pressed && interactive && styles.factSectionPressed,
-            ]}
-          >
-            <Text
-              style={styles.factText}
-              numberOfLines={EXPLORE_SWIPE_CARD_FACT_MAX_LINES}
-            >
-              {fact}
-            </Text>
-          </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Fun fact about ${country.name}`}
+                accessibilityHint="Opens the AI country profile"
+                disabled={!interactive}
+                onPress={interactive ? openAiExplorer : undefined}
+                onPressIn={interactive ? warmAiExplorer : undefined}
+                style={({ pressed }) => [
+                  styles.factSection,
+                  pressed && interactive && styles.factSectionPressed,
+                ]}
+              >
+                <Text
+                  style={styles.factText}
+                  numberOfLines={EXPLORE_SWIPE_CARD_FACT_MAX_LINES}
+                >
+                  {fact}
+                </Text>
+              </Pressable>
+            </>
+          )}
         </View>
       </View>
     </View>

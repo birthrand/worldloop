@@ -25,10 +25,9 @@ export const EXPLORE_SWIPE_CARD_GLOW_SCRIM = "rgba(0, 0, 0, 0.58)";
 
 /**
  * Explore typography scale (px).
- * 11 nav · 12 segments · 14 body · 16 emphasis · 18 headers · 20 hero
+ * 11 nav · 14 body · 16 emphasis · 18 headers · 20 hero
  */
 export const EXPLORE_SWIPE_TEXT_NAV = 11;
-export const EXPLORE_SWIPE_TEXT_SEGMENT = 12;
 export const EXPLORE_SWIPE_TEXT_BODY = 14;
 export const EXPLORE_SWIPE_TEXT_BODY_LINE_HEIGHT = 20;
 export const EXPLORE_SWIPE_TEXT_EMPHASIS = 16;
@@ -37,7 +36,6 @@ export const EXPLORE_SWIPE_TEXT_HEADER_LINE_HEIGHT = 24;
 /** Centered WorldLoop wordmark in the swipe explore header. */
 export const EXPLORE_SWIPE_HEADER_TITLE_SIZE = 18;
 export const EXPLORE_SWIPE_TEXT_HERO = 20;
-export const EXPLORE_SWIPE_TEXT_SEGMENT_LETTER_SPACING = 1.4;
 
 export const EXPLORE_SWIPE_CARD_TITLE_COLOR = "#FFFFFF";
 export const EXPLORE_SWIPE_CARD_SUBTITLE_COLOR = "#8E8E93";
@@ -119,13 +117,6 @@ export const EXPLORE_SWIPE_NAV_INACTIVE_COLOR = "rgba(255, 255, 255, 0.5)";
 export const EXPLORE_SWIPE_TAB_BAR_BG = "#0A0A0A";
 export const EXPLORE_SWIPE_TAB_BAR_BORDER = "rgba(255, 255, 255, 0.08)";
 
-/** Subtle segmented pill — low contrast so the card stays the focus. */
-export const EXPLORE_SWIPE_TAB_TRACK_BG = "rgba(255, 255, 255, 0.06)";
-export const EXPLORE_SWIPE_TAB_TRACK_BORDER = "rgba(255, 255, 255, 0.05)";
-export const EXPLORE_SWIPE_TAB_ACTIVE_BG = "rgba(255, 255, 255, 0.1)";
-export const EXPLORE_SWIPE_TAB_ACTIVE_TEXT = "rgba(255, 255, 255, 0.92)";
-export const EXPLORE_SWIPE_TAB_INACTIVE_TEXT = "rgba(255, 255, 255, 0.38)";
-
 /** Segmented hero progress bar at top of swipe card. */
 export const EXPLORE_SWIPE_CAROUSEL_SEGMENT_ACTIVE = "#FFFFFF";
 export const EXPLORE_SWIPE_CAROUSEL_SEGMENT_INACTIVE =
@@ -133,5 +124,3 @@ export const EXPLORE_SWIPE_CAROUSEL_SEGMENT_INACTIVE =
 export const EXPLORE_SWIPE_CAROUSEL_SEGMENT_HEIGHT = 3;
 export const EXPLORE_SWIPE_CAROUSEL_SEGMENT_GAP = 5;
 export const EXPLORE_SWIPE_CAROUSEL_SEGMENT_WIDTH = 88;
-export const EXPLORE_SWIPE_TAB_HEIGHT = 44;
-export const EXPLORE_SWIPE_TAB_RADIUS = 999;

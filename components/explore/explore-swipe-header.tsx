@@ -8,7 +8,6 @@ import {
   getExploreHasCustomSort,
 } from "@/components/explore/explore-country-more-menus";
 import { ExploreFeedMenuSheet } from "@/components/explore/explore-feed-menu-sheet";
-import { ExploreSwipeTabs } from "@/components/explore/explore-swipe-tabs";
 import {
   EXPLORE_SWIPE_CARD_ACTION_GAP,
   EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING,
@@ -113,8 +112,6 @@ export function ExploreSwipeHeader({
         </Text>
       </View>
 
-      <ExploreSwipeTabs />
-
       <ExploreFeedMenuSheet
         visible={isFeedMenuOpen}
         onClose={() => setIsFeedMenuOpen(false)}
@@ -133,7 +130,6 @@ const styles = StyleSheet.create({
   root: {
     paddingHorizontal: EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING,
     paddingBottom: EXPLORE_SWIPE_DECK_VERTICAL_GAP,
-    gap: 14,
   },
   row: {
     position: "relative",

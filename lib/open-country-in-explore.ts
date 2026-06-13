@@ -1,5 +1,6 @@
 import { router } from "expo-router";
 
+import { warmCountryHeroImage } from "@/lib/prefetch-feed-heroes";
 import { useCountryFeedStore } from "@/store/use-country-feed-store";
 import { useRecentlyViewedStore } from "@/store/use-recently-viewed-store";
 import { useSearchUiStore } from "@/store/use-search-ui-store";
@@ -24,6 +25,8 @@ export function openCountryInExplore(
   country: Country,
   options?: OpenCountryInExploreOptions,
 ): void {
+  warmCountryHeroImage(country);
+
   useSearchUiStore.getState().closeSearch();
 
   const spatial = useSpatialContextStore.getState();

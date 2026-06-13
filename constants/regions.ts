@@ -62,7 +62,11 @@ export function continentTabLabel(region: string, expanded: boolean): string {
     : CONTINENT_SHORT_LABELS[region];
 }
 
-/** Step to previous/next continent in a list (wraps around). */
+/**
+ * Step to previous/next continent in a list (wraps around).
+ * Explore region-complete empty state uses the fixed global `CONTINENTS` order
+ * (not header tab order or user progress).
+ */
 export function adjacentContinent(
   current: string,
   direction: "prev" | "next",
