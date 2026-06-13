@@ -8,12 +8,15 @@ import { useContext } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { SPACE_TAB_BAR_BG } from "@/constants/space-theme";
+import {
+  EXPLORE_SWIPE_ACCENT_COLOR,
+  EXPLORE_SWIPE_NAV_INACTIVE_COLOR,
+  EXPLORE_SWIPE_TAB_BAR_BG,
+  EXPLORE_SWIPE_TAB_BAR_BORDER,
+  EXPLORE_SWIPE_TEXT_NAV,
+} from "@/constants/explore-swipe-layout";
 
-const TAB_ACTIVE = "#fbbf24";
-const TAB_INACTIVE = "rgba(148, 163, 184, 0.82)";
-const TAB_ACTIVE_ICON_SIZE = 26;
-const TAB_INACTIVE_ICON_SIZE = 24;
+const TAB_ICON_SIZE = 24;
 
 /** Bar chrome only — add safe-area bottom inset for full tab bar height. */
 export const TAB_BAR_CONTENT_HEIGHT = 54;
@@ -97,7 +100,9 @@ export function BottomTabBar({ state, navigation }: BottomTabBarProps) {
 
           const routeIndex = state.routes.indexOf(route);
           const isFocused = state.index === routeIndex;
-          const color = isFocused ? TAB_ACTIVE : TAB_INACTIVE;
+          const color = isFocused
+            ? EXPLORE_SWIPE_ACCENT_COLOR
+            : EXPLORE_SWIPE_NAV_INACTIVE_COLOR;
 
           return (
             <Pressable
@@ -110,7 +115,7 @@ export function BottomTabBar({ state, navigation }: BottomTabBarProps) {
             >
               <Ionicons
                 name={isFocused ? item.iconFocused : item.icon}
-                size={isFocused ? TAB_ACTIVE_ICON_SIZE : TAB_INACTIVE_ICON_SIZE}
+                size={TAB_ICON_SIZE}
                 color={color}
               />
               <Text
@@ -130,20 +135,18 @@ export function BottomTabBar({ state, navigation }: BottomTabBarProps) {
   );
 }
 
-const TAB_BAR_BORDER = "rgba(148, 163, 184, 0.24)";
-
 const styles = StyleSheet.create({
   shell: {
     overflow: "hidden",
-    backgroundColor: SPACE_TAB_BAR_BG,
+    backgroundColor: EXPLORE_SWIPE_TAB_BAR_BG,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: TAB_BAR_BORDER,
+    borderTopColor: EXPLORE_SWIPE_TAB_BAR_BORDER,
   },
   bar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-around",
-    backgroundColor: SPACE_TAB_BAR_BG,
+    backgroundColor: EXPLORE_SWIPE_TAB_BAR_BG,
     paddingTop: 8,
     paddingBottom: 2,
     paddingHorizontal: 8,
@@ -156,12 +159,12 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   label: {
-    fontSize: 11,
+    fontSize: EXPLORE_SWIPE_TEXT_NAV - 1,
     lineHeight: 13,
   },
   labelActive: {
     fontFamily: "Poppins-SemiBold",
-    fontSize: 11,
+    fontSize: EXPLORE_SWIPE_TEXT_NAV,
   },
   labelInactive: {
     fontFamily: "Poppins-Medium",

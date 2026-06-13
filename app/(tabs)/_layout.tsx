@@ -4,7 +4,8 @@ import { StyleSheet, View } from "react-native";
 
 import { BottomTabBar } from "@/components/bottom-tab-bar";
 import { SearchOverlay } from "@/components/search/search-overlay";
-import { SPACE_SCREEN_BASE, SPACE_TAB_BAR_BG } from "@/constants/space-theme";
+import { EXPLORE_SWIPE_TAB_BAR_BG } from "@/constants/explore-swipe-layout";
+import { SPACE_SCREEN_BASE } from "@/constants/space-theme";
 
 export default function TabsLayout() {
   const { isSignedIn, isLoaded } = useAuth();
@@ -29,7 +30,7 @@ export default function TabsLayout() {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: SPACE_TAB_BAR_BG,
+            backgroundColor: EXPLORE_SWIPE_TAB_BAR_BG,
             borderTopWidth: 0,
             elevation: 0,
             shadowOpacity: 0,

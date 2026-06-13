@@ -1,16 +1,31 @@
 import { BlurView } from "expo-blur";
 import { Image } from "expo-image";
 import { useMemo } from "react";
-import { Platform, StyleSheet, View, useWindowDimensions } from "react-native";
+import {
+  Platform,
+  StyleSheet,
+  View,
+  useWindowDimensions,
+  type ImageStyle,
+} from "react-native";
 
+import { images } from "@/constants/images";
 import {
   SPACE_BLUR_INTENSITY,
   SPACE_DARK_SCRIM,
   SPACE_WEB_BLUR_FALLBACK,
 } from "@/constants/space-theme";
-import { images } from "@/constants/images";
 
 const STAR_COUNT = 36;
+
+type SavedSpaceBackgroundProps = {
+  blurIntensity?: number;
+  imageScale?: number;
+  /** Native image blur — reliably softens the map (BlurView alone often won't). */
+  imageBlurRadius?: number;
+  scrimColor?: string;
+  webBlurFallback?: string;
+};
 
 function createStars(width: number, height: number) {
   const stars: {
@@ -38,31 +53,57 @@ function createStars(width: number, height: number) {
   return stars;
 }
 
-export function SavedSpaceBackground() {
+export function SavedSpaceBackground({
+  blurIntensity = SPACE_BLUR_INTENSITY,
+  imageScale = 1,
+  imageBlurRadius = 0,
+  scrimColor = SPACE_DARK_SCRIM,
+  webBlurFallback = SPACE_WEB_BLUR_FALLBACK,
+}: SavedSpaceBackgroundProps) {
   const { width, height } = useWindowDimensions();
   const stars = useMemo(() => createStars(width, height), [width, height]);
 
+  const mapImageStyle: ImageStyle[] = [
+    StyleSheet.absoluteFillObject,
+    ...(imageScale !== 1 ? [{ transform: [{ scale: imageScale }] }] : []),
+  ];
+
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      <Image
-        source={images.earthMap}
-        style={StyleSheet.absoluteFill}
-        contentFit="cover"
-        accessibilityLabel=""
-        accessibilityElementsHidden
-      />
+      <View
+        style={[
+          StyleSheet.absoluteFill,
+          Platform.OS === "web" && imageBlurRadius > 0
+            ? {
+                // RN web — CSS blur on the map wrapper
+                filter: `blur(${Math.round(imageBlurRadius * 0.45)}px)`,
+              }
+            : null,
+        ]}
+      >
+        <Image
+          source={images.earthMap}
+          style={mapImageStyle}
+          blurRadius={imageBlurRadius > 0 ? imageBlurRadius : undefined}
+          contentFit="cover"
+          accessibilityLabel=""
+          accessibilityElementsHidden
+        />
+      </View>
 
       {Platform.OS === "web" ? (
-        <View style={styles.webBlurFallback} />
+        <View
+          style={[styles.webBlurFallback, { backgroundColor: webBlurFallback }]}
+        />
       ) : (
         <BlurView
-          intensity={SPACE_BLUR_INTENSITY}
+          intensity={blurIntensity}
           tint="dark"
           style={StyleSheet.absoluteFill}
         />
       )}
 
-      <View style={styles.darkScrim} />
+      <View style={[styles.darkScrim, { backgroundColor: scrimColor }]} />
       <View style={styles.nebulaTop} />
       <View style={styles.nebulaBottom} />
 
@@ -88,11 +129,9 @@ export function SavedSpaceBackground() {
 const styles = StyleSheet.create({
   webBlurFallback: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: SPACE_WEB_BLUR_FALLBACK,
   },
   darkScrim: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: SPACE_DARK_SCRIM,
   },
   nebulaTop: {
     position: "absolute",

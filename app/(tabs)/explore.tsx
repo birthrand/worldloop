@@ -5,7 +5,7 @@ import { StyleSheet, View } from "react-native";
 import { ExploreError } from "@/components/explore/explore-error";
 import { ExploreFeed } from "@/components/explore/explore-feed";
 import { ExploreFeedSkeleton } from "@/components/explore/explore-feed-skeleton";
-import { EXPLORE_FEED_BODY_BG } from "@/constants/explore-feed-layout";
+import { EXPLORE_SWIPE_SCREEN_BG } from "@/constants/explore-swipe-layout";
 import { useCountryFeedStore } from "@/store/use-country-feed-store";
 import { useSpatialContextStore } from "@/store/use-spatial-context-store";
 
@@ -97,6 +97,6 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: EXPLORE_FEED_BODY_BG,
+    backgroundColor: EXPLORE_SWIPE_SCREEN_BG,
   },
 });
