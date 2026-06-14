@@ -230,7 +230,8 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    zIndex: 20,
+    zIndex: 30,
+    elevation: 30,
   },
   row: {
     position: "relative",

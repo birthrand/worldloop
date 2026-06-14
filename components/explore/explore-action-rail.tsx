@@ -33,6 +33,10 @@ import {
   EXPLORE_FEED_RAIL_HORIZONTAL_PADDING,
   EXPLORE_FEED_SURFACE_RADIUS,
 } from "@/constants/explore-feed-layout";
+import {
+  EXPLORE_SWIPE_CARD_INFO_BG,
+  EXPLORE_SWIPE_CARD_INFO_BORDER,
+} from "@/constants/explore-swipe-layout";
 import { openCountryInCulture } from "@/features/navigation/open-country-in-culture";
 import { hasCultureVideo } from "@/lib/format-country";
 import { focusCountryOnMap } from "@/lib/open-country-on-map";
@@ -239,7 +243,6 @@ function SortCheckboxOption({
 }
 
 type MoreMenuRowProps = {
-  icon: keyof typeof Ionicons.glyphMap;
   label: string;
   subtitle?: string;
   disabled?: boolean;
@@ -248,7 +251,6 @@ type MoreMenuRowProps = {
 };
 
 function MoreMenuRow({
-  icon,
   label,
   subtitle,
   disabled = false,
@@ -268,24 +270,6 @@ function MoreMenuRow({
         pressed && !disabled && styles.optionPressed,
       ]}
     >
-      <View
-        style={[
-          styles.menuIconWrap,
-          active && !disabled && styles.menuIconWrapActive,
-        ]}
-      >
-        <Ionicons
-          name={icon}
-          size={20}
-          color={
-            disabled
-              ? "rgba(255, 255, 255, 0.35)"
-              : active
-                ? "#fbbf24"
-                : "#ffffff"
-          }
-        />
-      </View>
       <View style={styles.menuTextGroup}>
         <Text
           style={[
@@ -643,43 +627,28 @@ export function ExploreActionRail({
               style={[styles.sheet, { paddingBottom: insets.bottom + 12 }]}
               accessibilityViewIsModal
             >
+              <View style={styles.handleWrap}>
+                <View style={styles.handleBar} />
+              </View>
+
               <View style={styles.sheetHeader}>
                 <Text style={styles.sheetTitle}>More actions</Text>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Close more actions"
-                  hitSlop={10}
-                  onPress={handleCloseMoreMenu}
-                  style={({ pressed }) => [
-                    styles.closeButton,
-                    pressed && styles.optionPressed,
-                  ]}
-                >
-                  <Ionicons
-                    name="close"
-                    size={20}
-                    color="rgba(255, 255, 255, 0.45)"
-                  />
-                </Pressable>
               </View>
 
               <View style={styles.menuPanel}>
                 <MoreMenuRow
-                  icon="share-social-outline"
                   label="Share"
                   subtitle={`Share ${country.name} with friends`}
                   onPress={handleShareFromMenu}
                 />
                 <View style={styles.menuDivider} />
                 <MoreMenuRow
-                  icon="globe-outline"
                   label="View on map"
                   subtitle={`Locate ${country.name} on the world map`}
                   onPress={handleJumpToMap}
                 />
                 <View style={styles.menuDivider} />
                 <MoreMenuRow
-                  icon="swap-vertical-outline"
                   label="Sort feed"
                   subtitle={currentSortSummary ?? "Shuffled order"}
                   active={hasCustomSort}
@@ -687,7 +656,6 @@ export function ExploreActionRail({
                 />
                 <View style={styles.menuDivider} />
                 <MoreMenuRow
-                  icon="volume-medium-outline"
                   label="Listen"
                   subtitle="Narration coming soon"
                   disabled
@@ -718,7 +686,7 @@ export function ExploreActionRail({
               style={[styles.sheet, { paddingBottom: insets.bottom + 12 }]}
               accessibilityViewIsModal
             >
-              <View style={styles.sheetHeader}>
+              <View style={styles.sheetHeaderRow}>
                 <View style={styles.sheetTitleGroup}>
                   <Text style={styles.sheetTitle}>Sort feed</Text>
                   {currentSortSummary ? (
@@ -955,15 +923,28 @@ const styles = StyleSheet.create({
     width: "100%",
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    paddingTop: 12,
+    paddingTop: 8,
     paddingHorizontal: 16,
-    backgroundColor: "#111827",
+    backgroundColor: EXPLORE_SWIPE_CARD_INFO_BG,
     borderWidth: 1,
     borderBottomWidth: 0,
-    borderColor: "rgba(255, 255, 255, 0.14)",
+    borderColor: EXPLORE_SWIPE_CARD_INFO_BORDER,
     gap: 4,
   },
+  handleWrap: {
+    alignItems: "center",
+    paddingBottom: 8,
+  },
+  handleBar: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(255, 255, 255, 0.22)",
+  },
   sheetHeader: {
+    marginBottom: 2,
+  },
+  sheetHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -1005,17 +986,6 @@ const styles = StyleSheet.create({
   },
   menuRowDisabled: {
     opacity: 0.55,
-  },
-  menuIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
-  },
-  menuIconWrapActive: {
-    backgroundColor: "rgba(251, 191, 36, 0.15)",
   },
   menuTextGroup: {
     flex: 1,

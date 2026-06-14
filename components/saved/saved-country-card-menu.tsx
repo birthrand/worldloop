@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import {
-  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -9,9 +8,9 @@ import {
   type StyleProp,
   type ViewStyle,
 } from "react-native";
-import Animated, { SlideInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { SwipeDismissSheet } from "@/components/explore/swipe-dismiss-sheet";
 import {
   EXPLORE_SWIPE_CARD_INFO_BG,
   EXPLORE_SWIPE_CARD_INFO_BORDER,
@@ -22,11 +21,6 @@ import { continentDisplayLabel, isContinent } from "@/constants/regions";
 import { openDiscoverSimilarInExplore } from "@/lib/open-discover-similar-in-explore";
 import { useSavedCountriesStore } from "@/store/use-saved-countries-store";
 import type { Country } from "@/types/country";
-
-const SHEET_ENTER = SlideInDown.springify()
-  .damping(20)
-  .stiffness(150)
-  .mass(0.85);
 
 type SavedCountryCardMenuProps = {
   country: Country;
@@ -119,63 +113,38 @@ export function SavedCountryCardMenu({
         />
       </Pressable>
 
-      <Modal
+      <SwipeDismissSheet
         visible={open}
-        animationType="fade"
-        transparent
-        onRequestClose={closeMenu}
+        onClose={closeMenu}
+        sheetStyle={[styles.sheet, { paddingBottom: insets.bottom + 12 }]}
+        backdropAccessibilityLabel="Close menu"
+        accessibilityLabel={`More actions for ${country.name}`}
       >
-        <View style={styles.overlay}>
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            accessibilityRole="button"
-            accessibilityLabel="Close menu"
-            onPress={closeMenu}
-          />
-          <Animated.View
-            entering={SHEET_ENTER}
-            style={[styles.sheet, { paddingBottom: insets.bottom + 12 }]}
-            accessibilityViewIsModal
-          >
-            <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle} numberOfLines={1}>
-                {country.name}
-              </Text>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Close menu"
-                hitSlop={10}
-                onPress={closeMenu}
-                style={({ pressed }) => [
-                  styles.closeButton,
-                  pressed && styles.menuRowPressed,
-                ]}
-              >
-                <Ionicons
-                  name="close"
-                  size={20}
-                  color="rgba(255, 255, 255, 0.45)"
-                />
-              </Pressable>
-            </View>
-
-            <View style={styles.menuPanel}>
-              <MenuRow
-                label="Remove"
-                subtitle="Remove from your saved list"
-                destructive
-                onPress={handleRemove}
-              />
-              <View style={styles.menuDivider} />
-              <MenuRow
-                label="Discover similar"
-                subtitle={similarSubtitle}
-                onPress={handleDiscoverSimilar}
-              />
-            </View>
-          </Animated.View>
+        <View style={styles.handleWrap}>
+          <View style={styles.handleBar} />
         </View>
-      </Modal>
+
+        <View style={styles.sheetHeader}>
+          <Text style={styles.sheetTitle} numberOfLines={1}>
+            {country.name}
+          </Text>
+        </View>
+
+        <View style={styles.menuPanel}>
+          <MenuRow
+            label="Remove"
+            subtitle="Remove from your saved list"
+            destructive
+            onPress={handleRemove}
+          />
+          <View style={styles.menuDivider} />
+          <MenuRow
+            label="Discover similar"
+            subtitle={similarSubtitle}
+            onPress={handleDiscoverSimilar}
+          />
+        </View>
+      </SwipeDismissSheet>
     </>
   );
 }
@@ -191,44 +160,40 @@ const styles = StyleSheet.create({
   triggerPressed: {
     opacity: 0.78,
   },
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.55)",
-    justifyContent: "flex-end",
-  },
   sheet: {
     width: "100%",
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    paddingTop: 12,
+    paddingTop: 8,
     paddingHorizontal: 16,
     backgroundColor: EXPLORE_SWIPE_CARD_INFO_BG,
     borderWidth: 1,
     borderBottomWidth: 0,
     borderColor: EXPLORE_SWIPE_CARD_INFO_BORDER,
+    gap: 4,
+  },
+  handleWrap: {
+    alignItems: "center",
+    paddingBottom: 8,
+  },
+  handleBar: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(255, 255, 255, 0.22)",
   },
   sheetHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-    marginBottom: 8,
+    marginBottom: 2,
   },
   sheetTitle: {
-    flex: 1,
     fontFamily: "Poppins-SemiBold",
     fontSize: 16,
     lineHeight: 20,
     color: EXPLORE_SWIPE_CARD_TITLE_COLOR,
   },
-  closeButton: {
-    width: 28,
-    height: 28,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   menuPanel: {
     gap: 0,
+    marginTop: 4,
   },
   menuRow: {
     minHeight: 52,

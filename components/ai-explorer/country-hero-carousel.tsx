@@ -1,15 +1,12 @@
+import { CountryHeroScrimStack } from "@/components/ai-explorer/country-hero-scrims";
 import { AI_EXPLORER_THEME } from "@/constants/ai-explorer-theme";
 import {
-  COUNTRY_DETAIL_HERO_BOTTOM_SCRIM_RATIO,
   getCountryDetailHeroDotsBottom,
   getCountryDetailHeroHeight,
-  getCountryDetailHeroTopScrimHeight,
 } from "@/constants/country-detail-layout";
-import { EXPLORE_SWIPE_SCREEN_BG } from "@/constants/explore-swipe-layout";
 import { images as appImages } from "@/constants/images";
 import { Image } from "expo-image";
-import { LinearGradient } from "expo-linear-gradient";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   FlatList,
   NativeScrollEvent,
@@ -20,68 +17,30 @@ import {
   useWindowDimensions,
 } from "react-native";
 
-const HERO_TOP_SCRIM_COLORS = [
-  "rgba(0, 0, 0, 0.72)",
-  "rgba(0, 0, 0, 0.42)",
-  "rgba(0, 0, 0, 0)",
-] as const;
-
-const HERO_TOP_SCRIM_LOCATIONS = [0, 0.45, 1] as const;
-
-const HERO_BOTTOM_SCRIM_COLORS = [
-  EXPLORE_SWIPE_SCREEN_BG,
-  EXPLORE_SWIPE_SCREEN_BG,
-  "rgba(0, 0, 0, 0.92)",
-  "rgba(0, 0, 0, 0.62)",
-  "rgba(0, 0, 0, 0.28)",
-  "rgba(0, 0, 0, 0)",
-] as const;
-
-const HERO_BOTTOM_SCRIM_LOCATIONS = [0, 0.14, 0.32, 0.52, 0.76, 1] as const;
-
-function HeroTopScrim({ height }: { height: number }) {
-  return (
-    <LinearGradient
-      pointerEvents="none"
-      colors={[...HERO_TOP_SCRIM_COLORS]}
-      locations={[...HERO_TOP_SCRIM_LOCATIONS]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }}
-      style={[styles.topScrim, { height }]}
-    />
-  );
-}
-
-function HeroBottomScrim({ heightRatio }: { heightRatio: number }) {
-  return (
-    <LinearGradient
-      pointerEvents="none"
-      colors={[...HERO_BOTTOM_SCRIM_COLORS]}
-      locations={[...HERO_BOTTOM_SCRIM_LOCATIONS]}
-      start={{ x: 0, y: 1 }}
-      end={{ x: 0, y: 0 }}
-      style={[styles.bottomScrim, { height: `${heightRatio * 100}%` }]}
-    />
-  );
-}
-
 type CountryHeroCarouselProps = {
   images: string[];
   countryName: string;
+  initialIndex?: number;
 };
 
 export function CountryHeroCarousel({
   images,
   countryName,
+  initialIndex = 0,
 }: CountryHeroCarouselProps) {
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const heroHeight = getCountryDetailHeroHeight(screenHeight);
-  const topScrimHeight = getCountryDetailHeroTopScrimHeight(screenHeight);
   const dotsBottom = getCountryDetailHeroDotsBottom(screenHeight);
   const fallbackWidth = screenWidth;
 
   const [carouselWidth, setCarouselWidth] = useState(fallbackWidth);
-  const [activeIndex, setActiveIndex] = useState(0);
+  const lockedInitialIndex = useRef(initialIndex);
+  const [activeIndex, setActiveIndex] = useState(() =>
+    Math.max(
+      0,
+      Math.min(lockedInitialIndex.current, Math.max(images.length - 1, 0)),
+    ),
+  );
   const listRef = useRef<FlatList<string>>(null);
 
   const slides = images.length > 0 ? images : [];
@@ -112,6 +71,20 @@ export function CountryHeroCarousel({
     }
   };
 
+  useEffect(() => {
+    if (carouselWidth <= 0 || slides.length === 0) return;
+
+    const clamped = Math.max(
+      0,
+      Math.min(lockedInitialIndex.current, slides.length - 1),
+    );
+    listRef.current?.scrollToOffset({
+      offset: clamped * carouselWidth,
+      animated: false,
+    });
+    setActiveIndex(clamped);
+  }, [carouselWidth, slides.length]);
+
   if (slides.length === 0) {
     return (
       <View
@@ -128,8 +101,7 @@ export function CountryHeroCarousel({
             accessibilityLabel={`${countryName} placeholder`}
           />
         </View>
-        <HeroTopScrim height={topScrimHeight} />
-        <HeroBottomScrim heightRatio={COUNTRY_DETAIL_HERO_BOTTOM_SCRIM_RATIO} />
+        <CountryHeroScrimStack containerHeight={heroHeight} />
       </View>
     );
   }
@@ -170,8 +142,7 @@ export function CountryHeroCarousel({
         )}
       />
 
-      <HeroTopScrim height={topScrimHeight} />
-      <HeroBottomScrim heightRatio={COUNTRY_DETAIL_HERO_BOTTOM_SCRIM_RATIO} />
+      <CountryHeroScrimStack containerHeight={heroHeight} />
 
       {slides.length > 1 ? (
         <View
@@ -228,20 +199,6 @@ const styles = StyleSheet.create({
   placeholderImage: {
     ...StyleSheet.absoluteFillObject,
     opacity: 0.35,
-  },
-  bottomScrim: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 1,
-  },
-  topScrim: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 1,
   },
   paginationDots: {
     position: "absolute",

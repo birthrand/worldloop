@@ -1,10 +1,11 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { StyleSheet, useWindowDimensions } from "react-native";
 import Animated, {
   useAnimatedScrollHandler,
   useSharedValue,
+  type SharedValue,
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -13,27 +14,103 @@ import { CountryProfileCard } from "@/components/ai-explorer/country-profile-car
 import { getCountryDetailContentPaddingBottom } from "@/constants/country-detail-layout";
 import { EXPLORE_SWIPE_SCREEN_BG } from "@/constants/explore-swipe-layout";
 import { useAiExplorerCountry } from "@/hooks/use-ai-explorer-country";
+import type { CountryLandmark, CountryWikipediaSummary } from "@/lib/api";
 import { getCachedCountryProfile } from "@/lib/country-profile-cache";
 import { getCountryImages } from "@/lib/format-country";
 import { focusCountryOnMap } from "@/lib/open-country-on-map";
+import type { Country } from "@/types/country";
 
-/** Country detail — profile-style deep dive for a single country. */
-export default function CountryDetailScreen() {
-  const { name } = useLocalSearchParams<{ name: string }>();
-  const routeName =
-    typeof name === "string" ? decodeURIComponent(name).trim() : "";
-  const { country, refreshing, wikipedia, landmarks } = useAiExplorerCountry();
-  const { height: screenHeight } = useWindowDimensions();
-  const scrollY = useSharedValue(0);
+function parseHeroIndex(value: string | string[] | undefined): number {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (!raw) return 0;
 
-  const overviewLoading = refreshing && !wikipedia?.extract?.trim();
-  const images = getCountryImages(country);
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+}
 
+type CountryDetailScreenBodyProps = {
+  country: Country;
+  images: string[];
+  wikipedia: CountryWikipediaSummary | null;
+  landmarks: CountryLandmark[];
+  overviewLoading: boolean;
+  initialHeroIndex: number;
+  screenHeight: number;
+  scrollY: SharedValue<number>;
+  onBack: () => void;
+  onShowMap: () => void;
+};
+
+function CountryDetailScreenBody({
+  country,
+  images,
+  wikipedia,
+  landmarks,
+  overviewLoading,
+  initialHeroIndex,
+  screenHeight,
+  scrollY,
+  onBack,
+  onShowMap,
+}: CountryDetailScreenBodyProps) {
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
       scrollY.value = event.contentOffset.y;
     },
   });
+
+  return (
+    <>
+      <CountryDetailCollapsingHeader
+        country={country}
+        countryName={country.name}
+        scrollY={scrollY}
+        screenHeight={screenHeight}
+        onBack={onBack}
+      />
+
+      <Animated.ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingBottom: getCountryDetailContentPaddingBottom(screenHeight),
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={scrollHandler}
+      >
+        <CountryProfileCard
+          country={country}
+          images={images}
+          wikipedia={wikipedia}
+          landmarks={landmarks}
+          overviewLoading={overviewLoading}
+          scrollY={scrollY}
+          onShowMap={onShowMap}
+          initialHeroIndex={initialHeroIndex}
+        />
+      </Animated.ScrollView>
+    </>
+  );
+}
+
+/** Country detail — profile-style deep dive for a single country. */
+export default function CountryDetailScreen() {
+  const { name, heroIndex: heroIndexParam } = useLocalSearchParams<{
+    name: string;
+    heroIndex?: string;
+  }>();
+  const routeName =
+    typeof name === "string" ? decodeURIComponent(name).trim() : "";
+  const { country, refreshing, wikipedia, landmarks } = useAiExplorerCountry();
+  const { height: screenHeight } = useWindowDimensions();
+  const scrollY = useSharedValue(0);
+  const [initialHeroIndex] = useState(() => parseHeroIndex(heroIndexParam));
+
+  const overviewLoading = refreshing && !wikipedia?.extract?.trim();
+  const images = getCountryImages(country);
 
   const handleBack = useCallback(() => {
     router.back();
@@ -51,34 +128,18 @@ export default function CountryDetailScreen() {
     <SafeAreaView style={styles.safe} edges={["bottom"]}>
       <StatusBar style="light" />
 
-      <CountryDetailCollapsingHeader
+      <CountryDetailScreenBody
         country={country}
-        countryName={country.name}
-        scrollY={scrollY}
+        images={images}
+        wikipedia={wikipedia}
+        landmarks={landmarks}
+        overviewLoading={overviewLoading}
+        initialHeroIndex={initialHeroIndex}
         screenHeight={screenHeight}
+        scrollY={scrollY}
         onBack={handleBack}
+        onShowMap={handleShowMap}
       />
-
-      <Animated.ScrollView
-        style={styles.scroll}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: getCountryDetailContentPaddingBottom(screenHeight) },
-        ]}
-        showsVerticalScrollIndicator={false}
-        scrollEventThrottle={16}
-        onScroll={scrollHandler}
-      >
-        <CountryProfileCard
-          country={country}
-          images={images}
-          wikipedia={wikipedia}
-          landmarks={landmarks}
-          overviewLoading={overviewLoading}
-          scrollY={scrollY}
-          onShowMap={handleShowMap}
-        />
-      </Animated.ScrollView>
     </SafeAreaView>
   );
 }

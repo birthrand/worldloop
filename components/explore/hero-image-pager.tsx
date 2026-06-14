@@ -4,6 +4,7 @@ import {
   NativeSyntheticEvent,
   Pressable,
   StyleSheet,
+  View,
 } from "react-native";
 import {
   FlatList,
@@ -15,6 +16,7 @@ import {
   CountryImage,
   isCountryImageReady,
 } from "@/components/explore/country-image";
+import { EXPLORE_SWIPE_CARD_PRESS_OVERLAY } from "@/constants/explore-swipe-layout";
 
 type HeroImagePagerProps = {
   images: string[];
@@ -26,6 +28,7 @@ type HeroImagePagerProps = {
   onIndexChange: (index: number) => void;
   onImagePress?: () => void;
   onImagePressIn?: () => void;
+  onImagePressOut?: () => void;
   onActiveImageLoadChange?: (loaded: boolean) => void;
   scrollEnabled?: boolean;
 };
@@ -40,6 +43,7 @@ export function HeroImagePager({
   onIndexChange,
   onImagePress,
   onImagePressIn,
+  onImagePressOut,
   onActiveImageLoadChange,
   scrollEnabled = true,
 }: HeroImagePagerProps) {
@@ -141,18 +145,28 @@ export function HeroImagePager({
           accessibilityHint="Opens a detailed AI-powered country profile"
           onPress={onImagePress}
           onPressIn={onImagePressIn}
+          onPressOut={onImagePressOut}
           disabled={!onImagePress}
-          style={{ width: heroWidth, height: heroHeight }}
+          style={{ width: heroWidth, height: heroHeight, overflow: "hidden" }}
         >
-          <CountryImage
-            uri={item || undefined}
-            flag={flag}
-            iso2={iso2}
-            style={StyleSheet.absoluteFill}
-            contentFit="cover"
-            showSkeleton
-            onLoadStateChange={(loaded) => handleSlideLoadChange(index, loaded)}
-          />
+          {({ pressed }) => (
+            <>
+              <CountryImage
+                uri={item || undefined}
+                flag={flag}
+                iso2={iso2}
+                style={StyleSheet.absoluteFill}
+                contentFit="cover"
+                showSkeleton
+                onLoadStateChange={(loaded) =>
+                  handleSlideLoadChange(index, loaded)
+                }
+              />
+              {pressed && onImagePress ? (
+                <View style={styles.pressOverlay} pointerEvents="none" />
+              ) : null}
+            </>
+          )}
         </Pressable>
       )}
     />
@@ -164,3 +178,10 @@ export function HeroImagePager({
 
   return <GestureDetector gesture={heroScrollGesture}>{list}</GestureDetector>;
 }
+
+const styles = StyleSheet.create({
+  pressOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: EXPLORE_SWIPE_CARD_PRESS_OVERLAY,
+  },
+});

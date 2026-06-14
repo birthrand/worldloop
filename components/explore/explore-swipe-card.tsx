@@ -43,6 +43,7 @@ import {
   EXPLORE_SWIPE_CARD_INFO_REGION_PADDING_BOTTOM,
   EXPLORE_SWIPE_CARD_INFO_REGION_PADDING_TOP,
   EXPLORE_SWIPE_CARD_INFO_TITLE_ACTION_GAP,
+  EXPLORE_SWIPE_CARD_PRESS_OVERLAY,
   EXPLORE_SWIPE_CARD_RADIUS,
   EXPLORE_SWIPE_CARD_SHADOW,
   EXPLORE_SWIPE_CARD_SHADOW_OFFSET_Y,
@@ -183,13 +184,10 @@ export function ExploreSwipeCard({
     }
   }, [images]);
 
-  const openDetail = () => {
-    openCountryDetail(country, { from: "explore" });
-  };
-
-  const warmDetail = () => {
+  const openDetail = useCallback(() => {
     warmCountryDetail(country);
-  };
+    openCountryDetail(country, { from: "explore", heroIndex });
+  }, [country, heroIndex]);
 
   const handleToggleSaved = () => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -229,7 +227,6 @@ export function ExploreSwipeCard({
               onIndexChange={updateHeroIndex}
               scrollEnabled={heroScrollEnabled}
               onImagePress={interactive ? openDetail : undefined}
-              onImagePressIn={interactive ? warmDetail : undefined}
               onActiveImageLoadChange={setIsActiveHeroLoaded}
             />
           ) : null}
@@ -247,74 +244,83 @@ export function ExploreSwipeCard({
           ) : null}
         </View>
 
-        <View style={styles.infoRegion}>
-          <View style={styles.titleRow}>
-            <View style={styles.titleBlock}>
-              <Text
-                style={styles.countryName}
-                numberOfLines={EXPLORE_SWIPE_CARD_TITLE_MAX_LINES}
-              >
-                {country.name}
-              </Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Open ${country.name} details`}
+          accessibilityHint="Opens country detail"
+          disabled={!interactive}
+          onPress={interactive ? openDetail : undefined}
+          style={styles.infoRegion}
+        >
+          {({ pressed }) => (
+            <>
+              <View style={styles.titleRow}>
+                <View style={styles.titleBlock}>
+                  <Text
+                    style={styles.countryName}
+                    numberOfLines={EXPLORE_SWIPE_CARD_TITLE_MAX_LINES}
+                  >
+                    {country.name}
+                  </Text>
 
-              <Text style={styles.subtitle} numberOfLines={1}>
-                {regionLabel} · {capitalLabel}
-              </Text>
-            </View>
+                  <Text style={styles.subtitle} numberOfLines={1}>
+                    {regionLabel} · {capitalLabel}
+                  </Text>
+                </View>
 
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={
-                isSaved ? `Unsave ${country.name}` : `Save ${country.name}`
-              }
-              accessibilityHint={
-                isSaved
-                  ? "Removes this country from your saved list"
-                  : "Adds this country to your saved list"
-              }
-              disabled={!interactive}
-              onPress={handleToggleSaved}
-              hitSlop={BOOKMARK_HIT_SLOP}
-              style={({ pressed }) => [
-                styles.bookmarkButton,
-                pressed && interactive && styles.bookmarkButtonPressed,
-              ]}
-            >
-              <Ionicons
-                name={isSaved ? "bookmark" : "bookmark-outline"}
-                size={EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE}
-                color={
-                  isSaved
-                    ? EXPLORE_SWIPE_ACCENT_COLOR
-                    : EXPLORE_SWIPE_CARD_ACTION_ICON_COLOR
-                }
-              />
-            </Pressable>
-          </View>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    isSaved ? `Unsave ${country.name}` : `Save ${country.name}`
+                  }
+                  accessibilityHint={
+                    isSaved
+                      ? "Removes this country from your saved list"
+                      : "Adds this country to your saved list"
+                  }
+                  disabled={!interactive}
+                  onPress={handleToggleSaved}
+                  hitSlop={BOOKMARK_HIT_SLOP}
+                  style={({ pressed: bookmarkPressed }) => [
+                    styles.bookmarkButton,
+                    bookmarkPressed &&
+                      interactive &&
+                      styles.bookmarkButtonPressed,
+                  ]}
+                >
+                  <Ionicons
+                    name={isSaved ? "bookmark" : "bookmark-outline"}
+                    size={EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE}
+                    color={
+                      isSaved
+                        ? EXPLORE_SWIPE_ACCENT_COLOR
+                        : EXPLORE_SWIPE_CARD_ACTION_ICON_COLOR
+                    }
+                  />
+                </Pressable>
+              </View>
 
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Did you know about ${country.name}`}
-            accessibilityHint="Opens country detail"
-            disabled={!interactive}
-            onPress={interactive ? openDetail : undefined}
-            onPressIn={interactive ? warmDetail : undefined}
-            style={({ pressed }) => [
-              styles.factSection,
-              pressed && interactive && styles.factSectionPressed,
-            ]}
-          >
-            <Text style={styles.factLabel}>Did you know</Text>
-            <Text
-              style={styles.factText}
-              numberOfLines={EXPLORE_SWIPE_CARD_FACT_MAX_LINES}
-            >
-              {fact}
-            </Text>
-          </Pressable>
+              <View style={styles.factSection}>
+                <Text style={styles.factLabel}>Did you know</Text>
+                <Text
+                  style={styles.factText}
+                  numberOfLines={EXPLORE_SWIPE_CARD_FACT_MAX_LINES}
+                >
+                  {fact}
+                </Text>
+              </View>
 
-          <View style={styles.infoRegionSpacer} />
-        </View>
+              <View style={styles.infoRegionSpacer} />
+
+              {pressed && interactive ? (
+                <View
+                  style={styles.infoRegionPressOverlay}
+                  pointerEvents="none"
+                />
+              ) : null}
+            </>
+          )}
+        </Pressable>
       </View>
     </View>
   );
@@ -365,6 +371,7 @@ const styles = StyleSheet.create({
   },
   infoRegion: {
     flexShrink: 0,
+    overflow: "hidden",
     height: EXPLORE_SWIPE_CARD_INFO_REGION_HEIGHT,
     paddingTop: EXPLORE_SWIPE_CARD_INFO_REGION_PADDING_TOP,
     paddingBottom: EXPLORE_SWIPE_CARD_INFO_REGION_PADDING_BOTTOM,
@@ -372,6 +379,10 @@ const styles = StyleSheet.create({
     backgroundColor: EXPLORE_SWIPE_CARD_INFO_BG,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: EXPLORE_SWIPE_CARD_INFO_BORDER,
+  },
+  infoRegionPressOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: EXPLORE_SWIPE_CARD_PRESS_OVERLAY,
   },
   titleRow: {
     flexDirection: "row",
@@ -414,9 +425,6 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
     marginTop: EXPLORE_SWIPE_CARD_INFO_REGION_GAP,
     gap: EXPLORE_SWIPE_CARD_FACT_LABEL_GAP,
-  },
-  factSectionPressed: {
-    opacity: 0.82,
   },
   factLabel: {
     fontFamily: "Poppins-Medium",

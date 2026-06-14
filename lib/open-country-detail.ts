@@ -15,6 +15,7 @@ export type CountryDetailOrigin = "explore" | "saved" | "search" | "profile";
 
 type OpenCountryDetailOptions = {
   from: CountryDetailOrigin;
+  heroIndex?: number;
 };
 
 /** Start warming hero + profile as soon as the user touches a country entry point. */
@@ -50,6 +51,11 @@ export function openCountryDetail(
 
   router.push({
     pathname: "/country/[name]",
-    params: { name: country.name },
+    params: {
+      name: country.name,
+      ...(options.from === "explore"
+        ? { heroIndex: String(options.heroIndex ?? 0) }
+        : {}),
+    },
   });
 }

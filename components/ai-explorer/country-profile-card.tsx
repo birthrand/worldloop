@@ -68,6 +68,8 @@ import type { Country } from "@/types/country";
 const DESCRIPTION_COLLAPSED_LINES = 3;
 const DESCRIPTION_READ_MORE_CHAR_THRESHOLD = 200;
 const OVERVIEW_LINE_HEIGHT = 22;
+const OVERVIEW_PARAGRAPH_GAP = 12;
+const OVERVIEW_PARAGRAPH_SENTENCES = 2;
 const OVERVIEW_SKELETON_LINE_WIDTHS = ["100%", "94%", "78%"] as const;
 const COUNTRY_NAME_FONT_SIZE = EXPLORE_SWIPE_TEXT_HEADER;
 const COUNTRY_NAME_MIN_FONT_SIZE = 15;
@@ -94,6 +96,45 @@ function buildOverviewPreview(
   return { overflows: true, preview };
 }
 
+function splitOverviewIntoParagraphs(text: string): string[] {
+  const normalized = text.replace(/\r\n/g, "\n").trim();
+  if (!normalized) return [];
+
+  const explicitParagraphs = normalized
+    .split(/\n{2,}/)
+    .map((paragraph) =>
+      paragraph.replace(/\n/g, " ").replace(/\s+/g, " ").trim(),
+    )
+    .filter(Boolean);
+
+  if (explicitParagraphs.length > 1) {
+    return explicitParagraphs;
+  }
+
+  const block = explicitParagraphs[0] ?? normalized.replace(/\s+/g, " ").trim();
+  const sentences = block
+    .match(/[^.!?]+[.!?]+(?:\s+|$)|[^.!?]+$/g)
+    ?.map((sentence) => sentence.trim())
+    .filter(Boolean) ?? [block];
+
+  if (sentences.length <= OVERVIEW_PARAGRAPH_SENTENCES) {
+    return [block];
+  }
+
+  const paragraphs: string[] = [];
+  for (
+    let index = 0;
+    index < sentences.length;
+    index += OVERVIEW_PARAGRAPH_SENTENCES
+  ) {
+    paragraphs.push(
+      sentences.slice(index, index + OVERVIEW_PARAGRAPH_SENTENCES).join(" "),
+    );
+  }
+
+  return paragraphs;
+}
+
 type CountryProfileCardProps = {
   country: Country;
   images: string[];
@@ -102,6 +143,7 @@ type CountryProfileCardProps = {
   overviewLoading?: boolean;
   scrollY: SharedValue<number>;
   onShowMap: () => void;
+  initialHeroIndex?: number;
 };
 
 function SectionDivider() {
@@ -265,9 +307,11 @@ export function CountryProfileCard({
   overviewLoading = false,
   scrollY,
   onShowMap,
+  initialHeroIndex = 0,
 }: CountryProfileCardProps) {
   const insets = useSafeAreaInsets();
   const { height: screenHeight } = useWindowDimensions();
+
   const contentOverlap = getCountryDetailContentOverlap(screenHeight);
   const contentPaddingTop = getCountryDetailContentPaddingTop(screenHeight);
   const contentGap = getCountryDetailContentGap(screenHeight);
@@ -294,7 +338,6 @@ export function CountryProfileCard({
 
     return { opacity };
   });
-
   const [overviewExpanded, setOverviewExpanded] = useState(false);
   const [overviewOverflows, setOverviewOverflows] = useState(false);
 
@@ -330,6 +373,11 @@ export function CountryProfileCard({
         country.ai?.fact?.trim() ||
         `Explore ${country.name} — discover its people, places, and stories.`);
 
+  const overviewParagraphs = useMemo(
+    () => splitOverviewIntoParagraphs(overviewText),
+    [overviewText],
+  );
+
   const handleOverviewMeasure = (
     event: NativeSyntheticEvent<TextLayoutEventData>,
   ) => {
@@ -353,9 +401,15 @@ export function CountryProfileCard({
 
   return (
     <View style={styles.root}>
-      <CountryHeroCarousel images={images} countryName={country.name} />
+      <View style={styles.heroWrap}>
+        <CountryHeroCarousel
+          images={images}
+          countryName={country.name}
+          initialIndex={initialHeroIndex}
+        />
+      </View>
 
-      <View
+      <AnimatedReanimated.View
         style={[
           styles.content,
           {
@@ -367,17 +421,19 @@ export function CountryProfileCard({
         ]}
       >
         <View style={styles.header}>
-          <AnimatedReanimated.Text
-            style={[styles.countryName, contentTitleStyle]}
-            numberOfLines={2}
-            ellipsizeMode="tail"
-            adjustsFontSizeToFit
-            minimumFontScale={
-              COUNTRY_NAME_MIN_FONT_SIZE / COUNTRY_NAME_FONT_SIZE
-            }
-          >
-            {country.name}
-          </AnimatedReanimated.Text>
+          <View style={styles.titleMeasureWrap}>
+            <AnimatedReanimated.Text
+              style={[styles.countryName, contentTitleStyle]}
+              numberOfLines={2}
+              ellipsizeMode="tail"
+              adjustsFontSizeToFit
+              minimumFontScale={
+                COUNTRY_NAME_MIN_FONT_SIZE / COUNTRY_NAME_FONT_SIZE
+              }
+            >
+              {country.name}
+            </AnimatedReanimated.Text>
+          </View>
           <View style={styles.flagChip}>
             <FlagBadge
               flag={country.flag}
@@ -420,16 +476,28 @@ export function CountryProfileCard({
                     >
                       {overviewText}
                     </Text>
-                    <Text
-                      style={styles.bodyText}
-                      numberOfLines={
-                        overviewExpanded
-                          ? undefined
-                          : DESCRIPTION_COLLAPSED_LINES
-                      }
-                    >
-                      {overviewText}
-                    </Text>
+                    {overviewExpanded ? (
+                      <View style={styles.overviewParagraphs}>
+                        {overviewParagraphs.map((paragraph, index) => (
+                          <Text
+                            key={`overview-paragraph-${index}`}
+                            style={[
+                              styles.bodyText,
+                              index > 0 ? styles.overviewParagraph : null,
+                            ]}
+                          >
+                            {paragraph}
+                          </Text>
+                        ))}
+                      </View>
+                    ) : (
+                      <Text
+                        style={styles.bodyText}
+                        numberOfLines={DESCRIPTION_COLLAPSED_LINES}
+                      >
+                        {overviewText}
+                      </Text>
+                    )}
                   </View>
                   {showReadMoreControl ? (
                     <Pressable
@@ -493,7 +561,7 @@ export function CountryProfileCard({
             </>
           ) : null}
         </View>
-      </View>
+      </AnimatedReanimated.View>
     </View>
   );
 }
@@ -501,6 +569,13 @@ export function CountryProfileCard({
 const styles = StyleSheet.create({
   root: {
     width: "100%",
+  },
+  heroWrap: {
+    width: "100%",
+  },
+  titleMeasureWrap: {
+    flex: 1,
+    minWidth: 0,
   },
   content: {
     marginHorizontal: EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING,
@@ -592,6 +667,12 @@ const styles = StyleSheet.create({
   },
   overviewBody: {
     width: "100%",
+  },
+  overviewParagraphs: {
+    width: "100%",
+  },
+  overviewParagraph: {
+    marginTop: OVERVIEW_PARAGRAPH_GAP,
   },
   overviewMeasure: {
     position: "absolute",

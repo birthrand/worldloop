@@ -17,6 +17,8 @@ export const EXPLORE_SWIPE_CARD_IMAGE_FALLBACK = EXPLORE_SWIPE_WORLD_BG_TOP;
 export const EXPLORE_SWIPE_CARD_INFO_BG = EXPLORE_SWIPE_CARD_SURFACE;
 export const EXPLORE_SWIPE_CARD_INFO_BORDER = "rgba(255, 255, 255, 0.06)";
 export const EXPLORE_SWIPE_CARD_INFO_WEB_FALLBACK = EXPLORE_SWIPE_CARD_SURFACE;
+/** Light scrim shown while a swipe-card tap target is pressed. */
+export const EXPLORE_SWIPE_CARD_PRESS_OVERLAY = "rgba(255, 255, 255, 0.08)";
 
 /** Soft drop shadow so the card floats off the glow. */
 export const EXPLORE_SWIPE_CARD_BORDER = "rgba(255, 255, 255, 0.08)";
@@ -122,8 +124,8 @@ export const EXPLORE_SWIPE_CARD_TITLE_MAX_LINES = 2;
 export const EXPLORE_SWIPE_CARD_INFO_HEADER_GAP = 2;
 /** Gap between country name and bookmark in the title row. */
 export const EXPLORE_SWIPE_CARD_INFO_TITLE_ACTION_GAP = 8;
-/** Section break between header block and fun fact. */
-export const EXPLORE_SWIPE_CARD_INFO_REGION_GAP = 16;
+/** Section break between header block (title + stats) and fun fact. */
+export const EXPLORE_SWIPE_CARD_INFO_REGION_GAP = 4;
 /** @deprecated Use EXPLORE_SWIPE_CARD_INFO_HEADER_GAP — kept for saved-list parity. */
 export const EXPLORE_SWIPE_CARD_INFO_TEXT_GAP =
   EXPLORE_SWIPE_CARD_INFO_HEADER_GAP;

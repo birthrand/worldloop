@@ -1,22 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useMemo, useRef } from "react";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import Animated, {
-  cancelAnimation,
-  runOnJS,
-  SlideInDown,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-} from "react-native-reanimated";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { SwipeDismissSheet } from "@/components/explore/swipe-dismiss-sheet";
 import { WORLDLOOP_HEADER_ACCENT_COLOR } from "@/components/worldloop-header";
 import {
-  EXPLORE_SWIPE_TAB_BAR_BG,
-  EXPLORE_SWIPE_TAB_BAR_BORDER,
+  EXPLORE_SWIPE_CARD_INFO_BG,
+  EXPLORE_SWIPE_CARD_INFO_BORDER,
 } from "@/constants/explore-swipe-layout";
 import {
   continentDisplayLabel,
@@ -32,15 +22,6 @@ import {
 import { useCountryFeedStore } from "@/store/use-country-feed-store";
 import { useSavedCountriesStore } from "@/store/use-saved-countries-store";
 import { useSpatialContextStore } from "@/store/use-spatial-context-store";
-
-const SHEET_ENTER = SlideInDown.springify()
-  .damping(20)
-  .stiffness(150)
-  .mass(0.85);
-
-const SHEET_DISMISS_DRAG_PX = 88;
-const SHEET_DISMISS_VELOCITY = 900;
-const SHEET_DISMISS_EXIT_PX = 420;
 
 type ExploreFeedMenuSheetProps = {
   visible: boolean;
@@ -90,34 +71,6 @@ export function ExploreFeedMenuSheet({
   onClose,
 }: ExploreFeedMenuSheetProps) {
   const insets = useSafeAreaInsets();
-  const canCloseFromBackdropRef = useRef(false);
-  const translateY = useSharedValue(0);
-  const isDismissing = useSharedValue(false);
-
-  useEffect(() => {
-    if (!visible) {
-      canCloseFromBackdropRef.current = false;
-      cancelAnimation(translateY);
-      translateY.value = 0;
-      isDismissing.value = false;
-      return;
-    }
-
-    cancelAnimation(translateY);
-    translateY.value = 0;
-    isDismissing.value = false;
-
-    const timeout = setTimeout(() => {
-      canCloseFromBackdropRef.current = true;
-    }, 120);
-
-    return () => clearTimeout(timeout);
-  }, [visible, isDismissing, translateY]);
-
-  const handleBackdropClose = () => {
-    if (!canCloseFromBackdropRef.current) return;
-    onClose();
-  };
   const selectedRegion = useCountryFeedStore((s) => s.selectedRegion);
   const discoveryMode = useCountryFeedStore((s) => s.discoveryMode);
   const countryCount = useCountryFeedStore((s) => s.countries.length);
@@ -209,155 +162,83 @@ export function ExploreFeedMenuSheet({
     tab === HERE_TAB ? discoveryMode === "here" : isContinent(tab),
   );
 
-  const panGesture = useMemo(
-    () =>
-      Gesture.Pan()
-        .activeOffsetY(8)
-        .failOffsetX([-24, 24])
-        .onUpdate((event) => {
-          if (isDismissing.value) return;
-          translateY.value = Math.max(0, event.translationY);
-        })
-        .onEnd((event) => {
-          if (isDismissing.value) return;
-
-          const shouldDismiss =
-            event.translationY > SHEET_DISMISS_DRAG_PX ||
-            event.velocityY > SHEET_DISMISS_VELOCITY;
-
-          if (!shouldDismiss) {
-            translateY.value = withSpring(0, { damping: 20, stiffness: 220 });
-            return;
-          }
-
-          isDismissing.value = true;
-          translateY.value = withTiming(
-            SHEET_DISMISS_EXIT_PX,
-            { duration: 200 },
-            (finished) => {
-              if (finished) {
-                runOnJS(onClose)();
-              }
-            },
-          );
-        }),
-    [isDismissing, onClose, translateY],
-  );
-
-  const dragStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
-  }));
-
   return (
-    <Modal
+    <SwipeDismissSheet
       visible={visible}
-      transparent
-      animationType="none"
-      presentationStyle="overFullScreen"
-      statusBarTranslucent
-      onRequestClose={handleBackdropClose}
+      onClose={onClose}
+      sheetStyle={[styles.sheet, { paddingBottom: insets.bottom + 12 }]}
+      backdropAccessibilityLabel="Close feed filters"
+      accessibilityLabel="Browse feed filters"
     >
-      <View style={styles.modalOverlay}>
-        <Pressable
-          style={StyleSheet.absoluteFill}
-          accessibilityRole="button"
-          accessibilityLabel="Close feed filters"
-          onPress={handleBackdropClose}
-        />
-        {visible ? (
-          <GestureDetector gesture={panGesture}>
-            <Animated.View
-              entering={SHEET_ENTER}
-              style={styles.sheetEnterWrapper}
-            >
-              <Animated.View
-                style={[
-                  styles.sheet,
-                  dragStyle,
-                  { paddingBottom: insets.bottom + 12 },
-                ]}
-                accessibilityViewIsModal
-                accessibilityRole="adjustable"
-                accessibilityLabel="Browse feed filters"
-                accessibilityHint="Swipe down to close"
-              >
-                <View style={styles.handleWrap}>
-                  <View style={styles.handleBar} />
-                </View>
-
-                <View style={styles.sheetHeader}>
-                  <Text style={styles.sheetTitle}>Browse feed</Text>
-                </View>
-
-                <View style={styles.menuPanel}>
-                  {headerTabs.map((name, index) => {
-                    const selected = name === selectedTab;
-                    const showPersonalHeader =
-                      index === 0 && name === FOR_YOU_TAB;
-                    const showContinentsHeader =
-                      index === continentStartIndex && continentStartIndex >= 0;
-
-                    const accessibilityLabel =
-                      name === FOR_YOU_TAB
-                        ? "Show your personalized country feed"
-                        : name === SAVED_TAB
-                          ? selected
-                            ? `Saved countries, ${savedCount} items`
-                            : `Show ${savedCount} saved countries as a swipe deck`
-                          : name === PLACES_TAB
-                            ? selected
-                              ? `Places mode, ${placesCount} landmarks`
-                              : "Show landmarks from your For You country pool"
-                            : name === HERE_TAB
-                              ? `Here mode: ${hereScopeLabel}, ${countryCount} countries`
-                              : selected
-                                ? `Clear ${name} filter and show For You feed`
-                                : `Show countries in ${name}`;
-
-                    const label =
-                      name === FOR_YOU_TAB
-                        ? name
-                        : name === SAVED_TAB
-                          ? savedCount > 0
-                            ? `${name} (${savedCount})`
-                            : name
-                          : name === PLACES_TAB
-                            ? placesCount > 0 && discoveryMode === "places"
-                              ? `${name} (${placesCount})`
-                              : name
-                            : name === HERE_TAB
-                              ? name
-                              : continentTabLabel(name, true);
-
-                    return (
-                      <View key={name}>
-                        {showPersonalHeader ? (
-                          <Text style={styles.sectionLabel}>Personal</Text>
-                        ) : null}
-                        {showContinentsHeader ? (
-                          <Text style={styles.sectionLabel}>World</Text>
-                        ) : null}
-                        {index > 0 &&
-                        !showContinentsHeader &&
-                        !showPersonalHeader ? (
-                          <View style={styles.menuDivider} />
-                        ) : null}
-                        <FeedMenuRow
-                          label={label}
-                          selected={selected}
-                          accessibilityLabel={accessibilityLabel}
-                          onPress={() => onTabPress(name)}
-                        />
-                      </View>
-                    );
-                  })}
-                </View>
-              </Animated.View>
-            </Animated.View>
-          </GestureDetector>
-        ) : null}
+      <View style={styles.handleWrap}>
+        <View style={styles.handleBar} />
       </View>
-    </Modal>
+
+      <View style={styles.sheetHeader}>
+        <Text style={styles.sheetTitle}>Browse feed</Text>
+      </View>
+
+      <View style={styles.menuPanel}>
+        {headerTabs.map((name, index) => {
+          const selected = name === selectedTab;
+          const showPersonalHeader = index === 0 && name === FOR_YOU_TAB;
+          const showContinentsHeader =
+            index === continentStartIndex && continentStartIndex >= 0;
+
+          const accessibilityLabel =
+            name === FOR_YOU_TAB
+              ? "Show your personalized country feed"
+              : name === SAVED_TAB
+                ? selected
+                  ? `Saved countries, ${savedCount} items`
+                  : `Show ${savedCount} saved countries as a swipe deck`
+                : name === PLACES_TAB
+                  ? selected
+                    ? `Places mode, ${placesCount} landmarks`
+                    : "Show landmarks from your For You country pool"
+                  : name === HERE_TAB
+                    ? `Here mode: ${hereScopeLabel}, ${countryCount} countries`
+                    : selected
+                      ? `Clear ${name} filter and show For You feed`
+                      : `Show countries in ${name}`;
+
+          const label =
+            name === FOR_YOU_TAB
+              ? name
+              : name === SAVED_TAB
+                ? savedCount > 0
+                  ? `${name} (${savedCount})`
+                  : name
+                : name === PLACES_TAB
+                  ? placesCount > 0 && discoveryMode === "places"
+                    ? `${name} (${placesCount})`
+                    : name
+                  : name === HERE_TAB
+                    ? name
+                    : continentTabLabel(name, true);
+
+          return (
+            <View key={name}>
+              {showPersonalHeader ? (
+                <Text style={styles.sectionLabel}>Personal</Text>
+              ) : null}
+              {showContinentsHeader ? (
+                <Text style={styles.sectionLabel}>World</Text>
+              ) : null}
+              {index > 0 && !showContinentsHeader && !showPersonalHeader ? (
+                <View style={styles.menuDivider} />
+              ) : null}
+              <FeedMenuRow
+                label={label}
+                selected={selected}
+                accessibilityLabel={accessibilityLabel}
+                onPress={() => onTabPress(name)}
+              />
+            </View>
+          );
+        })}
+      </View>
+    </SwipeDismissSheet>
   );
 }
 
@@ -365,23 +246,16 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.85,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.55)",
-    justifyContent: "flex-end",
-  },
-  sheetEnterWrapper: {
-    width: "100%",
-  },
   sheet: {
     width: "100%",
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingTop: 8,
     paddingHorizontal: 16,
-    backgroundColor: EXPLORE_SWIPE_TAB_BAR_BG,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderColor: EXPLORE_SWIPE_TAB_BAR_BORDER,
+    backgroundColor: EXPLORE_SWIPE_CARD_INFO_BG,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    borderColor: EXPLORE_SWIPE_CARD_INFO_BORDER,
     gap: 4,
   },
   handleWrap: {

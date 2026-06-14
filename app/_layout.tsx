@@ -46,7 +46,14 @@ export default function RootLayout() {
             name="oauth-callback"
             options={{ headerShown: false }}
           />
-          <Stack.Screen name="country" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="country"
+            options={{
+              headerShown: false,
+              // animation: "fade",
+              // presentation: "fullScreenModal",
+            }}
+          />
           {__DEV__ ? <Stack.Screen name="dev" /> : null}
         </Stack>
       </GestureHandlerRootView>
