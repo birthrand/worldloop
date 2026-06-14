@@ -15,7 +15,10 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { ExploreRegionCompleteState } from "@/components/explore/explore-region-complete-state";
-import { ExploreSwipeCard } from "@/components/explore/explore-swipe-card";
+import {
+  ExploreSwipeCard,
+  type HeroMediaMode,
+} from "@/components/explore/explore-swipe-card";
 import { ExploreSwipePlaceCard } from "@/components/explore/explore-swipe-place-card";
 import {
   EXPLORE_SWIPE_CARD_INFO_BG,
@@ -36,6 +39,10 @@ import {
   prefetchFeedHeroImagesAroundIndex,
   warmFeedHeroesOnSwipeBegin,
 } from "@/lib/prefetch-feed-heroes";
+import {
+  prefetchFeedVideosAroundIndex,
+  warmFeedVideosOnSwipeBegin,
+} from "@/lib/prefetch-feed-videos";
 import { useCountryFeedStore } from "@/store/use-country-feed-store";
 import type { Country } from "@/types/country";
 import type { PlaceFeedItem } from "@/types/place-feed";
@@ -70,6 +77,7 @@ type SwipeableTopCardProps = {
   onSwipeNext: () => void;
   onSwipePrevious: () => void;
   onSwipeBegin: () => void;
+  heroMediaMode?: HeroMediaMode;
 };
 
 function SwipeableTopCard({
@@ -82,6 +90,7 @@ function SwipeableTopCard({
   onSwipeNext,
   onSwipePrevious,
   onSwipeBegin,
+  heroMediaMode = "image",
 }: SwipeableTopCardProps) {
   const translateY = useSharedValue(0);
   const translateX = useSharedValue(0);
@@ -95,6 +104,18 @@ function SwipeableTopCard({
   useEffect(() => {
     setHeroIndex(0);
   }, [country.name]);
+
+  useEffect(() => {
+    translateY.value = 0;
+    translateX.value = 0;
+    isDismissing.value = false;
+  }, [country.name, isDismissing, translateX, translateY]);
+
+  useEffect(() => {
+    if (heroMediaMode === "video" && heroIndex !== 0) {
+      setHeroIndex(0);
+    }
+  }, [heroIndex, heroMediaMode]);
 
   useEffect(() => {
     canSwipeBackSv.value = canSwipeBack ? 1 : 0;
@@ -318,6 +339,7 @@ function SwipeableTopCard({
             width={cardWidth}
             height={cardHeight}
             interactive={false}
+            heroMediaMode={heroMediaMode}
           />
         </Animated.View>
       ) : null}
@@ -332,6 +354,7 @@ function SwipeableTopCard({
             width={cardWidth}
             height={cardHeight}
             interactive={false}
+            heroMediaMode={heroMediaMode}
           />
         </Animated.View>
       ) : null}
@@ -346,6 +369,7 @@ function SwipeableTopCard({
             heroIndex={heroIndex}
             heroScrollEnabled
             onHeroIndexChange={setHeroIndex}
+            heroMediaMode={heroMediaMode}
           />
         </Animated.View>
       </GestureDetector>
@@ -640,6 +664,7 @@ type ExploreSwipeDeckProps = {
   currentIndex: number;
   onIndexChange: (index: number) => void;
   onNeedMore: () => void;
+  heroMediaMode?: HeroMediaMode;
 };
 
 export function ExploreSwipeDeck({
@@ -647,6 +672,7 @@ export function ExploreSwipeDeck({
   currentIndex,
   onIndexChange,
   onNeedMore,
+  heroMediaMode = "image",
 }: ExploreSwipeDeckProps) {
   const discoveryMode = useCountryFeedStore((s) => s.discoveryMode);
   const places = useCountryFeedStore((s) => s.places);
@@ -670,11 +696,13 @@ export function ExploreSwipeDeck({
   useEffect(() => {
     if (isPlacesMode || countries.length === 0) return;
     void prefetchFeedHeroImagesAroundIndex(countries, currentIndex);
+    void prefetchFeedVideosAroundIndex(countries, currentIndex);
   }, [countries, currentIndex, isPlacesMode]);
 
   const handleSwipeBegin = useCallback(() => {
     if (isPlacesMode) return;
     warmFeedHeroesOnSwipeBegin(countries, currentIndex);
+    warmFeedVideosOnSwipeBegin(countries, currentIndex);
   }, [countries, currentIndex, isPlacesMode]);
 
   const handleSwipeNext = useCallback(() => {
@@ -793,6 +821,7 @@ export function ExploreSwipeDeck({
               onSwipeNext={handleSwipeNext}
               onSwipePrevious={handleSwipePrevious}
               onSwipeBegin={handleSwipeBegin}
+              heroMediaMode={heroMediaMode}
             />
           ) : null}
         </View>

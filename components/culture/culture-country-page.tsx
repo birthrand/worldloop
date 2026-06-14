@@ -54,12 +54,11 @@ export function CultureCountryPage({
     <View style={{ width: pageWidth, height: pageHeight }}>
       <CultureVideoSlide
         video={video}
-        flag={country.flag}
-        iso2={country.cca2}
-        posterUri={posterUri}
         isActive={isActive}
         width={pageWidth}
         height={pageHeight}
+        flag={country.flag}
+        iso2={country.cca2}
       />
       <CultureOverlay country={country} />
     </View>

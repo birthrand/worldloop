@@ -1,10 +1,15 @@
-import { STATIC_COUNTRY_CATALOG_ENABLED } from "@/constants/static-catalog";
+import {
+  STATIC_COUNTRY_CATALOG_ENABLED,
+  STATIC_CULTURE_VIDEOS_ENABLED,
+} from "@/constants/static-catalog";
 import catalogJson from "@/data/countries.json";
 
 import {
   filterCountriesForExploreRegion,
   normalizeCountriesRegions,
 } from "@/lib/app-region";
+import { parseCultureFeedSeed, seededShuffle } from "@/lib/culture-shuffle";
+import { hasCultureVideo } from "@/lib/format-country";
 import { countryToMapCountry } from "@/lib/map-country";
 import type { Country, MapCountry } from "@/types/country";
 import type { StaticCountryCatalog } from "@/types/country-catalog";
@@ -14,6 +19,8 @@ const catalog = catalogJson as StaticCountryCatalog;
 let normalizedCountries: Country[] | null = null;
 let countriesByName: Map<string, Country> | null = null;
 let shuffledFeedOrder: Country[] | null = null;
+let staticCultureCountries: Country[] | null = null;
+const cultureOrderBySeed = new Map<string, Country[]>();
 
 function shuffleInPlace<T>(items: T[]): T[] {
   const list = [...items];
@@ -49,6 +56,14 @@ export function isStaticCountryCatalogEnabled(): boolean {
   return STATIC_COUNTRY_CATALOG_ENABLED && catalog.countries.length > 0;
 }
 
+export function isStaticCultureFeedEnabled(): boolean {
+  if (!isStaticCountryCatalogEnabled() || !STATIC_CULTURE_VIDEOS_ENABLED) {
+    return false;
+  }
+
+  return getStaticCultureCountries().length > 0;
+}
+
 export function getStaticCatalogCount(): number {
   return catalog.count;
 }
@@ -76,6 +91,59 @@ export function getStaticExploreRegionCountries(region: string): Country[] {
 
 export function resetStaticFeedShuffle(): void {
   shuffledFeedOrder = null;
+}
+
+/** Countries with a valid culture clip in the bundled catalog. */
+export function getStaticCultureCountries(region?: string | null): Country[] {
+  if (!staticCultureCountries) {
+    staticCultureCountries = getStaticCountries().filter(hasCultureVideo);
+  }
+
+  const regionFilter = region?.trim();
+  if (!regionFilter) {
+    return staticCultureCountries;
+  }
+
+  return filterCountriesForExploreRegion(staticCultureCountries, regionFilter);
+}
+
+function getStaticCultureOrderForSeed(seed: string): Country[] {
+  const parsedSeed = parseCultureFeedSeed(seed);
+  const cached = cultureOrderBySeed.get(parsedSeed);
+  if (cached) return cached;
+
+  const ordered = seededShuffle(getStaticCultureCountries(), parsedSeed);
+  cultureOrderBySeed.set(parsedSeed, ordered);
+  return ordered;
+}
+
+export type StaticCultureFeedPage = {
+  countries: Country[];
+  nextCursor: string | null;
+  total: number;
+  seed: string;
+};
+
+/** Paginated Culture For You feed — cursor is numeric offset into seeded shuffle. */
+export function getStaticCultureFeedPage(
+  seed: string,
+  cursor?: string,
+  limit = 20,
+): StaticCultureFeedPage {
+  const parsedSeed = parseCultureFeedSeed(seed);
+  const order = getStaticCultureOrderForSeed(parsedSeed);
+  const offset = cursor ? Number.parseInt(cursor, 10) : 0;
+  const safeOffset = Number.isFinite(offset) && offset > 0 ? offset : 0;
+  const page = order.slice(safeOffset, safeOffset + limit);
+  const nextOffset = safeOffset + page.length;
+  const nextCursor = nextOffset < order.length ? String(nextOffset) : null;
+
+  return {
+    countries: page,
+    nextCursor,
+    total: order.length,
+    seed: parsedSeed,
+  };
 }
 
 function getShuffledFeedOrder(): Country[] {

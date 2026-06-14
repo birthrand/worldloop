@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-06-14T01:29:02.405Z",
+  "generatedAt": "2026-06-14T18:21:16.681Z",
   "count": 250,
   "countries": [
     {
@@ -43,7 +43,15 @@
         ],
         "caption": "Discover the wonders of Afghanistan!",
         "narration": "Welcome to Afghanistan, a country with a rich history and diverse culture. Did you know it has the largest lapis lazuli mines, treasured for millennia? Explore its unique traditions and landscapes that make it truly special!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/27048853/12056979_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/27048853/amazon-bolivia-bolivian-pachamama-27048853.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 12
+        }
+      ]
     },
     {
       "name": "Åland Islands",
@@ -83,7 +91,15 @@
         ],
         "caption": "Discover the beautiful Åland Islands!",
         "narration": "Welcome to the Åland Islands, a stunning archipelago that offers a rich cultural experience. With its unique blend of Swedish and Finnish influences, this region is full of surprises. Explore its breathtaking natural beauty and vibrant local traditions!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/34766649/14742180_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/34766649/aerial-beach-boats-california-34766649.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 44
+        }
+      ]
     },
     {
       "name": "Albania",
@@ -123,7 +139,15 @@
         ],
         "caption": "Discover the hidden gems of Albania!",
         "narration": "Welcome to Albania, a country filled with fascinating history and stunning landscapes. Did you know that it has over 750,000 bunkers? Join us as we explore the beauty and uniqueness of this incredible destination!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36539494/15493839_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36539494/pexels-photo-36539494.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 9
+        }
+      ]
     },
     {
       "name": "Algeria",
@@ -163,7 +187,15 @@
         ],
         "caption": "Explore Algeria, Africa's largest nation!",
         "narration": "Welcome to Algeria, a land of vast deserts and rich history. Did you know it's the largest country in Africa? From ancient Roman ruins to stunning wildlife, Algeria has so much to discover!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36188099/15347365_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36188099/ancestral-culture-carnival-carnival-atmosphere-carnival-costume-36188099.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 12
+        }
+      ]
     },
     {
       "name": "American Samoa",
@@ -204,7 +236,15 @@
         ],
         "caption": "Discover the stunning beauty of American Samoa!",
         "narration": "Welcome to American Samoa, a beautiful territory in the South Pacific! Here, you can explore a unique national park, vibrant culture, and breathtaking landscapes. Let's dive into some fascinating facts about this incredible place!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36188104/15347330_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36188104/ancestral-culture-carnival-carnival-atmosphere-carnival-costume-36188104.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 8
+        }
+      ]
     },
     {
       "name": "Andorra",
@@ -244,7 +284,15 @@
         ],
         "caption": "Discover the hidden gems of Andorra!",
         "narration": "Welcome to Andorra, a tiny country full of surprises! Did you know it's nestled in the Pyrenees mountains between France and Spain? With its breathtaking landscapes and rich culture, Andorra is truly a hidden gem in Europe."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36188110/15347336_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36188110/ancestral-culture-carnival-carnival-atmosphere-carnival-costume-36188110.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 8
+        }
+      ]
     },
     {
       "name": "Angola",
@@ -284,7 +332,15 @@
         ],
         "caption": "Discover the wonders of Angola!",
         "narration": "Welcome to Angola, a land filled with natural beauty and cultural diversity. Did you know that it is home to Kalandula Falls, the largest waterfall by volume? With its rich heritage and stunning coastline, Angola is a fascinating destination to explore."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/37505842/15890413_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/37505842/pexels-photo-37505842.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Anguilla",
@@ -324,7 +380,15 @@
         ],
         "caption": "Discover the beauty of Anguilla's beaches!",
         "narration": "Welcome to Anguilla, a beautiful Caribbean island known for its breathtaking beaches. With 33 pristine shores, you'll find the perfect spot to relax and soak up the sun. Join the fun of boat racing and enjoy the local music scene that brings the island to life!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33835057/14359224_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33835057/african-traditions-hausa-kt-nigeria-nigeria-culture-33835057.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Antarctica",
@@ -368,7 +432,15 @@
         ],
         "caption": "Discover the wonders of the coldest place on Earth!",
         "narration": "Welcome to Antarctica, a land of extremes! Did you know it's the coldest, windiest, and driest continent? Join us to explore its fascinating features and unique research opportunities."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/35532642/15053578_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/35532642/pexels-photo-35532642.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 11
+        }
+      ]
     },
     {
       "name": "Antigua and Barbuda",
@@ -408,7 +480,15 @@
         ],
         "caption": "Discover the beauty of Antigua and Barbuda!",
         "narration": "Welcome to Antigua and Barbuda, a stunning Caribbean paradise! With its 365 beaches, this country offers a unique beach experience for every day of the year. Let’s explore some fascinating facts about this beautiful nation!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/28154660/12311932_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/28154660/african-tribal-culture-28154660.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 14
+        }
+      ]
     },
     {
       "name": "Argentina",
@@ -449,7 +529,15 @@
         ],
         "caption": "Discover the wonders of Argentina!",
         "narration": "Welcome to Argentina, a country brimming with culture and natural beauty. Did you know it boasts the southernmost city in the world? From vibrant tango dances to stunning landscapes, Argentina offers unique experiences for everyone!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/34522629/14626579_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/34522629/argentinean-mate-argentinian-drink-buenos-aires-malbec-wine-34522629.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 6
+        }
+      ]
     },
     {
       "name": "Armenia",
@@ -489,7 +577,15 @@
         ],
         "caption": "Discover Armenia's ancient treasures!",
         "narration": "Did you know that Armenia boasts the oldest known winery in the world? This fascinating country has a rich history that dates back thousands of years. From its unique alphabet to its stunning landscapes, Armenia is a treasure trove of culture and heritage!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/16209388/16209388-uhd_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/16209388/armenia-vertical-cascade-yerevan-drone-shot-16209388.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 47
+        }
+      ]
     },
     {
       "name": "Aruba",
@@ -530,7 +626,15 @@
         ],
         "caption": "Discover the beauty and uniqueness of Aruba!",
         "narration": "Welcome to Aruba, an island paradise in the Caribbean! With stunning beaches and a vibrant culture, it’s a perfect destination for families. Did you know that the island has no rivers? Instead, it uses advanced technology to provide fresh water. Let's explore more fascinating facts about this beautiful island!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36627853/15528954_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36627853/pexels-photo-36627853.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 18
+        }
+      ]
     },
     {
       "name": "Australia",
@@ -577,7 +681,15 @@
         ],
         "caption": "Discover the wonders of Australia!",
         "narration": "Australia is a land of incredible diversity and surprises. From the longest fence in the world to stunning natural wonders like the Great Barrier Reef, this country has so much to offer. Get ready to explore the unique facts that make Australia truly special!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/37265117/15786747_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/37265117/pexels-photo-37265117.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 18
+        }
+      ]
     },
     {
       "name": "Austria",
@@ -617,7 +729,15 @@
         ],
         "caption": "Discover the wonders of Austria!",
         "narration": "Austria is a land of rich history and culture. From its stunning landscapes to its fascinating traditions, there's so much to explore. Did you know it has the world's oldest zoo? Join us as we delve into the unique facts about this incredible country!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/30593081/13100153_1440_2560_25fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/30593081/pexels-photo-30593081.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 7
+        }
+      ]
     },
     {
       "name": "Azerbaijan",
@@ -657,7 +777,15 @@
         ],
         "caption": "Discover the wonders of Azerbaijan!",
         "narration": "Welcome to Azerbaijan, a fascinating country with a rich history and vibrant culture. Did you know it’s home to the first oil well ever drilled? Let’s explore some more surprising facts about this unique nation!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/35581132/15077438_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/35581132/pexels-photo-35581132.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 17
+        }
+      ]
     },
     {
       "name": "Bahamas",
@@ -697,7 +825,15 @@
         ],
         "caption": "Discover the beauty of the Bahamas!",
         "narration": "Welcome to the Bahamas, an enchanting archipelago in North America! With its 700 islands, there's always something new to explore. From stunning beaches to a vibrant culture, the Bahamas is a true tropical paradise."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/28218200/12331233_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/28218200/bahamas-bimini-28218200.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 7
+        }
+      ]
     },
     {
       "name": "Bahrain",
@@ -737,7 +873,15 @@
         ],
         "caption": "Discover the wonders of Bahrain!",
         "narration": "Welcome to Bahrain, a fascinating island nation in Asia! From its incredible underwater theme park to its deep-rooted pearl diving traditions, Bahrain is full of surprises. Let’s dive into some amazing facts about this captivating country!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/29434199/12671462_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/29434199/pexels-photo-29434199.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 7
+        }
+      ]
     },
     {
       "name": "Bangladesh",
@@ -777,7 +921,15 @@
         ],
         "caption": "Discover the unique wonders of Bangladesh!",
         "narration": "Welcome to Bangladesh, a vibrant country full of surprises! From its lush landscapes to its rich culture, there's so much to explore. Did you know it's home to the world's largest river delta? Let's dive deeper into its incredible features!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/35164473/14895630_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/35164473/pexels-photo-35164473.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 44
+        }
+      ]
     },
     {
       "name": "Barbados",
@@ -817,7 +969,15 @@
         ],
         "caption": "Discover the wonders of Barbados!",
         "narration": "Welcome to Barbados, a beautiful island in North America! With its fascinating history and vibrant culture, there's so much to learn and explore. From unique wildlife to delicious rum, let’s dive into what makes this place special!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/29176573/12598929_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/29176573/playa-29176573.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 17
+        }
+      ]
     },
     {
       "name": "Belarus",
@@ -858,7 +1018,15 @@
         ],
         "caption": "Explore the wonders of Belarus!",
         "narration": "Welcome to Belarus, a country rich in natural beauty and unique traditions. Did you know it boasts the largest forest area in Europe? From delicious local drinks to stunning architecture, there's so much to discover!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36335661/15410983_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36335661/pexels-photo-36335661.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 15
+        }
+      ]
     },
     {
       "name": "Belgium",
@@ -900,7 +1068,15 @@
         ],
         "caption": "Discover Belgium's sweet secrets!",
         "narration": "Welcome to Belgium, a country known for its rich history and delightful treats. Did you know that it has more than 2,000 chocolate shops? That's a lot of chocolate to enjoy!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33539089/14261128_1440_2560_24fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33539089/belgium-33539089.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 9
+        }
+      ]
     },
     {
       "name": "Belize",
@@ -942,7 +1118,15 @@
         ],
         "caption": "Discover the wonders of Belize!",
         "narration": "Welcome to Belize, a stunning coastal nation in North America. With its breathtaking barrier reef and rich cultural heritage, there’s so much to explore here. From ancient Mayan ruins to vibrant wildlife, Belize is a treasure trove for adventurers and nature lovers alike."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/32586778/13896518_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/32586778/aquarium-coral-garden-grotto-diver-nature-adventure-32586778.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 11
+        }
+      ]
     },
     {
       "name": "Benin",
@@ -982,7 +1166,15 @@
         ],
         "caption": "Discover the rich history and culture of Benin!",
         "narration": "Welcome to Benin, a country steeped in history and tradition. From the vibrant celebrations of Voodoo Day to the beautiful textiles that tell stories, Benin is a land of fascinating contrasts. Explore its unique heritage and the important roles of both traditional and modern governance."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33835057/14359224_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33835057/african-traditions-hausa-kt-nigeria-nigeria-culture-33835057.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Bermuda",
@@ -1022,7 +1214,15 @@
         ],
         "caption": "Discover the enchanting beauty of Bermuda!",
         "narration": "Welcome to Bermuda, a stunning island with breathtaking pink sand beaches. Did you know that the unique color comes from crushed coral and shells? This tropical paradise is full of surprising facts waiting to be uncovered!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/34900764/14785003_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/34900764/pexels-photo-34900764.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 18
+        }
+      ]
     },
     {
       "name": "Bhutan",
@@ -1062,7 +1262,15 @@
         ],
         "caption": "Discover Bhutan, where happiness measures success!",
         "narration": "Welcome to Bhutan, a small yet remarkable country nestled in the Himalayas. Here, happiness is prioritized over wealth, showcasing a unique approach to measuring prosperity. Explore its stunning landscapes and rich traditions that captivate visitors from around the world."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/37953625/16104315_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/37953625/pexels-photo-37953625.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 13
+        }
+      ]
     },
     {
       "name": "Bolivia",
@@ -1105,7 +1313,15 @@
         ],
         "caption": "Discover the wonders of Bolivia!",
         "narration": "Welcome to Bolivia, a country full of surprises! From the majestic heights of Lake Titicaca to its colorful festivals, there's so much to explore. Did you know that Bolivia is one of the most culturally diverse nations in the world? Let's dive into its fascinating facts!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/27048856/12056961_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/27048856/amazon-bolivia-bolivian-pachamama-27048856.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 25
+        }
+      ]
     },
     {
       "name": "Bosnia and Herzegovina",
@@ -1147,7 +1363,15 @@
         ],
         "caption": "Discover the wonders of Bosnia and Herzegovina!",
         "narration": "Did you know that Bosnia and Herzegovina is a country filled with history and breathtaking scenery? From the iconic Old Bridge in Mostar to the rich coffee culture, there's so much to explore. Join us as we uncover more fascinating facts about this unique European gem!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/37153662/15739795_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/37153662/pexels-photo-37153662.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 12
+        }
+      ]
     },
     {
       "name": "Botswana",
@@ -1188,7 +1412,15 @@
         ],
         "caption": "Discover the wonders of Botswana!",
         "narration": "Did you know that Botswana boasts the largest salt pan in the world? The Makgadikgadi Pan is so vast that it's comparable to the size of Portugal! This incredible natural wonder is just one of the many fascinating aspects of Botswana's rich landscape and culture."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/37453856/15863853_1440_2560_24fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/37453856/pexels-photo-37453856.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 29
+        }
+      ]
     },
     {
       "name": "Bouvet Island",
@@ -1227,7 +1459,15 @@
         ],
         "caption": "Discover the wonders of Bouvet Island!",
         "narration": "Welcome to Bouvet Island, a mysterious and uninhabited volcanic island. It's one of the most remote places on Earth, creating a unique habitat for seabirds. Even though there are no people living here, this island has a fascinating history and is a part of Norway's territory."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/34509933/14621846_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/34509933/above-sea-fish-hjell-lofoten-34509933.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 111
+        }
+      ]
     },
     {
       "name": "Brazil",
@@ -1270,7 +1510,15 @@
         ],
         "caption": "Explore the wonders of Brazil!",
         "narration": "Welcome to Brazil, a land of amazing diversity! From the lush Amazon Rainforest to the lively rhythms of Carnival, there's so much to learn. Did you know that Brazil is the only South American country where Portuguese is spoken? Let's dive into the vibrant culture and stunning landscapes of this beautiful nation."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/18327364/18327364-hd_1080_1920_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/18327364/brasil-marinha-18327364.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 11
+        }
+      ]
     },
     {
       "name": "British Indian Ocean Territory",
@@ -1310,7 +1558,15 @@
         ],
         "caption": "Discover the wonders of the British Indian Ocean Territory!",
         "narration": "The British Indian Ocean Territory is a unique and remote area with fascinating features. Did you know it has the largest atoll in the world? While it has no permanent residents, its strategic location is home to a significant military base. Explore its rich marine life and learn about its intriguing history!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/34900764/14785003_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/34900764/pexels-photo-34900764.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 18
+        }
+      ]
     },
     {
       "name": "British Virgin Islands",
@@ -1350,7 +1606,15 @@
         ],
         "caption": "Discover the beauty and culture of the British Virgin Islands!",
         "narration": "Welcome to the British Virgin Islands, a stunning tropical paradise! With crystal-clear waters and a rich cultural heritage, there's so much to explore. Did you know that this territory has no personal income tax? Let's dive into more fascinating facts about these beautiful islands!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/37710570/15992200_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/37710570/pexels-photo-37710570.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 26
+        }
+      ]
     },
     {
       "name": "Brunei",
@@ -1390,7 +1654,15 @@
         ],
         "caption": "Discover the hidden gems of Brunei!",
         "narration": "Welcome to Brunei, a small but prosperous nation in Asia. Known for its wealth from oil and gas, Brunei also features incredible cultural sites and stunning natural landscapes. Let's explore some surprising facts about this unique country!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36627853/15528954_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36627853/pexels-photo-36627853.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 18
+        }
+      ]
     },
     {
       "name": "Bulgaria",
@@ -1430,7 +1702,15 @@
         ],
         "caption": "Discover the hidden gems of Bulgaria!",
         "narration": "Welcome to Bulgaria, a country steeped in history and rich traditions! Did you know it boasts one of the oldest gold treasures in the world? Join us as we explore more amazing facts about this beautiful European nation."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/34930793/14796351_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/34930793/a-mosque-airplane-ankara-autumn-34930793.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 19
+        }
+      ]
     },
     {
       "name": "Burkina Faso",
@@ -1470,7 +1750,15 @@
         ],
         "caption": "Discover the rich culture and resilience of Burkina Faso!",
         "narration": "Welcome to Burkina Faso, a country full of pride and diversity. With over 60 ethnic groups, its culture is as colorful as its landscapes. From being a top cotton producer to hosting the largest film festival in Africa, Burkina Faso has much to offer!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33835057/14359224_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33835057/african-traditions-hausa-kt-nigeria-nigeria-culture-33835057.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Burundi",
@@ -1511,7 +1799,15 @@
         ],
         "caption": "Discover the hidden treasures of Burundi!",
         "narration": "Welcome to Burundi, a small but vibrant country in Africa. From its stunning landscapes to its rich traditions, there's so much to explore. Join us as we delve into the unique aspects of Burundian culture and history!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/37505842/15890413_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/37505842/pexels-photo-37505842.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Cabo Verde",
@@ -1551,7 +1847,15 @@
         ],
         "caption": "Discover the islands of Cabo Verde, a hidden gem in the Atlantic Ocean!",
         "narration": "Welcome to Cabo Verde, a beautiful island nation! With its ten unique islands, each one has its own charm and culture. From vibrant music to stunning beaches, there's so much to explore in this Atlantic paradise."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36073845/15298630_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36073845/4k-drone-beach-resort-crashing-waves-dji-36073845.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 75
+        }
+      ]
     },
     {
       "name": "Cambodia",
@@ -1591,7 +1895,15 @@
         ],
         "caption": "Discover the wonders of Cambodia!",
         "narration": "Welcome to Cambodia, a country filled with rich history and stunning landscapes. Did you know that Angkor Wat, the largest religious monument globally, is located here? Explore its beauty and learn about the vibrant culture that makes Cambodia truly unique!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/29191447/12604626_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/29191447/cambodia-khmer-khmer-architecture-khmer-culture-29191447.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 8
+        }
+      ]
     },
     {
       "name": "Cameroon",
@@ -1632,7 +1944,15 @@
         ],
         "caption": "Discover the rich diversity of Cameroon!",
         "narration": "Welcome to Cameroon, a vibrant African nation full of cultural richness. With over 250 ethnic groups, each sharing distinct traditions, the country offers a unique experience. From stunning landscapes to a mix of languages, Cameroon truly embodies the spirit of Africa."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33948204/14405369_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33948204/hero-pexels-pexels-africa-33948204.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 8
+        }
+      ]
     },
     {
       "name": "Canada",
@@ -1678,7 +1998,15 @@
         ],
         "caption": "Discover the wonders of Canada!",
         "narration": "Welcome to Canada, a country full of surprises! Did you know that Canada has the longest coastline in the world? From its stunning lakes to its diverse wildlife, there's so much to learn about this beautiful nation!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/7143791/7143791-uhd_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/7143791/1th-1th-july-america-boy-7143791.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 11
+        }
+      ]
     },
     {
       "name": "Caribbean Netherlands",
@@ -1720,7 +2048,15 @@
         ],
         "caption": "Discover the unique islands of the Caribbean Netherlands!",
         "narration": "Welcome to the Caribbean Netherlands, where beauty and culture blend seamlessly. Explore the vibrant islands of Bonaire, Sint Eustatius, and Saba. Each island has its own unique charm and history, waiting to be uncovered!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36094790/15307528_1440_1920_50fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36094790/pexels-photo-36094790.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 15
+        }
+      ]
     },
     {
       "name": "Cayman Islands",
@@ -1760,7 +2096,15 @@
         ],
         "caption": "Explore the beauty and uniqueness of the Cayman Islands!",
         "narration": "Welcome to the Cayman Islands, a tropical paradise famous for its breathtaking coral reefs. With no direct taxes, it's also a thriving financial center. Don't miss the delicious turtle stew, a true taste of the islands, and the stunning Seven Mile Beach, perfect for relaxation and adventure!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/34654453/14688822_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/34654453/pexels-photo-34654453.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 23
+        }
+      ]
     },
     {
       "name": "Central African Republic",
@@ -1801,7 +2145,15 @@
         ],
         "caption": "Explore the wonders of the Central African Republic!",
         "narration": "Welcome to the Central African Republic, a hidden gem in Africa! Discover its stunning national parks and vibrant cultures. Did you know it has over 80 ethnic groups? Let's dive into the fascinating facts about this unique country!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/34914612/14790270_1440_2560_24fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/34914612/pexels-photo-34914612.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 12
+        }
+      ]
     },
     {
       "name": "Chad",
@@ -1842,7 +2194,15 @@
         ],
         "caption": "Discover the unique wonders of Chad!",
         "narration": "Welcome to Chad, a country with incredible natural beauty and cultural diversity. From the vast Sahara Desert to vibrant cities, there's so much to explore. Did you know that Chad is home to Lake Chad? Join us to learn more about this fascinating nation!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33835057/14359224_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33835057/african-traditions-hausa-kt-nigeria-nigeria-culture-33835057.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Chile",
@@ -1883,7 +2243,15 @@
         ],
         "caption": "Discover the wonders of Chile!",
         "narration": "Welcome to Chile, a country filled with breathtaking landscapes and rich cultural heritage. From the vast Atacama Desert to the majestic Andes Mountains, there's so much to explore. Let's dive into some fascinating facts about this beautiful South American nation!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/20452930/20452930-uhd_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/20452930/chile-santiago-20452930.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 7
+        }
+      ]
     },
     {
       "name": "China",
@@ -1923,7 +2291,15 @@
         ],
         "caption": "Discover the wonders of China!",
         "narration": "Welcome to China, a country of incredible diversity and rich history. With a population of over 1.4 billion, it is the most populous nation on Earth. From the majestic Great Wall to the adorable giant pandas, there's so much to explore!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/6540513/6540513-uhd_1440_2560_25fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/6540513/pexels-photo-6540513.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 16
+        }
+      ]
     },
     {
       "name": "Christmas Island",
@@ -1963,7 +2339,15 @@
         ],
         "caption": "Discover the wonders of Christmas Island!",
         "narration": "Welcome to Christmas Island, a remote paradise in Oceania! Did you know that millions of red crabs make an incredible journey every year? This unique island is not only known for its crabs but also for its stunning wildlife and rich cultural history."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/29486146/12692070_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/29486146/adventure-africa-africa-travel-african-adventure-29486146.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 11
+        }
+      ]
     },
     {
       "name": "Cocos (Keeling) Islands",
@@ -2003,7 +2387,15 @@
         ],
         "caption": "Discover the hidden treasures of the Cocos (Keeling) Islands!",
         "narration": "Welcome to the enchanting Cocos (Keeling) Islands, a beautiful destination in Oceania. With its stunning beaches and rich wildlife, this tropical paradise is sure to captivate your imagination. Let's explore some fascinating facts about these unique islands!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/32712335/13945770_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/32712335/coconut-palm-coconut-palms-las-palmas-lush-environment-32712335.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 38
+        }
+      ]
     },
     {
       "name": "Colombia",
@@ -2043,7 +2435,15 @@
         ],
         "caption": "Explore the wonders of Colombia!",
         "narration": "Welcome to Colombia, a vibrant country bursting with culture and biodiversity! Did you know that it's the largest producer of emeralds in the world? With stunning landscapes and colorful festivals, Colombia is truly a gem in South America."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/30266124/12975405_1440_1920_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/30266124/pexels-photo-30266124.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 6
+        }
+      ]
     },
     {
       "name": "Comoros",
@@ -2085,7 +2485,15 @@
         ],
         "caption": "Discover the unique wonders of Comoros!",
         "narration": "Welcome to Comoros, a tropical paradise in the Indian Ocean! Did you know it's the only place where vanilla, ylang-ylang, and cloves thrive together? This beautiful archipelago boasts a rich blend of cultures and languages, making it truly special."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/34900764/14785003_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/34900764/pexels-photo-34900764.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 18
+        }
+      ]
     },
     {
       "name": "Congo",
@@ -2127,7 +2535,15 @@
         ],
         "caption": "Discover the wonders of Congo-Brazzaville!",
         "narration": "Welcome to the Republic of the Congo, a land rich in natural beauty and cultural diversity. Did you know it's home to the second-largest rainforest globally? Join us as we explore its fascinating wildlife and vibrant traditions!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33835057/14359224_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33835057/african-traditions-hausa-kt-nigeria-nigeria-culture-33835057.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Cook Islands",
@@ -2168,7 +2584,15 @@
         ],
         "caption": "Discover the unique beauty of the Cook Islands!",
         "narration": "Welcome to the Cook Islands, a beautiful paradise in Oceania! With stunning coral reefs and rich cultural heritage, there's so much to explore. Did you know these islands are named after the famous explorer Captain James Cook? Let's dive into more interesting facts!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/32538673/13876508_1440_2560_24fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/32538673/greece-greek-island-santorini-sea-32538673.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 9
+        }
+      ]
     },
     {
       "name": "Costa Rica",
@@ -2208,7 +2632,15 @@
         ],
         "caption": "Discover the wonders of Costa Rica!",
         "narration": "Welcome to Costa Rica, a treasure trove of nature and culture! With its stunning biodiversity and friendly people, it offers a unique experience for all. Did you know that this beautiful nation has no army? It's a peaceful paradise waiting for you to explore!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/26179980/11935740_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/26179980/arts-crafts-custom-danza-panama-city-26179980.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 5
+        }
+      ]
     },
     {
       "name": "Croatia",
@@ -2248,7 +2680,15 @@
         ],
         "caption": "Explore the beauty and surprises of Croatia!",
         "narration": "Did you know that Croatia boasts over 1,200 islands? Many of these islands are uninhabited, making them peaceful spots for nature lovers. From the historic streets of Dubrovnik to the stunning Plitvice Lakes, there's so much to discover in this beautiful country!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36391532/15432725_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36391532/pexels-photo-36391532.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 15
+        }
+      ]
     },
     {
       "name": "Cuba",
@@ -2288,7 +2728,15 @@
         ],
         "caption": "Discover the fascinating facts about Cuba!",
         "narration": "Cuba, a vibrant island in the Caribbean, offers much more than its beautiful beaches. Did you know it has the highest literacy rate in the world? Explore its rich culture, unique vehicles, and stunning biodiversity!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/26179980/11935740_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/26179980/arts-crafts-custom-danza-panama-city-26179980.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 5
+        }
+      ]
     },
     {
       "name": "Curaçao",
@@ -2330,7 +2778,15 @@
         ],
         "caption": "Discover the colorful charm of Curaçao!",
         "narration": "Welcome to Curaçao, a stunning island in the Caribbean! With its vibrant architecture and rich cultural blend, it’s a treasure waiting to be explored. From beautiful underwater parks to unique local liqueurs, Curaçao is full of surprises!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33835057/14359224_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33835057/african-traditions-hausa-kt-nigeria-nigeria-culture-33835057.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Cyprus",
@@ -2371,7 +2827,15 @@
         ],
         "caption": "Discover the wonders of Cyprus!",
         "narration": "Welcome to Cyprus, a fascinating island with a rich history and beautiful landscapes. Did you know that it is home to the oldest known water wells? With its unique blend of cultures and delicious food like halloumi cheese, there's so much to explore!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36184236/15345586_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36184236/big-ship-cyprus-shipwreck-36184236.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Czechia",
@@ -2412,7 +2876,15 @@
         ],
         "caption": "Discover the enchanting facts about Czechia!",
         "narration": "Welcome to Czechia, a country full of surprises! Did you know that it has the largest castle complex in the world? Explore its rich history and charming traditions that make it a unique destination for all ages."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/34203436/14496950_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/34203436/pexels-photo-34203436.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 6
+        }
+      ]
     },
     {
       "name": "Denmark",
@@ -2456,7 +2928,15 @@
         ],
         "caption": "Discover Denmark's unique attractions and cultural gems!",
         "narration": "Welcome to Denmark, a country filled with fascinating history and vibrant culture. From the enchanting Little Mermaid statue to the cozy concept of hygge, there's so much to explore. Did you know that Denmark also boasts the oldest amusement park in the world? Let's dive into what makes this Nordic nation so special!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/32209107/13737185_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/32209107/pexels-photo-32209107.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 18
+        }
+      ]
     },
     {
       "name": "Djibouti",
@@ -2497,7 +2977,15 @@
         ],
         "caption": "Discover the unique wonders of Djibouti!",
         "narration": "Welcome to Djibouti, a fascinating country located in the Horn of Africa. From its stunning landscapes like Lake Assal to its rich cultural tapestry, there's so much to explore. Join us as we uncover some surprising facts about this beautiful destination!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33835057/14359224_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33835057/african-traditions-hausa-kt-nigeria-nigeria-culture-33835057.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Dominica",
@@ -2537,7 +3025,15 @@
         ],
         "caption": "Discover the wonders of the Nature Island!",
         "narration": "Welcome to Dominica, where nature thrives in every corner! This beautiful island is filled with breathtaking landscapes and unique wildlife. Join us as we explore fascinating facts about this Caribbean gem!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/26093377/11930748_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/26093377/atardecer-china-poblana-church-papantla-26093377.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 6
+        }
+      ]
     },
     {
       "name": "Dominican Republic",
@@ -2577,7 +3073,15 @@
         ],
         "caption": "Discover the wonders of the Dominican Republic!",
         "narration": "Welcome to the Dominican Republic, a land rich in culture and history. This vibrant country is known for its stunning landscapes and warm-hearted people. Did you know it shares the island of Hispaniola with Haiti? Let’s explore more exciting facts about this amazing destination!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/32539305/13876836_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/32539305/dominican-republic-dominicana-explore-fronton-32539305.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 15
+        }
+      ]
     },
     {
       "name": "DRC",
@@ -2622,7 +3126,15 @@
         ],
         "caption": "Explore the wonders of the DRC!",
         "narration": "The Democratic Republic of the Congo is a land of incredible diversity and natural beauty. From its vast rainforests to its rich mineral resources, there's so much to discover. Join us as we learn more about this fascinating country in Central Africa!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/37505842/15890413_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/37505842/pexels-photo-37505842.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Ecuador",
@@ -2663,7 +3175,15 @@
         ],
         "caption": "Discover the wonders of Ecuador!",
         "narration": "Welcome to Ecuador, a country rich in biodiversity and culture. From the iconic Galápagos Islands to the lush Amazon rainforest, there's so much to explore. Did you know that Ecuador is named after the equator? Join us as we uncover more fascinating facts about this beautiful South American nation!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/32634049/13916248_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/32634049/quito-32634049.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 19
+        }
+      ]
     },
     {
       "name": "Egypt",
@@ -2703,7 +3223,15 @@
         ],
         "caption": "Discover the wonders of ancient Egypt!",
         "narration": "Welcome to Egypt, a land of incredible history and culture. Did you know that the Great Pyramid of Giza has stood for over 4,500 years? Join us as we explore the fascinating facts about this ancient civilization!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/19555656/19555656-uhd_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/19555656/pexels-photo-19555656.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 11
+        }
+      ]
     },
     {
       "name": "El Salvador",
@@ -2743,7 +3271,15 @@
         ],
         "caption": "Discover El Salvador's unique treasures!",
         "narration": "Welcome to El Salvador, a small but vibrant country in Central America. From its stunning volcanoes to its delicious cuisine, there's so much to explore. Let's dive into the fascinating facts that make El Salvador truly special!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/37070257/15704547_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/37070257/cultural-appreciation-guanajuato-mexico-outdoor-statue-37070257.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 15
+        }
+      ]
     },
     {
       "name": "Equatorial Guinea",
@@ -2785,7 +3321,15 @@
         ],
         "caption": "Discover the unique facets of Equatorial Guinea!",
         "narration": "Welcome to Equatorial Guinea, a hidden gem in Africa! This country stands out not just for its languages, but also for its incredible natural resources and vibrant culture. Join us as we explore the fascinating facts about this small yet rich nation."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/37505842/15890413_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/37505842/pexels-photo-37505842.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Eritrea",
@@ -2827,7 +3371,15 @@
         ],
         "caption": "Discover the beauty and diversity of Eritrea!",
         "narration": "Welcome to Eritrea, a country rich in history and culture. From the stunning architecture of Asmara to its vibrant coffee traditions, there's so much to learn. Let's explore the fascinating facts that make Eritrea unique!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33835057/14359224_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33835057/african-traditions-hausa-kt-nigeria-nigeria-culture-33835057.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Estonia",
@@ -2867,7 +3419,15 @@
         ],
         "caption": "Discover the digital wonder of Estonia!",
         "narration": "Welcome to Estonia, a pioneer in digital innovation! With nearly all government services online, it’s a model for the future. Did you know its capital, Tallinn, is a UNESCO World Heritage Site? Join us as we explore this fascinating country!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/35592618/15083462_1080_1920_24fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/35592618/pexels-photo-35592618.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 8
+        }
+      ]
     },
     {
       "name": "Eswatini",
@@ -2908,7 +3468,15 @@
         ],
         "caption": "Discover the unique kingdom of Eswatini!",
         "narration": "Welcome to Eswatini, a small yet fascinating country in Africa! Known for its rich culture and stunning wildlife, Eswatini offers a glimpse into a unique monarchy. Join us as we explore the traditions and natural wonders that make this nation special!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33835057/14359224_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33835057/african-traditions-hausa-kt-nigeria-nigeria-culture-33835057.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Ethiopia",
@@ -2948,7 +3516,15 @@
         ],
         "caption": "Discover the wonders of Ethiopia, a land rich in history and culture!",
         "narration": "Ethiopia is a fascinating country with a deep-rooted history. Did you know it was never colonized? From its ancient kingdoms to its unique calendar, there's so much to learn about this incredible nation."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33534355/14259741_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33534355/4-k-video-african-african-craft-africana-33534355.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Falkland Islands",
@@ -2988,7 +3564,15 @@
         ],
         "caption": "Discover the wonders of the Falkland Islands!",
         "narration": "Welcome to the Falkland Islands, a stunning archipelago with incredible wildlife! From their famous penguins to rich farming history, there's so much to learn about this remote paradise. Let's explore together!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/28615731/12437233_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/28615731/4k-aerial-beach-cloud-28615731.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 36
+        }
+      ]
     },
     {
       "name": "Faroe Islands",
@@ -3029,7 +3613,15 @@
         ],
         "caption": "Discover the unique charm of the Faroe Islands!",
         "narration": "Welcome to the Faroe Islands, a breathtaking archipelago in Europe. Did you know that there are more sheep than people here? With stunning landscapes and rich traditions, the islands offer a unique glimpse into nature and culture."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/20483279/20483279-uhd_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/20483279/pexels-photo-20483279.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 12
+        }
+      ]
     },
     {
       "name": "Fiji",
@@ -3071,7 +3663,15 @@
         ],
         "caption": "Explore the tropical paradise of Fiji, where culture and nature unite!",
         "narration": "Welcome to Fiji, a stunning island nation in the heart of Oceania! With over 300 islands, there's so much to discover. From vibrant coral reefs to rich cultural traditions, Fiji is a treasure waiting to be explored."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/34900764/14785003_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/34900764/pexels-photo-34900764.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 18
+        }
+      ]
     },
     {
       "name": "Finland",
@@ -3112,7 +3712,15 @@
         ],
         "caption": "Discover the sauna culture of Finland!",
         "narration": "Did you know that Finland has more saunas than cars? With around 2 million saunas, they offer a unique place for relaxation and socializing. It's a key part of Finnish culture, reflecting their love for wellness and community."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/18095986/18095986-hd_1080_1920_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/18095986/helsinki-18095986.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 8
+        }
+      ]
     },
     {
       "name": "France",
@@ -3165,7 +3773,15 @@
         ],
         "caption": "Discover the wonders of France!",
         "narration": "Welcome to France, a country rich in history and culture! From the magnificent Louvre to the iconic Eiffel Tower, there's so much to explore. Did you know that France is also famous for its delicious cheeses? Let's dive into some fascinating facts about this beautiful nation!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/19368466/19368466-uhd_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/19368466/france-french-flag-historic-historic-architecture-19368466.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 7
+        }
+      ]
     },
     {
       "name": "French Guiana",
@@ -3205,7 +3821,15 @@
         ],
         "caption": "Discover the wonders of French Guiana!",
         "narration": "Welcome to French Guiana, a unique territory in South America. From its fascinating spaceport to its lush rainforests, there's so much to explore. Let's dive into some surprising facts about this vibrant region!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/37080828/15708818_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/37080828/pexels-photo-37080828.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 13
+        }
+      ]
     },
     {
       "name": "French Polynesia",
@@ -3247,7 +3871,15 @@
         ],
         "caption": "Discover the enchanting islands of French Polynesia!",
         "narration": "Welcome to French Polynesia, a mesmerizing paradise in Oceania! With over 100 islands, this beautiful destination offers rich culture, stunning landscapes, and a vibrant marine ecosystem. Explore the wonders of Tahiti and the legendary Bora Bora!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/37480230/15876319_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/37480230/pexels-photo-37480230.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 20
+        }
+      ]
     },
     {
       "name": "French Southern and Antarctic Lands",
@@ -3286,7 +3918,15 @@
         ],
         "caption": "Discover the wonders of this remote territory!",
         "narration": "Welcome to the French Southern and Antarctic Lands, a hidden gem in the southern Indian Ocean. With its breathtaking landscapes and fascinating wildlife, this territory is a treasure trove for scientists and nature lovers alike. Join us as we explore the unique features of this remarkable place!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36134172/15323611_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36134172/pexels-photo-36134172.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Gabon",
@@ -3326,7 +3966,15 @@
         ],
         "caption": "Discover the wonders of Gabon!",
         "narration": "Welcome to Gabon, a country rich in natural beauty and wildlife. Did you know that its rainforests are among the largest in the world? With unique traditions and a commitment to conservation, Gabon offers a glimpse into nature's wonders."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33835057/14359224_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33835057/african-traditions-hausa-kt-nigeria-nigeria-culture-33835057.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Gambia",
@@ -3366,7 +4014,15 @@
         ],
         "caption": "Discover the wonders of The Gambia!",
         "narration": "Welcome to The Gambia, the smallest country on the African mainland! This vibrant nation is rich in culture and history, offering a unique blend of music, wildlife, and delicious cuisine. Join us as we explore some fascinating facts about this beautiful land!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33835057/14359224_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33835057/african-traditions-hausa-kt-nigeria-nigeria-culture-33835057.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Georgia",
@@ -3406,7 +4062,15 @@
         ],
         "caption": "Discover the wonders of Georgia!",
         "narration": "Georgia is a fascinating country located at the crossroads of Europe and Asia. Its rich history and culture make it a unique destination. Did you know that Georgia's winemaking traditions are among the oldest in the world? Let's explore more about this amazing place!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/29132840/12585361_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/29132840/georgia-currency-georgia-football-georgia-people-georgia-population-29132840.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 7
+        }
+      ]
     },
     {
       "name": "Germany",
@@ -3446,7 +4110,15 @@
         ],
         "caption": "Discover the wonders of Germany!",
         "narration": "Welcome to Germany, a country rich in culture and history! From its famous beer to its iconic castles, there's so much to explore. Did you know that Germany has over 1,500 types of beer? Join us as we uncover more surprising facts about this fascinating nation!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/37584710/15928199_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/37584710/pexels-photo-37584710.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Ghana",
@@ -3486,7 +4158,15 @@
         ],
         "caption": "Discover the vibrant culture and history of Ghana!",
         "narration": "Ghana, located in West Africa, is a nation rich in history and culture. It was the first country in Africa to achieve independence, paving the way for others. With stunning landscapes and a diverse population, Ghana offers a unique experience for everyone."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/35187775/14907669_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/35187775/pexels-photo-35187775.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 8
+        }
+      ]
     },
     {
       "name": "Gibraltar",
@@ -3526,7 +4206,15 @@
         ],
         "caption": "Discover Gibraltar's unique wildlife and culture!",
         "narration": "Did you know that Gibraltar is home to the only wild monkey population in Europe? These Barbary macaques are a fascinating part of the local ecosystem. Explore the stunning views from the Rock of Gibraltar and learn about its rich history and culture!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/34126364/14470691_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/34126364/african-monkey-34126364.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 7
+        }
+      ]
     },
     {
       "name": "Greece",
@@ -3566,7 +4254,15 @@
         ],
         "caption": "Discover the wonders of Greece!",
         "narration": "Welcome to Greece, a country rich in history and natural beauty. Did you know that Greece has over 6,000 islands? Join us as we explore the fascinating facts about this incredible destination!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/27374638/12127477_1440_2560_24fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/27374638/ancient-architecture-athens-europe-greece-27374638.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 5
+        }
+      ]
     },
     {
       "name": "Greenland",
@@ -3609,7 +4305,15 @@
         ],
         "caption": "Discover the wonders of Greenland!",
         "narration": "Welcome to Greenland, a land of stunning icebergs and rich culture. Did you know that it's the largest island in the world? Let's explore some fascinating facts about this unique place!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/9466174/9466174-uhd_1440_2732_25fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/9466174/adult-beads-buryats-cap-9466174.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 16
+        }
+      ]
     },
     {
       "name": "Grenada",
@@ -3649,7 +4353,15 @@
         ],
         "caption": "Discover the spice-filled paradise of Grenada!",
         "narration": "Welcome to Grenada, a beautiful island in the Caribbean. Known as the 'Spice Isle,' it's famous for its rich production of nutmeg and other spices. From stunning beaches to vibrant festivals, Grenada offers a unique blend of culture and natural beauty."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/34900764/14785003_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/34900764/pexels-photo-34900764.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 18
+        }
+      ]
     },
     {
       "name": "Guadeloupe",
@@ -3689,7 +4401,15 @@
         ],
         "caption": "Discover the beautiful butterfly-shaped islands of Guadeloupe!",
         "narration": "Welcome to Guadeloupe, a stunning archipelago in the Caribbean! With its unique butterfly shape, rich culture, and diverse ecosystems, there's so much to explore. From vibrant music to delicious rum, Guadeloupe offers a delightful experience for everyone."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/26093377/11930748_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/26093377/atardecer-china-poblana-church-papantla-26093377.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 6
+        }
+      ]
     },
     {
       "name": "Guam",
@@ -3731,7 +4451,15 @@
         ],
         "caption": "Discover the beauty and culture of Guam!",
         "narration": "Welcome to Guam, a tropical paradise in Oceania! This stunning island offers breathtaking beaches and a rich cultural heritage. From ancient Latte Stones to vibrant Chamorro traditions, there's so much to explore here!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/35110971/14874967_1440_2560_25fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/35110971/belly-dancers-belly-dancing-dancers-dancing-35110971.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 9
+        }
+      ]
     },
     {
       "name": "Guatemala",
@@ -3771,7 +4499,15 @@
         ],
         "caption": "Explore the wonders of Guatemala!",
         "narration": "Welcome to Guatemala, a country rich in history and culture. From the magnificent ruins of the Mayans to vibrant local traditions, there's so much to discover. Get ready to learn about its diverse landscapes and unique customs!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/34593752/14659255_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/34593752/4k-drone-4k-drone-footage-atitlan-guatemala-34593752.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 27
+        }
+      ]
     },
     {
       "name": "Guernsey",
@@ -3813,7 +4549,15 @@
         ],
         "caption": "Discover the unique charm of Guernsey!",
         "narration": "Welcome to Guernsey, a beautiful island located in the English Channel. With its own currency and rich history, Guernsey offers a unique blend of culture and nature. Explore its stunning beaches and learn about its fascinating past!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/35110971/14874967_1440_2560_25fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/35110971/belly-dancers-belly-dancing-dancers-dancing-35110971.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 9
+        }
+      ]
     },
     {
       "name": "Guinea",
@@ -3853,7 +4597,15 @@
         ],
         "caption": "Discover the wonders of Guinea!",
         "narration": "Welcome to Guinea, a country rich in natural beauty and cultural heritage. From the majestic Fouta Djallon mountains to its lively music traditions, there's so much to explore. Did you know that Guinea is a major producer of bauxite? Let's dive deeper into this fascinating nation!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33948204/14405369_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33948204/hero-pexels-pexels-africa-33948204.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 8
+        }
+      ]
     },
     {
       "name": "Guinea-Bissau",
@@ -3894,7 +4646,15 @@
         ],
         "caption": "Discover the vibrant culture and history of Guinea-Bissau!",
         "narration": "Guinea-Bissau is a small but diverse nation in West Africa. With over 30 ethnic groups, the country boasts a rich tapestry of cultures and languages. Its economy thrives on cashew nut production, and its breathtaking biodiversity is celebrated in stunning national parks."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33835011/14359212_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33835011/pexels-pexels-africa-pexels-hero-33835011.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 7
+        }
+      ]
     },
     {
       "name": "Guyana",
@@ -3934,7 +4694,15 @@
         ],
         "caption": "Discover the unique treasures of Guyana!",
         "narration": "Welcome to Guyana, a fascinating country that stands out in South America. Did you know it is the only English-speaking nation on the continent? With its stunning waterfalls and rich biodiversity, there's so much to explore and learn about this vibrant place!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33835057/14359224_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33835057/african-traditions-hausa-kt-nigeria-nigeria-culture-33835057.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Haiti",
@@ -3975,7 +4743,15 @@
         ],
         "caption": "Discover the rich history and culture of Haiti!",
         "narration": "Welcome to Haiti, a nation with a remarkable story of resilience. Did you know it was the first to gain independence from colonial rule? Explore its vibrant culture and stunning landscapes that make it truly unique!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36627853/15528954_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36627853/pexels-photo-36627853.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 18
+        }
+      ]
     },
     {
       "name": "Heard Island and McDonald Islands",
@@ -4014,7 +4790,15 @@
         ],
         "caption": "Discover the wonders of one of Earth's most isolated locations!",
         "narration": "Welcome to Heard Island and McDonald Islands, a hidden gem in the southern Indian Ocean. With no permanent residents, this remote paradise is a sanctuary for unique wildlife and stunning landscapes. Let's explore some surprising facts about this extraordinary place!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/30510286/13071522_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/30510286/atlantic-ocean-canary-island-spain-travel-30510286.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 17
+        }
+      ]
     },
     {
       "name": "Honduras",
@@ -4054,7 +4838,15 @@
         ],
         "caption": "Discover the wonders of Honduras!",
         "narration": "Welcome to Honduras, a country rich in history and natural beauty. From ancient Mayan ruins to stunning reefs, there's so much to explore. Did you know it has one of the largest barrier reefs in the world? Join us in uncovering more fascinating facts about this vibrant nation!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/34929233/14795506_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/34929233/itsekiri-traditional-music-34929233.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 14
+        }
+      ]
     },
     {
       "name": "Hong Kong",
@@ -4095,7 +4887,15 @@
         ],
         "caption": "Discover the towering skyline of Hong Kong!",
         "narration": "Welcome to Hong Kong, a vibrant city famous for its impressive skyline. Did you know it has more skyscrapers than any other place on Earth? Explore the blend of cultures and experiences that make this city truly unique!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/30337010/13004068_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/30337010/pexels-photo-30337010.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 7
+        }
+      ]
     },
     {
       "name": "Hungary",
@@ -4135,7 +4935,15 @@
         ],
         "caption": "Discover the wonders of Hungary!",
         "narration": "Welcome to Hungary, a country rich in history and culture! Did you know it boasts the largest thermal water cave system worldwide? From its unique language to delicious goulash, there’s so much to explore in this vibrant European nation."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/34783188/14746696_1440_2560_24fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/34783188/budapest-34783188.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Iceland",
@@ -4175,7 +4983,15 @@
         ],
         "caption": "Discover the wonders of Iceland!",
         "narration": "Welcome to Iceland, a land of fire and ice! With its stunning landscapes and rich culture, there's so much to explore. Did you know that this beautiful country has over 130 volcanoes? Let's dive into more fascinating facts about Iceland!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/31661627/13489517_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/31661627/blue-water-eruption-fountain-geysir-31661627.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "India",
@@ -4217,7 +5033,15 @@
         ],
         "caption": "Discover the wonders of India!",
         "narration": "India is a fascinating country with a rich tapestry of history and culture. Did you know it has the world's largest postal network? From festivals to stunning architecture, there's so much to learn and explore!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/34877656/14777996_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/34877656/pexels-photo-34877656.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 31
+        }
+      ]
     },
     {
       "name": "Indonesia",
@@ -4259,7 +5083,15 @@
         ],
         "caption": "Explore the wonders of Indonesia, a land of islands and rich culture!",
         "narration": "Welcome to Indonesia, a fascinating country made up of over 17,000 islands! With its vibrant culture and stunning natural beauty, there's so much to discover here. From the majestic Komodo dragons to the lively traditions of its diverse ethnic groups, Indonesia is truly a remarkable place."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/35411490/15003526_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/35411490/art-and-culture-bandung-35411490.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Iran",
@@ -4299,7 +5131,15 @@
         ],
         "caption": "Discover the rich tapestry of Iran's history and culture!",
         "narration": "Welcome to Iran, a land steeped in history and beauty! Did you know that this country boasts one of the oldest civilizations in the world? From stunning architecture to unique wildlife, Iran offers an incredible journey through time."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/37256296/15783076_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/37256296/pexels-photo-37256296.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Iraq",
@@ -4341,7 +5181,15 @@
         ],
         "caption": "Discover the wonders of Iraq's rich history and culture!",
         "narration": "Welcome to Iraq, a land with deep historical roots! From the ancient Sumerians to the vibrant cultures today, there’s so much to explore. Let’s uncover some fascinating facts about this remarkable country."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/37994810/16123406_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/37994810/pexels-photo-37994810.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 14
+        }
+      ]
     },
     {
       "name": "Ireland",
@@ -4382,7 +5230,15 @@
         ],
         "caption": "Discover the wonders of Ireland!",
         "narration": "Welcome to Ireland, the Emerald Isle, famous for its stunning landscapes and rich history. Did you know that this beautiful country has over 30,000 castles? Join us as we explore more surprising facts about Ireland!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/7083212/7083212-uhd_1440_2560_24fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/7083212/pexels-photo-7083212.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Isle of Man",
@@ -4423,7 +5279,15 @@
         ],
         "caption": "Explore the unique charm of the Isle of Man!",
         "narration": "Welcome to the Isle of Man, a captivating island with its own rich heritage. From thrilling motorcycle races to the revival of the Manx Gaelic language, there's so much to discover. Join us as we explore this beautiful destination!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/35688114/15125484_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/35688114/pexels-photo-35688114.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 8
+        }
+      ]
     },
     {
       "name": "Israel",
@@ -4464,7 +5328,15 @@
         ],
         "caption": "Discover the wonders of Israel!",
         "narration": "Welcome to Israel, a land rich in history and innovation. Did you know it boasts the lowest point on Earth at the Dead Sea? Let's explore more fascinating facts about this vibrant country."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/4038498/4038498-uhd_1440_2732_25fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/4038498/pexels-photo-4038498.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 14
+        }
+      ]
     },
     {
       "name": "Italy",
@@ -4505,7 +5377,15 @@
         ],
         "caption": "Discover Italy's rich history and culture!",
         "narration": "Welcome to Italy, a land bursting with history and flavor! Did you know that the University of Bologna is the oldest in the world? Join us as we explore more fascinating facts about this beautiful country!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36559603/15501014_1440_2560_25fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36559603/pexels-photo-36559603.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Ivory Coast",
@@ -4545,7 +5425,15 @@
         ],
         "caption": "Discover the rich culture and surprises of Ivory Coast!",
         "narration": "Welcome to Ivory Coast, a vibrant country in West Africa! With its diverse cultures and stunning natural beauty, there's so much to explore. From its delicious cocoa to unique traditions, Ivory Coast is truly a gem of a destination."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/30276171/12978260_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/30276171/pexels-photo-30276171.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 8
+        }
+      ]
     },
     {
       "name": "Jamaica",
@@ -4586,7 +5474,15 @@
         ],
         "caption": "Discover Jamaica's unique treasures!",
         "narration": "Welcome to Jamaica, a stunning island nation in the Caribbean! From its rich musical heritage to breathtaking natural beauty, there's so much to explore. Get ready to learn about the fascinating facts that make Jamaica truly special!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36906690/15634135_1080_1920_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36906690/pexels-photo-36906690.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 15
+        }
+      ]
     },
     {
       "name": "Japan",
@@ -4626,7 +5522,15 @@
         ],
         "caption": "Discover the wonders of Japan!",
         "narration": "Welcome to Japan, a fascinating country of islands! Did you know that it has over 6,800 islands? Each one offers unique landscapes and cultures waiting to be explored."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/8751248/8751248-uhd_1440_2732_25fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/8751248/pexels-photo-8751248.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 30
+        }
+      ]
     },
     {
       "name": "Jersey",
@@ -4668,7 +5572,15 @@
         ],
         "caption": "Discover the unique charm of Jersey!",
         "narration": "Welcome to Jersey, a beautiful island with a rich cultural heritage. From stunning beaches to delicious dairy products, Jersey has something for everyone. Explore its fascinating history and enjoy the blend of British and French influences!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36053385/15290038_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36053385/pexels-photo-36053385.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 5
+        }
+      ]
     },
     {
       "name": "Jordan",
@@ -4708,7 +5620,15 @@
         ],
         "caption": "Explore the wonders of Jordan!",
         "narration": "Discover the beauty and history of Jordan, where ancient cities meet breathtaking landscapes. From the majestic Petra to the unique Dead Sea, there's so much to learn and explore in this remarkable country."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/35225085/14923756_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/35225085/pexels-photo-35225085.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 15
+        }
+      ]
     },
     {
       "name": "Kazakhstan",
@@ -4750,7 +5670,15 @@
         ],
         "caption": "Discover the wonders of Kazakhstan!",
         "narration": "Welcome to Kazakhstan, a vast and fascinating country in Central Asia. With its incredible landscapes and rich traditions, there's so much to explore. From the stars above to the unique wildlife below, Kazakhstan is a land of surprises waiting to be discovered."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/35081961/14862051_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/35081961/2025-modern-mosque-mosque-dome-mosque-interior-35081961.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Kenya",
@@ -4791,7 +5719,15 @@
         ],
         "caption": "Discover the wonders of Kenya's wildlife and culture!",
         "narration": "Welcome to Kenya, a land of breathtaking landscapes and diverse wildlife. Did you know that every year, millions of animals embark on the Great Migration? Join us as we explore this incredible country and its unique heritage!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/37238300/15775679_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/37238300/pexels-photo-37238300.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 23
+        }
+      ]
     },
     {
       "name": "Kiribati",
@@ -4834,7 +5770,15 @@
         ],
         "caption": "Discover the beautiful islands of Kiribati!",
         "narration": "Welcome to Kiribati, a stunning nation of islands scattered across the Pacific Ocean. Did you know it covers an area larger than most countries? From unique wildlife to vibrant cultural dances, there's so much to learn about this fascinating place!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/35110971/14874967_1440_2560_25fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/35110971/belly-dancers-belly-dancing-dancers-dancing-35110971.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 9
+        }
+      ]
     },
     {
       "name": "Kosovo",
@@ -4875,7 +5819,15 @@
         ],
         "caption": "Discover the vibrant history and culture of Kosovo!",
         "narration": "Welcome to Kosovo, a country bursting with youthful energy and rich traditions. From its stunning natural landscapes to its lively folk music, there’s so much to explore. Did you know that Kosovo's independence was declared in 2008? Let’s dive into the unique stories that this beautiful nation has to offer!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/35289127/14951076_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/35289127/4k-video-copyright-free-bolu-bolu-forests-bolu-province-35289127.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 12
+        }
+      ]
     },
     {
       "name": "Kuwait",
@@ -4915,7 +5867,15 @@
         ],
         "caption": "Discover the wonders of Kuwait!",
         "narration": "Welcome to Kuwait, a fascinating country with a rich history and modern marvels. Did you know it was home to the world's first skyscraper? From its delicious national dish to its impressive literacy rates, Kuwait has so much to explore!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/34325045/14541768_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/34325045/4k-drone-4k-drone-video-4k-drone-video-quality-34325045.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 52
+        }
+      ]
     },
     {
       "name": "Kyrgyzstan",
@@ -4956,7 +5916,15 @@
         ],
         "caption": "Discover the wonders of Kyrgyzstan!",
         "narration": "Welcome to Kyrgyzstan, a stunning country filled with breathtaking landscapes and rich traditions. From the majestic Issyk-Kul Lake to the exciting sport of kok-boru, there's so much to explore. Join us as we uncover the unique culture and natural beauty that make Kyrgyzstan a gem in Central Asia!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/9467426/9467426-uhd_1440_2732_25fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/9467426/pexels-photo-9467426.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 17
+        }
+      ]
     },
     {
       "name": "Laos",
@@ -4996,7 +5964,15 @@
         ],
         "caption": "Discover the hidden gems of Laos!",
         "narration": "Welcome to Laos, a land of rich culture and stunning landscapes. Did you know it's one of the few landlocked countries in Southeast Asia? From its flavorful cuisine to the majestic Mekong River, there's so much to explore!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/35041472/14844206_1440_2560_25fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/35041472/pexels-photo-35041472.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 22
+        }
+      ]
     },
     {
       "name": "Latvia",
@@ -5036,7 +6012,15 @@
         ],
         "caption": "Discover the hidden gems of Latvia!",
         "narration": "Welcome to Latvia, a land of rich history and breathtaking nature. Did you know that this beautiful country hosts one of the oldest oak trees in the world? Join us as we explore more fascinating facts about Latvia!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/37924257/16092672_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/37924257/pexels-photo-37924257.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 22
+        }
+      ]
     },
     {
       "name": "Lebanon",
@@ -5077,7 +6061,15 @@
         ],
         "caption": "Discover the wonders of Lebanon!",
         "narration": "Lebanon is a fascinating country with a rich history and culture. From the ancient city of Byblos to its delicious cuisine, there's so much to explore. Join us as we uncover the unique aspects of this beautiful nation!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/34696361/14705959_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/34696361/tas-sokaklar-ve-sohbet-eden-insanlar-34696361.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 5
+        }
+      ]
     },
     {
       "name": "Lesotho",
@@ -5118,7 +6110,15 @@
         ],
         "caption": "Discover the 'Kingdom in the Sky'!",
         "narration": "Welcome to Lesotho, a stunning country known for its breathtaking mountains and rich culture. Did you know that it's the only nation entirely above 1,000 meters in elevation? Join us as we explore the unique traditions and beautiful landscapes of this incredible kingdom!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33835057/14359224_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33835057/african-traditions-hausa-kt-nigeria-nigeria-culture-33835057.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Liberia",
@@ -5158,7 +6158,15 @@
         ],
         "caption": "Discover the rich history and culture of Liberia!",
         "narration": "Welcome to Liberia, a land of rich history and diverse cultures. Did you know it was the first independent republic in Africa? Let's explore more amazing facts about this fascinating country!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33835057/14359224_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33835057/african-traditions-hausa-kt-nigeria-nigeria-culture-33835057.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Libya",
@@ -5198,7 +6206,15 @@
         ],
         "caption": "Explore the wonders of Libya!",
         "narration": "Did you know that Libya is mostly covered by the Sahara Desert? This vast expanse makes up about 90% of the country's land. Libya is not just sand; it has a rich history and incredible wildlife waiting to be discovered!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/29434199/12671462_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/29434199/pexels-photo-29434199.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 7
+        }
+      ]
     },
     {
       "name": "Liechtenstein",
@@ -5238,7 +6254,15 @@
         ],
         "caption": "Discover the wonders of Liechtenstein!",
         "narration": "Welcome to Liechtenstein, a charming country nestled in the Alps! Did you know it’s one of the world’s smallest nations? With its stunning castles and rich traditions, there’s so much to explore in this hidden gem of Europe."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/14299626/14299626-uhd_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/14299626/pexels-photo-14299626.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 9
+        }
+      ]
     },
     {
       "name": "Lithuania",
@@ -5278,7 +6302,15 @@
         ],
         "caption": "Discover the vibrant culture and history of Lithuania!",
         "narration": "Lithuania, a small but remarkable country in Europe, is filled with surprises! From its rich history of independence to its unique language, there's so much to learn. Explore the stunning landscapes and colorful traditions that make Lithuania truly special."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/18445201/18445201-uhd_1440_1920_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/18445201/buidings-18445201.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 5
+        }
+      ]
     },
     {
       "name": "Luxembourg",
@@ -5320,7 +6352,15 @@
         ],
         "caption": "Discover the wonders of Luxembourg!",
         "narration": "Welcome to Luxembourg, a tiny yet fascinating country in Europe. With its impressive castles and rich history, there's so much to learn. Did you know it has three official languages? Let's explore this little gem together!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/37620200/15946081_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/37620200/pexels-photo-37620200.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 9
+        }
+      ]
     },
     {
       "name": "Macau",
@@ -5361,7 +6401,15 @@
         ],
         "caption": "Discover the vibrant culture of Macau!",
         "narration": "Welcome to Macau, a fascinating blend of cultures and traditions. Did you know it's the gambling capital of the world? With its rich history and delicious cuisine, there's so much to explore in this tiny region!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36685083/15551533_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36685083/pexels-photo-36685083.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Madagascar",
@@ -5402,7 +6450,15 @@
         ],
         "caption": "Discover the wonders of Madagascar!",
         "narration": "Welcome to Madagascar, a fascinating island nation rich in biodiversity. Did you know it is home to unique species like lemurs? With its stunning coastlines and vibrant cultures, Madagascar offers endless adventures for explorers of all ages!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36134939/15324163_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36134939/pexels-photo-36134939.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 46
+        }
+      ]
     },
     {
       "name": "Malawi",
@@ -5443,7 +6499,15 @@
         ],
         "caption": "Discover the wonders of Malawi!",
         "narration": "Welcome to Malawi, a beautiful country in Africa! With its stunning Lake Malawi and rich culture, there's so much to learn and explore. Did you know that it’s called the 'Warm Heart of Africa'? Let’s dive into some amazing facts!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33835057/14359224_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33835057/african-traditions-hausa-kt-nigeria-nigeria-culture-33835057.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Malaysia",
@@ -5484,7 +6548,15 @@
         ],
         "caption": "Discover the wonders of Malaysia, a land of rich heritage and natural beauty.",
         "narration": "Welcome to Malaysia, a vibrant country in Asia! Here, you can explore ancient rainforests and experience a melting pot of cultures. From the towering Petronas Towers to the diverse wildlife, there's so much to learn and discover in this beautiful nation."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/20119060/uhd_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/20119060/pexels-photo-20119060.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 12
+        }
+      ]
     },
     {
       "name": "Maldives",
@@ -5524,7 +6596,15 @@
         ],
         "caption": "Discover the beauty of the Maldives!",
         "narration": "Welcome to the Maldives, a stunning paradise made up of nearly 1,200 coral islands! Here, you can explore vibrant marine life and enjoy the warm sun on beautiful beaches. Did you know that its unique geography plays a crucial role in its rich biodiversity? Let’s dive deeper into this fascinating country!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/12541027/12541027-uhd_1440_2560_24fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/12541027/pexels-photo-12541027.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 3
+        }
+      ]
     },
     {
       "name": "Mali",
@@ -5564,7 +6644,15 @@
         ],
         "caption": "Discover the wonders of Mali!",
         "narration": "Welcome to Mali, a land steeped in history and culture. Did you know that Timbuktu was once a major hub for trade and learning? From the majestic Niger River to the unique sounds of its music, Mali offers a rich tapestry of experiences."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33835057/14359224_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33835057/african-traditions-hausa-kt-nigeria-nigeria-culture-33835057.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Malta",
@@ -5605,7 +6693,15 @@
         ],
         "caption": "Discover the wonders of Malta!",
         "narration": "Welcome to Malta, a small island nation bursting with history and culture. From ancient temples to vibrant traditions, Malta offers a unique glimpse into the past. With its sunny shores and rich heritage, it's a delightful destination for everyone!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/16668182/16668182-uhd_1440_2560_24fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/16668182/pexels-photo-16668182.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 7
+        }
+      ]
     },
     {
       "name": "Marshall Islands",
@@ -5646,7 +6742,15 @@
         ],
         "caption": "Discover the beautiful and unique Marshall Islands!",
         "narration": "The Marshall Islands is a breathtaking archipelago with over 1,200 islands and islets. It offers a rich cultural heritage and stunning natural beauty. Join us as we explore its fascinating history and traditions!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33013803/14069333_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33013803/pexels-photo-33013803.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 11
+        }
+      ]
     },
     {
       "name": "Martinique",
@@ -5686,7 +6790,15 @@
         ],
         "caption": "Discover the beauty and culture of Martinique!",
         "narration": "Welcome to Martinique, a beautiful island in the Caribbean! With its vibrant culture and breathtaking landscapes, there's so much to explore. From the fiery Mount Pelée to the delicious local rum, Martinique is a treasure waiting to be discovered."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/34900764/14785003_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/34900764/pexels-photo-34900764.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 18
+        }
+      ]
     },
     {
       "name": "Mauritania",
@@ -5726,7 +6838,15 @@
         ],
         "caption": "Discover the wonders of Mauritania!",
         "narration": "Welcome to Mauritania, a fascinating country in Africa! Known for its stunning landscapes and rich culture, Mauritania surprises many with its unique features. From the vast Sahara Desert to its incredible wildlife, there’s so much to learn about this beautiful nation."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33835057/14359224_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33835057/african-traditions-hausa-kt-nigeria-nigeria-culture-33835057.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Mauritius",
@@ -5768,7 +6888,15 @@
         ],
         "caption": "Discover the wonders of Mauritius!",
         "narration": "Welcome to Mauritius, an island of rich history and breathtaking landscapes. Did you know it was once home to the famous dodo bird? With its diverse cultures and stunning nature, Mauritius is truly a unique destination!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/34288498/14526640_1440_2560_25fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/34288498/pexels-photo-34288498.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 6
+        }
+      ]
     },
     {
       "name": "Mayotte",
@@ -5808,7 +6936,15 @@
         ],
         "caption": "Discover the hidden treasures of Mayotte!",
         "narration": "Welcome to Mayotte, an enchanting archipelago in the Indian Ocean. With its vibrant culture and breathtaking marine life, there's so much to explore. Did you know that Mayotte is famous for its unique sea turtles? Let's dive into more fascinating facts about this beautiful region!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/34900764/14785003_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/34900764/pexels-photo-34900764.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 18
+        }
+      ]
     },
     {
       "name": "Mexico",
@@ -5850,7 +6986,15 @@
         ],
         "caption": "Discover the wonders of Mexico!",
         "narration": "Welcome to Mexico, a country rich in culture and history! From its ancient civilizations to its delicious cuisine, there's so much to learn. Get ready to explore the vibrant traditions and fascinating facts that make Mexico unique!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/32058674/13664643_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/32058674/cdmx-flagpole-mexican-architecture-mexican-beauty-32058674.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 14
+        }
+      ]
     },
     {
       "name": "Micronesia",
@@ -5891,7 +7035,15 @@
         ],
         "caption": "Discover the wonders of Micronesia!",
         "narration": "Welcome to Micronesia, a stunning archipelago in the heart of Oceania. With over 600 islands, this beautiful country offers a unique blend of cultures and breathtaking natural beauty. Explore its vibrant coral reefs and rich traditions that have been preserved for generations."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/35110971/14874967_1440_2560_25fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/35110971/belly-dancers-belly-dancing-dancers-dancing-35110971.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 9
+        }
+      ]
     },
     {
       "name": "Moldova",
@@ -5931,7 +7083,15 @@
         ],
         "caption": "Discover the hidden gems of Moldova!",
         "narration": "Welcome to Moldova, a country filled with surprises! Did you know it has the largest wine cellar in the world? There’s so much to explore, from unique traditions to rich cultural heritage."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36953387/15655705_1440_2560_24fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36953387/pexels-photo-36953387.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Monaco",
@@ -5971,7 +7131,15 @@
         ],
         "caption": "Discover the wonders of Monaco!",
         "narration": "Welcome to Monaco, a tiny yet fascinating country on the French Riviera. With its rich history and stunning attractions, Monaco is a jewel in Europe. Did you know it's the second smallest country in the world? Join us as we explore more about this unique destination!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/27808318/12229235_1440_2560_59fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/27808318/beautiful-nature-boats-coast-ferry-27808318.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Mongolia",
@@ -6012,7 +7180,15 @@
         ],
         "caption": "Explore the vast wonders of Mongolia!",
         "narration": "Welcome to Mongolia, a land of stunning landscapes and rich culture. Did you know that the Gobi Desert, the largest in Asia, stretches over a thousand miles? With its unique traditions and beautiful nature, Mongolia is a fascinating place to discover!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/9466607/9466607-uhd_1440_2732_25fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/9466607/adult-buryats-child-christmas-9466607.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 18
+        }
+      ]
     },
     {
       "name": "Montenegro",
@@ -6052,7 +7228,15 @@
         ],
         "caption": "Discover the breathtaking beauty of Montenegro!",
         "narration": "Welcome to Montenegro, a hidden gem in Europe! With stunning landscapes and rich history, this small country has so much to offer. From its deep fjords to lush forests, every corner is a picture-perfect escape."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/26241878/11942425_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/26241878/bay-of-kotor-houses-kotor-montenegro-26241878.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 13
+        }
+      ]
     },
     {
       "name": "Montserrat",
@@ -6092,7 +7276,15 @@
         ],
         "caption": "Discover the beauty and history of Montserrat!",
         "narration": "Welcome to Montserrat, a stunning Caribbean island with a rich Irish influence. From its lush landscapes to its intriguing volcanic history, there's so much to explore. Don't forget to check out the unique wild donkeys that roam freely!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/15157247/15157247-uhd_1776_3840_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/15157247/pexels-photo-15157247.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 11
+        }
+      ]
     },
     {
       "name": "Morocco",
@@ -6133,7 +7325,15 @@
         ],
         "caption": "Discover the wonders of Morocco!",
         "narration": "Welcome to Morocco, a country where ancient traditions meet stunning landscapes. Did you know that it boasts the Sahara Desert, the largest hot desert on Earth? Let's explore its unique culture and rich history together!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/34492896/14614788_1440_2560_32fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/34492896/morocco-rug-34492896.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 15
+        }
+      ]
     },
     {
       "name": "Mozambique",
@@ -6173,7 +7373,15 @@
         ],
         "caption": "Discover the wonders of Mozambique!",
         "narration": "Welcome to Mozambique, a stunning country filled with natural beauty and rich culture. Did you know it has the world's largest sand dune? Explore its vibrant traditions and diverse wildlife, making it a unique destination for travelers."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/37505842/15890413_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/37505842/pexels-photo-37505842.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Myanmar",
@@ -6213,7 +7421,15 @@
         ],
         "caption": "Explore the wonders of Myanmar!",
         "narration": "Did you know that Myanmar boasts the world's largest book? The Kuthodaw Pagoda is a treasure trove of Buddhist scriptures inscribed on stone slabs. With its rich culture and stunning landscapes, Myanmar is a fascinating destination for all ages!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33929845/14398519_1080_1920_24fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33929845/bangladesh-bangladesh-economy-bangladesh-edit-bangladesh-myanmar-border-33929845.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 6
+        }
+      ]
     },
     {
       "name": "Namibia",
@@ -6261,7 +7477,15 @@
         ],
         "caption": "Discover the wonders of Namibia!",
         "narration": "Welcome to Namibia, a land of stunning landscapes and rich wildlife. Did you know it's home to the oldest desert in the world? Explore its unique cultures and breathtaking natural wonders!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/26832319/12016345_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/26832319/pexels-photo-26832319.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 8
+        }
+      ]
     },
     {
       "name": "Nauru",
@@ -6302,7 +7526,15 @@
         ],
         "caption": "Discover the tiny yet fascinating island of Nauru!",
         "narration": "Welcome to Nauru, a small island nation with a big story! With its stunning landscapes and rich history, there's so much to learn about this unique country. Let's dive into some surprising facts about Nauru!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/35110971/14874967_1440_2560_25fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/35110971/belly-dancers-belly-dancing-dancers-dancing-35110971.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 9
+        }
+      ]
     },
     {
       "name": "Nepal",
@@ -6342,7 +7574,15 @@
         ],
         "caption": "Discover the breathtaking heights and rich culture of Nepal!",
         "narration": "Welcome to Nepal, a country that boasts some of the highest mountains in the world, including the magnificent Mount Everest. With a vibrant culture and diverse communities, there's so much to explore. Did you know that cows roam freely in the streets, regarded as sacred? Join us on a journey through this enchanting land!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36032169/15280309_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36032169/pexels-photo-36032169.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 16
+        }
+      ]
     },
     {
       "name": "Netherlands",
@@ -6382,7 +7622,15 @@
         ],
         "caption": "Discover the wonders of the Netherlands!",
         "narration": "Welcome to the Netherlands, a country famous for its vibrant culture and stunning landscapes. Did you know it has more bicycles than people? Join us as we explore this fascinating nation's unique features and rich history!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/29331308/12643562_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/29331308/serene-river-cruise-in-amsterdam-city-29331308.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 11
+        }
+      ]
     },
     {
       "name": "New Caledonia",
@@ -6422,7 +7670,15 @@
         ],
         "caption": "Explore the wonders of New Caledonia!",
         "narration": "Welcome to New Caledonia, a beautiful island nation in Oceania! Did you know it boasts the world's largest lagoon, teeming with vibrant marine life? The rich culture of the Kanak people adds to the island's charm, making it a unique destination for travelers."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36204696/15352783_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36204696/pexels-photo-36204696.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 37
+        }
+      ]
     },
     {
       "name": "New Zealand",
@@ -6468,7 +7724,15 @@
         ],
         "caption": "Discover the wonders of New Zealand!",
         "narration": "Welcome to New Zealand, a stunning island nation in Oceania! Did you know it was the first country to give women the right to vote back in 1893? Join us as we explore more fascinating facts about this unique land!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/37907229/16083980_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/37907229/pexels-photo-37907229.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 14
+        }
+      ]
     },
     {
       "name": "Nicaragua",
@@ -6508,7 +7772,15 @@
         ],
         "caption": "Discover the wonders of Nicaragua!",
         "narration": "Welcome to Nicaragua, a land of stunning landscapes and rich culture. Did you know that it features the largest freshwater lake in Central America? With its diverse ecosystems, beautiful beaches, and volcanic wonders, Nicaragua is a delightful destination for families."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/26093377/11930748_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/26093377/atardecer-china-poblana-church-papantla-26093377.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 6
+        }
+      ]
     },
     {
       "name": "Niger",
@@ -6548,7 +7820,15 @@
         ],
         "caption": "Explore the wonders of Niger!",
         "narration": "Welcome to Niger, a country rich in natural beauty and cultural diversity. Did you know that the Sahara Desert dominates much of its landscape? From ancient rock art to vital rivers, Niger has so many fascinating stories to tell!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33835011/14359212_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33835011/pexels-pexels-africa-pexels-hero-33835011.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 7
+        }
+      ]
     },
     {
       "name": "Nigeria",
@@ -6588,7 +7868,15 @@
         ],
         "caption": "Explore the vibrant cultures of Nigeria!",
         "narration": "Nigeria is a land of incredible diversity, with over 250 ethnic groups contributing to its rich cultural tapestry. From the bustling streets of Lagos to the serene landscapes of Abuja, each region has its unique story to tell."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33835057/14359224_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33835057/african-traditions-hausa-kt-nigeria-nigeria-culture-33835057.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Niue",
@@ -6629,7 +7917,15 @@
         ],
         "caption": "Discover the wonders of Niue!",
         "narration": "Welcome to Niue, a hidden gem in Oceania! This unique island is not only known for its stunning coral formations but also boasts an impressive literacy rate. With its rich culture and beautiful landscapes, Niue is a must-visit destination!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/35110971/14874967_1440_2560_25fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/35110971/belly-dancers-belly-dancing-dancers-dancing-35110971.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 9
+        }
+      ]
     },
     {
       "name": "Norfolk Island",
@@ -6670,7 +7966,15 @@
         ],
         "caption": "Discover the unique wonders of Norfolk Island!",
         "narration": "Welcome to Norfolk Island, a beautiful oasis in Oceania! Did you know it has the tallest pines in the world? Explore its fascinating history, unique language, and breathtaking beaches!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36229014/15363914_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36229014/pexels-photo-36229014.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 14
+        }
+      ]
     },
     {
       "name": "North Korea",
@@ -6710,7 +8014,15 @@
         ],
         "caption": "Discover the intriguing facts about North Korea!",
         "narration": "North Korea is a country full of surprises. From its massive military to its unique cultural traditions, there's much to learn. Did you know it celebrates a special day for its leader? Let's explore more fascinating aspects of this mysterious nation!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36947460/15652258_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36947460/pexels-photo-36947460.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 8
+        }
+      ]
     },
     {
       "name": "North Macedonia",
@@ -6750,7 +8062,15 @@
         ],
         "caption": "Discover the hidden gems of North Macedonia!",
         "narration": "Welcome to North Macedonia, a country rich in history and natural beauty. From the stunning Lake Ohrid to the vibrant culture, there's so much to explore. Let's dive into some fascinating facts about this remarkable nation!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/37340389/15815721_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/37340389/pexels-photo-37340389.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 6
+        }
+      ]
     },
     {
       "name": "Northern Mariana Islands",
@@ -6792,7 +8112,15 @@
         ],
         "caption": "Explore the wonders of the Northern Mariana Islands!",
         "narration": "Welcome to the Northern Mariana Islands, a beautiful chain of islands in Oceania. With a rich history and stunning natural landscapes, there's so much to discover. From the world's largest cave to diverse cultural influences, these islands offer a unique experience for everyone."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/34633003/14678481_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/34633003/aquarium-aquatic-ecosystem-coral-gardens-dive-adventure-34633003.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 9
+        }
+      ]
     },
     {
       "name": "Norway",
@@ -6836,7 +8164,15 @@
         ],
         "caption": "Discover the wonders of Norway!",
         "narration": "Welcome to Norway, a land of stunning landscapes and rich traditions! Did you know that it boasts the world's longest road tunnel? Let's explore more fascinating facts about this beautiful country!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/30625556/13110399_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/30625556/pexels-photo-30625556.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 16
+        }
+      ]
     },
     {
       "name": "Oman",
@@ -6876,7 +8212,15 @@
         ],
         "caption": "Discover the wonders of Oman!",
         "narration": "Welcome to Oman, a land of ancient history and breathtaking landscapes. Did you know that Oman is home to the world's oldest known city? Join us as we explore its rich culture and stunning natural beauty!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/30226373/12959203_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/30226373/ancient-architecture-middle-east-oman-30226373.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 30
+        }
+      ]
     },
     {
       "name": "Pakistan",
@@ -6917,7 +8261,15 @@
         ],
         "caption": "Discover the wonders of Pakistan!",
         "narration": "Welcome to Pakistan, a land filled with breathtaking landscapes and rich cultural heritage. Did you know it's home to K2, the second-highest mountain in the world? Let's explore more fascinating facts about this incredible country!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/12074768/12074768-hd_1080_1920_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/12074768/pexels-photo-12074768.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 39
+        }
+      ]
     },
     {
       "name": "Palau",
@@ -6958,7 +8310,15 @@
         ],
         "caption": "Discover the beauty and uniqueness of Palau!",
         "narration": "Welcome to Palau, a stunning island nation in Oceania! With its vast marine protected areas and friendly culture, there's so much to explore. Did you know that Palau is also famous for its Jellyfish Lake? Dive into the wonders of this beautiful country!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36690384/15552840_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36690384/pexels-photo-36690384.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 11
+        }
+      ]
     },
     {
       "name": "Palestine",
@@ -6998,7 +8358,15 @@
         ],
         "caption": "Discover the treasures of Palestine!",
         "narration": "Palestine is a region brimming with history and culture. From ancient cities to delicious cuisine, there's so much to explore. Join us as we uncover the fascinating facts about this unique place!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/29434199/12671462_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/29434199/pexels-photo-29434199.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 7
+        }
+      ]
     },
     {
       "name": "Panama",
@@ -7038,7 +8406,15 @@
         ],
         "caption": "Discover the wonders of Panama!",
         "narration": "Welcome to Panama, a vibrant country with rich history and diverse wildlife. From the incredible Panama Canal to the colorful traditions of the Kuna people, there's so much to explore. Join us in uncovering the unique treasures of this beautiful land!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/26179980/11935740_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/26179980/arts-crafts-custom-danza-panama-city-26179980.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 5
+        }
+      ]
     },
     {
       "name": "Papua New Guinea",
@@ -7080,7 +8456,15 @@
         ],
         "caption": "Discover the wonders of Papua New Guinea!",
         "narration": "Welcome to Papua New Guinea, a land of incredible diversity. With over 800 languages spoken, it's a unique melting pot of cultures. Explore its many islands and rich traditions!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36204696/15352783_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36204696/pexels-photo-36204696.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 37
+        }
+      ]
     },
     {
       "name": "Paraguay",
@@ -7121,7 +8505,15 @@
         ],
         "caption": "Discover the unique culture and surprising facts of Paraguay!",
         "narration": "Welcome to Paraguay, a captivating country in South America! Did you know that Guarani is not only a traditional language but also an official one? From its stunning Itaipu Dam to the refreshing tereré, Paraguay has so much to explore!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/37453856/15863853_1440_2560_24fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/37453856/pexels-photo-37453856.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 29
+        }
+      ]
     },
     {
       "name": "Peru",
@@ -7163,7 +8555,15 @@
         ],
         "caption": "Discover the wonders of Peru!",
         "narration": "Welcome to Peru, a country rich in history and culture. From the breathtaking Machu Picchu to its delicious culinary delights, there's so much to explore. Join us on a journey to learn more about this fascinating South American nation!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/34472003/14606843_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/34472003/alpaca-mountain-adventure-peruvian-34472003.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 15
+        }
+      ]
     },
     {
       "name": "Philippines",
@@ -7204,7 +8604,15 @@
         ],
         "caption": "Discover the wonders of the Philippines!",
         "narration": "Welcome to the Philippines, a stunning archipelago of over 7,600 islands! Each island offers its own unique culture and breathtaking landscapes. Explore the rich traditions and vibrant ecosystems that make this country so special."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36024555/15277076_1440_2560_24fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36024555/metro-manila-palengke-36024555.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 18
+        }
+      ]
     },
     {
       "name": "Pitcairn Islands",
@@ -7244,7 +8652,15 @@
         ],
         "caption": "Discover the hidden gems of the Pitcairn Islands!",
         "narration": "Welcome to the Pitcairn Islands, a remote paradise in the Pacific! With a tiny population of just 35, this unique territory has a rich history related to the HMS Bounty. Get ready to explore one of the most isolated places on Earth, where adventure awaits!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/32538673/13876508_1440_2560_24fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/32538673/greece-greek-island-santorini-sea-32538673.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 9
+        }
+      ]
     },
     {
       "name": "Poland",
@@ -7284,7 +8700,15 @@
         ],
         "caption": "Discover the wonders of Poland!",
         "narration": "Welcome to Poland, a country rich in history and culture. Did you know that it boasts the Malbork Castle, one of the largest in the world? From delicious pierogi to stunning natural landscapes, there's so much to explore!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36337048/15411878_1440_2560_24fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36337048/pexels-photo-36337048.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 34
+        }
+      ]
     },
     {
       "name": "Portugal",
@@ -7325,7 +8749,15 @@
         ],
         "caption": "Discover the rich culture and history of Portugal!",
         "narration": "Did you know that Portugal is home to the world's oldest bookstore? Livraria Bertrand has been welcoming readers since 1732! With its rich history and diverse culture, Portugal is a fascinating destination for anyone curious about the world."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/31966677/13621569_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/31966677/pexels-photo-31966677.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Puerto Rico",
@@ -7366,7 +8798,15 @@
         ],
         "caption": "Discover the wonders of Puerto Rico!",
         "narration": "Puerto Rico is an island rich in culture and surprising facts. Did you know it has the largest radio telescope in the world? And there's a magical bay that glows in the dark! Let's explore more about this beautiful destination."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/34885371/14779776_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/34885371/4k-beach-4k-beach-waves-beach-beach-waves-34885371.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 25
+        }
+      ]
     },
     {
       "name": "Qatar",
@@ -7406,7 +8846,15 @@
         ],
         "caption": "Discover the wonders of Qatar!",
         "narration": "Welcome to Qatar, a fascinating country in Asia! Did you know it has the world's largest natural gas field? With its rich culture and stunning architecture, Qatar is a unique place to explore."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/13987531/13987531-uhd_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/13987531/qatar-souq-waqif-video-walking-13987531.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 7
+        }
+      ]
     },
     {
       "name": "Réunion",
@@ -7446,7 +8894,15 @@
         ],
         "caption": "Discover the wonders of Réunion Island!",
         "narration": "Welcome to Réunion Island, a stunning destination in the Indian Ocean! With its active volcanoes, diverse cultures, and breathtaking landscapes, there's so much to learn and explore. Let's dive into some fascinating facts about this unique island!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36307688/15397716_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36307688/pexels-photo-36307688.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 9
+        }
+      ]
     },
     {
       "name": "Romania",
@@ -7486,7 +8942,15 @@
         ],
         "caption": "Discover the wonders of Romania, a land of castles and mountains!",
         "narration": "Welcome to Romania, a fascinating country in Europe! Did you know it boasts the world's heaviest building? From stunning castles to beautiful mountains, Romania offers a unique blend of history and nature."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/15833606/15833606-uhd_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/15833606/pexels-photo-15833606.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 9
+        }
+      ]
     },
     {
       "name": "Russia",
@@ -7534,7 +8998,15 @@
         ],
         "caption": "Discover the vastness of Russia!",
         "narration": "Welcome to Russia, the largest country on Earth! With its stunning landscapes and rich history, there's so much to explore. From the transcontinental stretches to the depths of Lake Baikal, join us as we uncover the wonders of this incredible nation."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/4973022/4973022-uhd_1440_2732_25fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/4973022/pexels-photo-4973022.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 23
+        }
+      ]
     },
     {
       "name": "Rwanda",
@@ -7576,7 +9048,15 @@
         ],
         "caption": "Discover the beauty and culture of Rwanda!",
         "narration": "Welcome to Rwanda, a country famous for its breathtaking hills and rich culture. Did you know it has the highest percentage of women in parliament worldwide? Join us in exploring the wonders of this East African gem!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33835057/14359224_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33835057/african-traditions-hausa-kt-nigeria-nigeria-culture-33835057.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Saint Barthélemy",
@@ -7616,7 +9096,15 @@
         ],
         "caption": "Discover the charm of Saint Barthélemy!",
         "narration": "Welcome to Saint Barthélemy, a gem in the Caribbean! This beautiful island is famous for its gorgeous beaches and luxurious lifestyle. Did you know it was once a Swedish colony? Explore its rich cultural blend and vibrant events throughout the year!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/37710569/15992244_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/37710569/pexels-photo-37710569.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 63
+        }
+      ]
     },
     {
       "name": "Saint Helena, Ascension and Tristan da Cunha",
@@ -7656,7 +9144,15 @@
         ],
         "caption": "Discover the hidden gems of this remote territory!",
         "narration": "Welcome to Saint Helena, Ascension, and Tristan da Cunha! This fascinating group of islands has intriguing stories and surprising facts. From Napoleon's exile to unique wildlife, there's so much to learn about this remote corner of the world."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33050416/14086634_1440_2560_25fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33050416/animals-atlantic-ocean-beach-cliffs-33050416.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 12
+        }
+      ]
     },
     {
       "name": "Saint Kitts and Nevis",
@@ -7696,7 +9192,15 @@
         ],
         "caption": "Discover the charm of Saint Kitts and Nevis!",
         "narration": "Welcome to Saint Kitts and Nevis, the smallest country in the Western Hemisphere! This beautiful twin-island nation is rich in history and natural wonders. From its breathtaking mountains to its fascinating sugar plantation heritage, there's so much to explore!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/5875616/5875616-uhd_1440_2560_24fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/5875616/amen-apostolic-apostolic-fashion-atheism-5875616.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 9
+        }
+      ]
     },
     {
       "name": "Saint Lucia",
@@ -7736,7 +9240,15 @@
         ],
         "caption": "Discover the wonders of Saint Lucia!",
         "narration": "Welcome to Saint Lucia, a beautiful island known for its unique landscapes and rich culture. Did you know that it has the only drive-in volcano in the world? Explore the vibrant Creole traditions and enjoy the stunning views of the famous Pitons!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/19036790/19036790-uhd_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/19036790/catrina-cementerio-day-of-the-dead-dia-de-los-muertos-19036790.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 21
+        }
+      ]
     },
     {
       "name": "Saint Martin",
@@ -7776,7 +9288,15 @@
         ],
         "caption": "Discover the unique blend of cultures on this beautiful island!",
         "narration": "Welcome to Saint Martin, a small island with a big personality! Did you know it's split between France and the Netherlands? With stunning beaches and delicious food, there's so much to explore!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/37710569/15992244_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/37710569/pexels-photo-37710569.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 63
+        }
+      ]
     },
     {
       "name": "Saint Pierre and Miquelon",
@@ -7816,7 +9336,15 @@
         ],
         "caption": "Discover the unique charm of Saint Pierre and Miquelon!",
         "narration": "Welcome to Saint Pierre and Miquelon, a fascinating French territory nestled in North America. This small archipelago boasts a rich cultural heritage and stunning natural beauty. Did you know it’s the only French territory in this part of the world? Let's explore more about this unique destination!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/7040304/7040304-uhd_1440_2560_25fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/7040304/isolated-people-placard-portrait-7040304.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 9
+        }
+      ]
     },
     {
       "name": "Saint Vincent and the Grenadines",
@@ -7856,7 +9384,15 @@
         ],
         "caption": "Explore the wonders of Saint Vincent and the Grenadines!",
         "narration": "Welcome to Saint Vincent and the Grenadines, a stunning Caribbean paradise! Discover its unique culture, beautiful beaches, and rich history. Did you know it’s home to the last commercial whaling station? Let’s dive into the amazing facts about this island nation!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/5875616/5875616-uhd_1440_2560_24fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/5875616/amen-apostolic-apostolic-fashion-atheism-5875616.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 9
+        }
+      ]
     },
     {
       "name": "Samoa",
@@ -7897,7 +9433,15 @@
         ],
         "caption": "Discover the stunning beauty and rich culture of Samoa!",
         "narration": "Welcome to Samoa, a paradise filled with breathtaking landscapes and a vibrant culture. Here, family and community are at the heart of everything. Did you know that Samoa was the first country to greet each new day? Let's explore more fascinating facts about this incredible nation!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/26093377/11930748_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/26093377/atardecer-china-poblana-church-papantla-26093377.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 6
+        }
+      ]
     },
     {
       "name": "San Marino",
@@ -7937,7 +9481,15 @@
         ],
         "caption": "Discover the hidden gems of San Marino!",
         "narration": "Did you know that San Marino is one of the oldest republics in the world? Founded in 301 AD, this tiny country is rich in history and culture. With its breathtaking landscapes and unique traditions, there's so much to learn about this remarkable place!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/35298897/14955855_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/35298897/pexels-photo-35298897.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 26
+        }
+      ]
     },
     {
       "name": "São Tomé and Príncipe",
@@ -7977,7 +9529,15 @@
         ],
         "caption": "Discover the wonders of São Tomé and Príncipe!",
         "narration": "Welcome to São Tomé and Príncipe, an island nation off the western coast of Africa. Known for its rich biodiversity and unique culture, this small country is a hidden gem. With just over 200,000 residents, it offers a peaceful escape filled with stunning beaches and delicious cuisine."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36940883/15649596_1440_2560_24fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36940883/beach-boats-coconut-trees-sao-miguel-dos-milagres-36940883.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 11
+        }
+      ]
     },
     {
       "name": "Saudi Arabia",
@@ -8017,7 +9577,15 @@
         ],
         "caption": "Discover the wonders of Saudi Arabia!",
         "narration": "Welcome to Saudi Arabia, a land of rich culture and fascinating landscapes. Did you know it features the world's largest sand desert? Join us as we explore more surprising facts about this incredible country!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/34918484/14791538_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/34918484/a-mosque-building-infrastructure-city-interior-34918484.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 7
+        }
+      ]
     },
     {
       "name": "Senegal",
@@ -8057,7 +9625,15 @@
         ],
         "caption": "Discover the vibrant culture and stunning landscapes of Senegal!",
         "narration": "Welcome to Senegal, a country rich in history and culture! From the stunning Pink Lake to the warm hospitality of its people, there's so much to learn. Join us as we explore the unique traditions and vibrant music that make Senegal special."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33835011/14359212_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33835011/pexels-pexels-africa-pexels-hero-33835011.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 7
+        }
+      ]
     },
     {
       "name": "Serbia",
@@ -8097,7 +9673,15 @@
         ],
         "caption": "Discover the wonders of Serbia!",
         "narration": "Welcome to Serbia, a country rich in history and culture! Did you know that it is home to the magnificent Church of Saint Sava? Join us as we explore more fascinating facts about this vibrant nation."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/34432620/14588308_1440_2560_24fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/34432620/aerial-belgrade-city-drone-34432620.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 15
+        }
+      ]
     },
     {
       "name": "Seychelles",
@@ -8139,7 +9723,15 @@
         ],
         "caption": "Discover the stunning islands of Seychelles!",
         "narration": "Welcome to Seychelles, a breathtaking archipelago with 115 islands! Known for its stunning beaches and unique wildlife, it’s a paradise for nature lovers. Did you know that the capital, Victoria, is one of the smallest in the world? Let’s explore more about this incredible nation!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/13424207/13424207-uhd_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/13424207/beach-beach-sand-blue-lagoon-calm-13424207.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 4
+        }
+      ]
     },
     {
       "name": "Sierra Leone",
@@ -8179,7 +9771,15 @@
         ],
         "caption": "Discover the wonders of Sierra Leone!",
         "narration": "Welcome to Sierra Leone, a country bursting with natural beauty and rich history. Did you know that its capital, Freetown, boasts one of the largest natural harbors in the world? With diverse cultures and delicious food, this West African gem is full of surprises!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36628441/15529272_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36628441/cliffs-sierra-36628441.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 25
+        }
+      ]
     },
     {
       "name": "Singapore",
@@ -8222,7 +9822,15 @@
         ],
         "caption": "Explore the unique wonders of Singapore!",
         "narration": "Welcome to Singapore, a vibrant city-state filled with surprises! Did you know it’s one of only three city-states in the world? From its commitment to cleanliness to the magical experiences at its night zoo, there’s so much to discover!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/32250600/13754539_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/32250600/pexels-photo-32250600.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 12
+        }
+      ]
     },
     {
       "name": "Sint Maarten",
@@ -8264,7 +9872,15 @@
         ],
         "caption": "Discover the unique charm of Sint Maarten!",
         "narration": "Welcome to Sint Maarten, an enchanting island divided between two nations! This small paradise is not only known for its beautiful beaches but also for its rich cultural diversity and vibrant history."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36161290/15335292_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36161290/ancestral-culture-carnival-carnival-atmosphere-carnival-costume-36161290.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 15
+        }
+      ]
     },
     {
       "name": "Slovakia",
@@ -8304,7 +9920,15 @@
         ],
         "caption": "Discover the enchanting castles of Slovakia!",
         "narration": "Welcome to Slovakia, a country rich in history and beauty. Did you know it boasts over 1,000 castles? Join us as we explore the wonders of this amazing nation!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/35290094/14951281_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/35290094/4k-video-active-dog-border-collie-border-collie-breed-35290094.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 11
+        }
+      ]
     },
     {
       "name": "Slovenia",
@@ -8344,7 +9968,15 @@
         ],
         "caption": "Discover the wonders of Slovenia!",
         "narration": "Welcome to Slovenia, a hidden gem in Europe! Did you know that this small country is packed with incredible natural wonders? From breathtaking caves to lush forests, Slovenia has something for everyone to enjoy!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/35061997/14852407_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/35061997/pexels-photo-35061997.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 15
+        }
+      ]
     },
     {
       "name": "Solomon Islands",
@@ -8384,7 +10016,15 @@
         ],
         "caption": "Discover the hidden gems of the Solomon Islands!",
         "narration": "Welcome to the Solomon Islands, a stunning oasis in Oceania. With over 900 islands, there's so much to explore! Did you know this archipelago is home to diverse cultures and languages? Join us on an adventure through its rich history and vibrant marine life!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33013803/14069333_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33013803/pexels-photo-33013803.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 11
+        }
+      ]
     },
     {
       "name": "Somalia",
@@ -8425,7 +10065,15 @@
         ],
         "caption": "Discover the wonders of Somalia!",
         "narration": "Did you know that Somalia boasts the longest coastline in Africa? With stunning views along the Indian Ocean, it's a place rich in culture and history. Explore its unique wildlife and vibrant traditions!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33835057/14359224_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33835057/african-traditions-hausa-kt-nigeria-nigeria-culture-33835057.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "South Africa",
@@ -8475,7 +10123,15 @@
         ],
         "caption": "Discover the wonders of South Africa!",
         "narration": "Welcome to South Africa, a country of stunning landscapes and rich history. Did you know it's home to the world's largest diamond mine? With 11 official languages, it's a true melting pot of cultures, inviting you to explore its diverse heritage."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33835057/14359224_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33835057/african-traditions-hausa-kt-nigeria-nigeria-culture-33835057.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "South Georgia",
@@ -8514,7 +10170,15 @@
         ],
         "caption": "Discover the wonders of South Georgia!",
         "narration": "Welcome to South Georgia, a stunning island in the Antarctic region! Here, you'll find the largest king penguin colony in the world, and while it's uninhabited by people, it's rich in wildlife. The island's dramatic landscapes and history of exploration make it a fascinating place to learn about."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/35070918/14855927_1440_2560_50fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/35070918/pexels-photo-35070918.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 14
+        }
+      ]
     },
     {
       "name": "South Korea",
@@ -8554,7 +10218,15 @@
         ],
         "caption": "Discover the vibrant culture of South Korea!",
         "narration": "Welcome to South Korea, a fascinating country with a rich history and a modern twist. From its incredible internet speeds that keep everyone connected, to the global phenomenon of K-Pop, there's so much to explore. Let's dive into some surprising facts about this dynamic nation!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36947447/15652354_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36947447/pexels-photo-36947447.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 16
+        }
+      ]
     },
     {
       "name": "South Sudan",
@@ -8594,7 +10266,15 @@
         ],
         "caption": "Discover the unique aspects of South Sudan!",
         "narration": "Welcome to South Sudan, a country rich in culture and history. Did you know it became independent only in 2011? Explore its diverse wildlife and the mighty Nile River that flows through this beautiful land."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/20636703/20636703-uhd_1440_2560_25fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/20636703/4k-african-village-ancient-architecture-andes-mountains-20636703.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 18
+        }
+      ]
     },
     {
       "name": "Spain",
@@ -8639,7 +10319,15 @@
         ],
         "caption": "Explore the vibrant culture and history of Spain!",
         "narration": "Welcome to Spain, a country bursting with culture and history! Did you know that it boasts the second-largest number of UNESCO World Heritage Sites in the world? From delicious cuisine to lively festivals, Spain has something for everyone to enjoy!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/20204343/20204343-uhd_1440_2560_25fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/20204343/4k-4k-background-4k-footage-4k-resolution-20204343.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 17
+        }
+      ]
     },
     {
       "name": "Sri Lanka",
@@ -8680,7 +10368,15 @@
         ],
         "caption": "Discover the wonders of Sri Lanka!",
         "narration": "Welcome to Sri Lanka, a beautiful island nation in Asia! Did you know it is home to the oldest living tree in the world? Join us to learn more about its incredible culture, wildlife, and contributions to the world!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/27853064/12243759_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/27853064/esala-perahera-27853064.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 14
+        }
+      ]
     },
     {
       "name": "Sudan",
@@ -8721,7 +10417,15 @@
         ],
         "caption": "Discover the hidden treasures of Sudan!",
         "narration": "Welcome to Sudan, a country full of surprises and rich history. Did you know it has more pyramids than Egypt? Let's explore its diverse cultures, breathtaking landscapes, and the mighty Nile River together!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/20636703/20636703-uhd_1440_2560_25fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/20636703/4k-african-village-ancient-architecture-andes-mountains-20636703.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 18
+        }
+      ]
     },
     {
       "name": "Suriname",
@@ -8761,7 +10465,15 @@
         ],
         "caption": "Discover Suriname: A Hidden Gem in South America!",
         "narration": "Welcome to Suriname, the tiniest country on the South American continent! With a vibrant culture and stunning biodiversity, Suriname offers a unique blend of history and nature. Let’s explore some fascinating facts about this remarkable nation!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33835057/14359224_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33835057/african-traditions-hausa-kt-nigeria-nigeria-culture-33835057.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Svalbard and Jan Mayen",
@@ -8801,7 +10513,15 @@
         ],
         "caption": "Discover the wonders of Svalbard and Jan Mayen!",
         "narration": "Welcome to Svalbard and Jan Mayen, a unique destination in Europe! This archipelago is not just known for its stunning landscapes, but also for its fascinating wildlife and innovative global seed vault. With a small population residing in Longyearbyen, it's a remarkable place to explore the wonders of nature and science."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36161290/15335292_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36161290/ancestral-culture-carnival-carnival-atmosphere-carnival-costume-36161290.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 15
+        }
+      ]
     },
     {
       "name": "Sweden",
@@ -8841,7 +10561,15 @@
         ],
         "caption": "Discover the wonders of Sweden!",
         "narration": "Welcome to Sweden, a country known for its stunning landscapes and rich culture. Did you know it’s home to the world's first ice hotel? Join us as we explore what makes Sweden unique!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/31348484/13378796_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/31348484/pexels-photo-31348484.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 23
+        }
+      ]
     },
     {
       "name": "Switzerland",
@@ -8884,7 +10612,15 @@
         ],
         "caption": "Discover the surprising wonders of Switzerland!",
         "narration": "Welcome to Switzerland, a land of stunning landscapes and rich culture. Did you know it has four official languages? From its delicious chocolate to its impressive tunnels, Switzerland is full of delightful surprises!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/19395034/uhd_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/19395034/pexels-photo-19395034.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 6
+        }
+      ]
     },
     {
       "name": "Syria",
@@ -8924,7 +10660,15 @@
         ],
         "caption": "Discover Syria's ancient heritage and rich culture!",
         "narration": "Welcome to Syria, a land steeped in history and culture. From the bustling streets of Damascus to the ancient ruins of Palmyra, there's so much to explore. Did you know that Syria is home to some of the oldest continuously inhabited cities in the world? Join us as we dive into the wonders of this beautiful country!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/37594186/15933035_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/37594186/pexels-photo-37594186.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 14
+        }
+      ]
     },
     {
       "name": "Taiwan",
@@ -8964,7 +10708,15 @@
         ],
         "caption": "Discover the wonders of Taiwan!",
         "narration": "Welcome to Taiwan, a stunning island filled with fascinating facts. From its towering skyscrapers to vibrant night markets, there's so much to explore. Join us as we uncover the unique culture and history of this beautiful region in Asia!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36684496/15551181_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36684496/pexels-photo-36684496.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 11
+        }
+      ]
     },
     {
       "name": "Tajikistan",
@@ -9005,7 +10757,15 @@
         ],
         "caption": "Discover the stunning heights and rich culture of Tajikistan!",
         "narration": "Welcome to Tajikistan, a country where breathtaking mountains meet a vibrant culture. Did you know that it hosts the highest peak in the former Soviet Union? Join us as we explore its unique heritage and natural wonders!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/9466607/9466607-uhd_1440_2732_25fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/9466607/adult-buryats-child-christmas-9466607.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 18
+        }
+      ]
     },
     {
       "name": "Tanzania",
@@ -9046,7 +10806,15 @@
         ],
         "caption": "Discover the wonders of Tanzania!",
         "narration": "Welcome to Tanzania, a land rich in natural beauty and cultural diversity. From the majestic Mount Kilimanjaro to the vibrant spice markets of Zanzibar, there's so much to explore. Let's dive into some fascinating facts about this incredible country!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/34364031/14558316_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/34364031/pexels-photo-34364031.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 16
+        }
+      ]
     },
     {
       "name": "Thailand",
@@ -9086,7 +10854,15 @@
         ],
         "caption": "Discover the wonders of Thailand!",
         "narration": "Welcome to Thailand, a vibrant country with a rich culture and fascinating history. Did you know it's home to the largest gold Buddha statue? Let's explore more amazing facts about this beautiful land!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/7817129/7817129-uhd_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/7817129/adult-architecture-art-buddha-7817129.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 14
+        }
+      ]
     },
     {
       "name": "Timor-Leste",
@@ -9127,7 +10903,15 @@
         ],
         "caption": "Discover the vibrant culture and history of Timor-Leste!",
         "narration": "Welcome to Timor-Leste, a nation rich in culture and history. Did you know that this beautiful country gained independence in 2002? It's a place filled with unique wildlife, delicious cuisine, and a diverse range of languages!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/34584833/14655406_1080_1920_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/34584833/pexels-photo-34584833.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 18
+        }
+      ]
     },
     {
       "name": "Togo",
@@ -9167,7 +10951,15 @@
         ],
         "caption": "Discover the unique culture and rich biodiversity of Togo!",
         "narration": "Welcome to Togo, a small yet fascinating country in West Africa! From its vibrant markets in Lomé to its rich traditions in voodoo, Togo offers a diverse cultural experience. Explore its stunning landscapes and learn about its unique contributions to the world!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33835057/14359224_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33835057/african-traditions-hausa-kt-nigeria-nigeria-culture-33835057.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Tokelau",
@@ -9209,7 +11001,15 @@
         ],
         "caption": "Discover the wonders of Tokelau!",
         "narration": "Welcome to Tokelau, a beautiful territory in Oceania! With only three atolls and a tiny population, it's a unique place filled with rich traditions. Did you know they rely mostly on solar energy? Let's explore more!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/26093377/11930748_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/26093377/atardecer-china-poblana-church-papantla-26093377.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 6
+        }
+      ]
     },
     {
       "name": "Tonga",
@@ -9250,7 +11050,15 @@
         ],
         "caption": "Discover the charm of the Friendly Islands!",
         "narration": "Welcome to Tonga, a stunning archipelago in Oceania. Known for its friendly people and rich culture, Tonga offers a unique glimpse into island life. Did you know it's home to 176 islands, each with its own charm? Let's explore more fascinating facts about this beautiful country!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/35110971/14874967_1440_2560_25fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/35110971/belly-dancers-belly-dancing-dancers-dancing-35110971.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 9
+        }
+      ]
     },
     {
       "name": "Trinidad and Tobago",
@@ -9290,7 +11098,15 @@
         ],
         "caption": "Discover the wonders of Trinidad and Tobago!",
         "narration": "Welcome to Trinidad and Tobago, a fascinating blend of cultures and natural beauty. Did you know it’s home to the world's largest natural asphalt lake? From vibrant Carnivals to unique wildlife, there's so much to explore in this Caribbean gem!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/33835057/14359224_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/33835057/african-traditions-hausa-kt-nigeria-nigeria-culture-33835057.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Tunisia",
@@ -9330,7 +11146,15 @@
         ],
         "caption": "Discover the rich history and culture of Tunisia!",
         "narration": "Welcome to Tunisia, a country steeped in history! From the ancient ruins of Carthage to the vast Sahara Desert, there's so much to explore. Did you know that Tunisia is also the largest producer of olive oil in the world? Join us as we uncover the wonders of this North African gem!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/8751973/8751973-uhd_1440_2732_24fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/8751973/pexels-photo-8751973.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 27
+        }
+      ]
     },
     {
       "name": "Turkey",
@@ -9370,7 +11194,15 @@
         ],
         "caption": "Discover the wonders of Turkey!",
         "narration": "Turkey is a fascinating country rich in history and culture. From the legendary city of Troy to the stunning landscapes, there's so much to explore. Did you know it straddles two continents? Let's learn more about this amazing place!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/37086906/15711362_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/37086906/pexels-photo-37086906.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 7
+        }
+      ]
     },
     {
       "name": "Turkmenistan",
@@ -9411,7 +11243,15 @@
         ],
         "caption": "Discover the wonders of Turkmenistan!",
         "narration": "Let's explore Turkmenistan, a country rich in natural resources and unique traditions. From its incredible gas reserves to the stunning architecture of its capital, Ashgabat, there's so much to learn about this fascinating nation."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/36627853/15528954_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/36627853/pexels-photo-36627853.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 18
+        }
+      ]
     },
     {
       "name": "Turks and Caicos Islands",
@@ -9451,7 +11291,15 @@
         ],
         "caption": "Discover the beauty of the Turks and Caicos Islands!",
         "narration": "Welcome to the stunning Turks and Caicos Islands! These islands boast breathtaking waters and are a paradise for marine life enthusiasts. From delicious local cuisine to rich cultural history, there's so much to learn about this beautiful destination."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/20107752/uhd_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/20107752/9x16-at-the-beach-background-beach-20107752.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 59
+        }
+      ]
     },
     {
       "name": "Tuvalu",
@@ -9492,7 +11340,15 @@
         ],
         "caption": "Discover the unique charm of Tuvalu!",
         "narration": "Welcome to Tuvalu, a tiny island nation in Oceania. With a population of just over 10,000, this beautiful country is made up of nine islands. Known for its stunning traditional dances, Tuvalu offers a glimpse into a rich culture at risk from rising sea levels."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/35110971/14874967_1440_2560_25fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/35110971/belly-dancers-belly-dancing-dancers-dancing-35110971.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 9
+        }
+      ]
     },
     {
       "name": "Uganda",
@@ -9533,7 +11389,15 @@
         ],
         "caption": "Discover the wonders of Uganda!",
         "narration": "Welcome to Uganda, a vibrant country in Africa! From the majestic Nile River to its diverse wildlife, there's so much to explore. Did you know that Uganda is a haven for birdwatchers with over 1,000 bird species? Let's dive into more amazing facts about this beautiful nation!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/37505842/15890413_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/37505842/pexels-photo-37505842.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Ukraine",
@@ -9573,7 +11437,15 @@
         ],
         "caption": "Discover the wonders of Ukraine!",
         "narration": "Welcome to Ukraine, a country rich in culture and history! Did you know it is the largest country in Europe by land area, not counting Russia? From its deep metro stations to delicious dishes like borscht, Ukraine has so much to explore."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/32456946/13842634_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/32456946/aerial-street-view-aerial-view-lviv-busy-city-square-city-life-footage-32456946.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 12
+        }
+      ]
     },
     {
       "name": "United Arab Emirates",
@@ -9613,7 +11485,15 @@
         ],
         "caption": "Discover the wonders of the UAE!",
         "narration": "Welcome to the United Arab Emirates, a land of innovation and tradition. Did you know it boasts the tallest building in the world? Explore its rich culture and stunning landscapes that attract millions every year."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/35010516/14831346_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/35010516/dubai-uae-national-day-35010516.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 32
+        }
+      ]
     },
     {
       "name": "United Kingdom",
@@ -9661,7 +11541,15 @@
         ],
         "caption": "Explore the diverse nations of the UK!",
         "narration": "Did you know that the United Kingdom consists of four distinct countries? Each one has its own unique culture and history. From the rolling hills of Scotland to the bustling streets of London, there's so much to discover!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/29566022/12726411_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/29566022/apartment-windows-beautiful-horse-beautiful-horses-black-horses-29566022.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 45
+        }
+      ]
     },
     {
       "name": "United States",
@@ -9711,7 +11599,15 @@
         ],
         "caption": "Discover the wonders of the United States!",
         "narration": "Welcome to the United States, a land of diversity and innovation! From its bustling cities to its breathtaking natural landscapes, there's so much to explore. Did you know that it has the largest economy in the world? Let's dive into more amazing facts about this incredible country!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/4668117/4668117-uhd_1440_2732_25fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/4668117/pexels-photo-4668117.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 18
+        }
+      ]
     },
     {
       "name": "United States Minor Outlying Islands",
@@ -9753,7 +11649,15 @@
         ],
         "caption": "Discover the hidden gems of the U.S. Minor Outlying Islands!",
         "narration": "Welcome to the United States Minor Outlying Islands! These beautiful islands are mostly uninhabited and play a crucial role in preserving wildlife. Let's dive into some surprising facts about these unique places!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/32583775/13894403_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/32583775/pexels-photo-32583775.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 25
+        }
+      ]
     },
     {
       "name": "United States Virgin Islands",
@@ -9793,7 +11697,15 @@
         ],
         "caption": "Discover the unique history and beauty of the U.S. Virgin Islands!",
         "narration": "The United States Virgin Islands, a tropical paradise, has a rich history and diverse culture. Did you know they were once a Danish colony? Explore stunning beaches and learn about their unique wildlife!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/32583775/13894403_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/32583775/pexels-photo-32583775.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 25
+        }
+      ]
     },
     {
       "name": "Uruguay",
@@ -9833,7 +11745,15 @@
         ],
         "caption": "Discover the surprising facts about Uruguay!",
         "narration": "Welcome to Uruguay, a small but fascinating country in South America! Did you know it has a national law to ensure everyone can access the internet? From its rich history in cattle ranching to its beautiful coastlines, Uruguay is full of surprises waiting to be explored."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/34329184/14543265_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/34329184/pexels-photo-34329184.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 21
+        }
+      ]
     },
     {
       "name": "Uzbekistan",
@@ -9874,7 +11794,15 @@
         ],
         "caption": "Discover the wonders of Uzbekistan!",
         "narration": "Welcome to Uzbekistan, a land rich in history and culture. From the majestic Silk Road cities to its delightful apricot varieties, there’s so much to explore. Dive into the unique traditions and breathtaking landscapes this vibrant country has to offer!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/32387242/13815185_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/32387242/pexels-photo-32387242.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 7
+        }
+      ]
     },
     {
       "name": "Vanuatu",
@@ -9916,7 +11844,15 @@
         ],
         "caption": "Discover the wonders of Vanuatu!",
         "narration": "Welcome to Vanuatu, a tropical paradise filled with breathtaking landscapes and vibrant cultures. Did you know that it houses one of the world's most active volcanoes? From its unique customs to its stunning coral reefs, Vanuatu offers endless adventures for everyone!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/34900764/14785003_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/34900764/pexels-photo-34900764.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 18
+        }
+      ]
     },
     {
       "name": "Vatican City",
@@ -9957,7 +11893,15 @@
         ],
         "caption": "Discover the wonders of the world's smallest country!",
         "narration": "Welcome to Vatican City, the smallest independent country on Earth! With a population of just 882 people, it’s a land rich in history and culture. Explore its unique features, from its own postal system to the breathtaking art found in the Sistine Chapel."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/37834012/16047933_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/37834012/pexels-photo-37834012.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 14
+        }
+      ]
     },
     {
       "name": "Venezuela",
@@ -9997,7 +11941,15 @@
         ],
         "caption": "Discover the wonders of Venezuela!",
         "narration": "Welcome to Venezuela, a country filled with breathtaking landscapes and rich culture. From the tallest waterfall in the world to delicious traditional dishes, there's so much to explore. Join us as we uncover more amazing facts about this vibrant South American nation."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/30414164/13033530_1080_1920_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/30414164/cinta-costera-crowd-flag-latinas-30414164.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     },
     {
       "name": "Vietnam",
@@ -10037,7 +11989,15 @@
         ],
         "caption": "Discover the wonders of Vietnam!",
         "narration": "Welcome to Vietnam, a country rich in culture and natural beauty. Did you know that it is the largest exporter of cashew nuts in the world? With its stunning coastline and delicious cuisine, Vietnam offers endless adventures for everyone."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/35071075/14856111_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/35071075/pexels-photo-35071075.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 14
+        }
+      ]
     },
     {
       "name": "Wallis and Futuna",
@@ -10077,7 +12037,15 @@
         ],
         "caption": "Discover the hidden treasures of Wallis and Futuna!",
         "narration": "Welcome to Wallis and Futuna, a beautiful territory in Oceania! With its rich cultural heritage and breathtaking natural beauty, this destination is truly one of a kind. From vibrant coral reefs to unique traditions, there's so much to explore here!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/34476748/14608980_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/34476748/pexels-photo-34476748.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 17
+        }
+      ]
     },
     {
       "name": "Western Sahara",
@@ -10118,7 +12086,15 @@
         ],
         "caption": "Discover the hidden gems of Western Sahara!",
         "narration": "Welcome to Western Sahara, a fascinating region filled with rich history and culture. Did you know it's one of the last colonies in the world? Join us as we explore its unique landscapes and vibrant traditions."
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/32018898/13646756_1440_2560_30fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/32018898/pexels-photo-32018898.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 31
+        }
+      ]
     },
     {
       "name": "Yemen",
@@ -10158,7 +12134,15 @@
         ],
         "caption": "Discover the wonders of Yemen's rich culture and history!",
         "narration": "Welcome to Yemen, a land of ancient history and stunning landscapes. Did you know that Yemen's capital, Sana'a, has been inhabited for thousands of years? Join us as we explore fascinating facts about this unique country!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/5973398/5973398-uhd_1440_2560_25fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/5973398/pexels-photo-5973398.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 29
+        }
+      ]
     },
     {
       "name": "Zambia",
@@ -10198,7 +12182,15 @@
         ],
         "caption": "Discover the wonders of Zambia!",
         "narration": "Welcome to Zambia, a land of stunning natural beauty and rich cultural heritage. From the breathtaking Victoria Falls to diverse wildlife and vibrant traditions, there's so much to explore. Let's dive into some fascinating facts about this amazing country!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/37453856/15863853_1440_2560_24fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/37453856/pexels-photo-37453856.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 29
+        }
+      ]
     },
     {
       "name": "Zimbabwe",
@@ -10252,7 +12244,15 @@
         ],
         "caption": "Explore the wonders of Zimbabwe!",
         "narration": "Welcome to Zimbabwe, a land rich in history and natural beauty. From the majestic Great Zimbabwe ruins to the breathtaking Victoria Falls, this country is full of surprises. Join us as we uncover the fascinating facts about this vibrant African nation!"
-      }
+      },
+      "videos": [
+        {
+          "url": "https://videos.pexels.com/video-files/37505842/15890413_1440_2560_60fps.mp4",
+          "provider": "pexels",
+          "poster": "https://images.pexels.com/videos/37505842/pexels-photo-37505842.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=1200&w=630",
+          "duration": 10
+        }
+      ]
     }
   ]
 }

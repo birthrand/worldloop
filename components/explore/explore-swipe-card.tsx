@@ -11,6 +11,10 @@ import {
 } from "react-native";
 
 import {
+  CultureVideoFlagShimmer,
+  CultureVideoSlide,
+} from "@/components/culture/culture-video-slide";
+import {
   isCountryImageReady,
   prefetchCountryImage,
 } from "@/components/explore/country-image";
@@ -60,8 +64,9 @@ import {
 import { continentDisplayLabel } from "@/constants/regions";
 import {
   formatCountryCapitalDisplay,
-  getAiFactByIndex,
+  getAiFact,
   getCountryImages,
+  getCultureVideo,
 } from "@/lib/format-country";
 import {
   openCountryDetail,
@@ -69,6 +74,8 @@ import {
 } from "@/lib/open-country-detail";
 import { useSavedCountriesStore } from "@/store/use-saved-countries-store";
 import type { Country } from "@/types/country";
+
+export type HeroMediaMode = "image" | "video";
 
 /** Keeps the glyph on the content edge while preserving a 40×40 touch target. */
 const BOOKMARK_HIT_SLOP = {
@@ -103,6 +110,8 @@ type ExploreSwipeCardProps = {
   onHeroIndexChange?: (index: number) => void;
   /** When false, horizontal swipes are handled by the deck gesture instead. */
   heroScrollEnabled?: boolean;
+  /** Controlled hero media mode — image carousel vs culture video. */
+  heroMediaMode?: HeroMediaMode;
 };
 
 export function ExploreSwipeCard({
@@ -113,8 +122,11 @@ export function ExploreSwipeCard({
   heroIndex: heroIndexProp,
   onHeroIndexChange,
   heroScrollEnabled = true,
+  heroMediaMode = "image",
 }: ExploreSwipeCardProps) {
   const images = useMemo(() => getCountryImages(country), [country]);
+  const cultureVideo = useMemo(() => getCultureVideo(country), [country]);
+  const heroMode = heroMediaMode;
   const capitalLabel = formatCountryCapitalDisplay(country.capital);
   const regionLabel = continentDisplayLabel(country.region?.trim() || "—");
 
@@ -161,10 +173,7 @@ export function ExploreSwipeCard({
     });
   }, []);
 
-  const fact = useMemo(
-    () => getAiFactByIndex(country, heroIndex),
-    [country, heroIndex],
-  );
+  const fact = useMemo(() => getAiFact(country), [country]);
 
   useEffect(() => {
     if (heroIndexProp === undefined) {
@@ -217,21 +226,63 @@ export function ExploreSwipeCard({
       >
         <View style={styles.imageRegion} onLayout={onImageRegionLayout}>
           {heroSize.width > 0 && heroSize.height > 0 ? (
-            <HeroImagePager
-              images={images}
-              flag={country.flag}
-              iso2={country.cca2}
-              heroWidth={heroSize.width}
-              heroHeight={heroSize.height}
-              activeIndex={heroIndex}
-              onIndexChange={updateHeroIndex}
-              scrollEnabled={heroScrollEnabled}
-              onImagePress={interactive ? openDetail : undefined}
-              onActiveImageLoadChange={setIsActiveHeroLoaded}
-            />
+            <>
+              {cultureVideo ? (
+                <View
+                  style={[
+                    StyleSheet.absoluteFill,
+                    heroMode !== "video" && styles.cultureVideoPreload,
+                  ]}
+                  pointerEvents={heroMode === "video" ? "auto" : "none"}
+                >
+                  <CultureVideoSlide
+                    video={cultureVideo}
+                    isActive={heroMode === "video" && interactive}
+                    width={heroSize.width}
+                    height={heroSize.height}
+                    flag={country.flag}
+                    iso2={country.cca2}
+                  />
+                </View>
+              ) : null}
+
+              {heroMode === "image" ? (
+                <View
+                  style={styles.heroImageLayer}
+                  pointerEvents={interactive ? "auto" : "none"}
+                >
+                  <HeroImagePager
+                    images={images}
+                    flag={country.flag}
+                    iso2={country.cca2}
+                    heroWidth={heroSize.width}
+                    heroHeight={heroSize.height}
+                    activeIndex={heroIndex}
+                    onIndexChange={updateHeroIndex}
+                    scrollEnabled={heroScrollEnabled}
+                    onImagePress={interactive ? openDetail : undefined}
+                    onActiveImageLoadChange={setIsActiveHeroLoaded}
+                  />
+                </View>
+              ) : null}
+
+              {heroMode === "video" && !cultureVideo ? (
+                <View
+                  style={[
+                    styles.videoLoadingShell,
+                    { width: heroSize.width, height: heroSize.height },
+                  ]}
+                >
+                  <CultureVideoFlagShimmer
+                    flag={country.flag}
+                    iso2={country.cca2}
+                  />
+                </View>
+              ) : null}
+            </>
           ) : null}
 
-          {images.length > 1 && isActiveHeroLoaded ? (
+          {heroMode === "image" && images.length > 1 && isActiveHeroLoaded ? (
             <View style={styles.carouselOverlay} pointerEvents="box-none">
               <MediaCarousel
                 images={images}
@@ -368,6 +419,18 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: "center",
     zIndex: 2,
+  },
+  cultureVideoPreload: {
+    opacity: 0,
+  },
+  heroImageLayer: {
+    flex: 1,
+    width: "100%",
+    zIndex: 1,
+  },
+  videoLoadingShell: {
+    overflow: "hidden",
+    backgroundColor: EXPLORE_SWIPE_CARD_IMAGE_FALLBACK,
   },
   infoRegion: {
     flexShrink: 0,

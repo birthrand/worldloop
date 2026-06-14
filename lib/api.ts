@@ -2,9 +2,11 @@ import { API_BASE_URL } from "@/constants/api";
 import { getHeroDisplayPixelWidth } from "@/lib/display-pixel-width";
 import {
   getStaticCountryByName,
+  getStaticCultureFeedPage,
   getStaticFeedPage,
   getStaticMapCountries,
   isStaticCountryCatalogEnabled,
+  isStaticCultureFeedEnabled,
   searchStaticCountries,
 } from "@/lib/static-countries";
 import type { Country, MapCountry } from "@/types/country";
@@ -63,6 +65,18 @@ export async function fetchCultureFeedCountries(
   cursor?: string,
   limit?: number,
 ): Promise<CultureFeedCountriesResponse> {
+  if (isStaticCultureFeedEnabled()) {
+    const page = getStaticCultureFeedPage(seed, cursor, limit ?? 20);
+    return Promise.resolve({
+      data: page.countries,
+      nextCursor: page.nextCursor,
+      meta: {
+        total: page.total,
+        seed: page.seed,
+      },
+    });
+  }
+
   const url = new URL(`${API_BASE_URL}/feed/culture/countries`);
   url.searchParams.set("seed", seed);
 

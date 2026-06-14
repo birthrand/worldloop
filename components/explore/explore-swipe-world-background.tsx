@@ -17,9 +17,13 @@ import { getCountryImages } from "@/lib/format-country";
 import { normalizeImageUrl } from "@/lib/normalize-image-url";
 import type { Country } from "@/types/country";
 
+export type ExploreHeroMediaMode = "image" | "video";
+
 type ExploreSwipeWorldBackgroundProps = {
   /** Active card — drives the muted transition wash (Layer 2). */
   paletteCountry?: Country;
+  /** When video mode is active, skip the ambient photo wash — card uses flag shimmer only. */
+  heroMediaMode?: ExploreHeroMediaMode;
 };
 
 /**
@@ -29,12 +33,13 @@ type ExploreSwipeWorldBackgroundProps = {
  */
 export function ExploreSwipeWorldBackground({
   paletteCountry,
+  heroMediaMode = "image",
 }: ExploreSwipeWorldBackgroundProps) {
   const heroUri = useMemo(() => {
-    if (!paletteCountry) return null;
+    if (!paletteCountry || heroMediaMode === "video") return null;
     const uri = getCountryImages(paletteCountry)[0];
     return uri ? normalizeImageUrl(uri) : null;
-  }, [paletteCountry]);
+  }, [heroMediaMode, paletteCountry]);
 
   return (
     <View style={styles.root} pointerEvents="none">

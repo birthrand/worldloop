@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import type { StaticCountryCatalog } from "../types/country-catalog.js";
 import {
   assertValidStaticCountryCatalog,
+  collectCatalogWarnings,
   validateStaticCountryCatalog,
 } from "./lib/catalog-validation.js";
 
@@ -29,8 +30,22 @@ async function main(): Promise<void> {
 
   assertValidStaticCountryCatalog(catalog);
 
+  const warnings = collectCatalogWarnings(catalog);
+  if (warnings.length > 0) {
+    console.warn(`Catalog warnings (${warnings.length}):\n`);
+    for (const warning of warnings) {
+      console.warn(`  - ${warning.message}`);
+    }
+    console.warn("");
+  }
+
+  const withVideo = catalog.countries.filter(
+    (country) => (country.videos?.length ?? 0) >= 1,
+  ).length;
+
   const sizeKb = (Buffer.byteLength(raw) / 1024).toFixed(1);
   console.log("Catalog validation passed.");
+  console.log(`  with videos: ${withVideo}/${catalog.count}`);
   console.log(`  countries: ${catalog.count}`);
   console.log(`  path:      ${CATALOG_PATH}`);
   console.log(`  size:      ~${sizeKb} KB`);

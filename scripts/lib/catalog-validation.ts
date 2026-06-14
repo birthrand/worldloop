@@ -6,6 +6,7 @@ import {
   type CountryCatalogEntry,
   type StaticCountryCatalog,
 } from "../../types/country-catalog.js";
+import type { CountryVideo } from "../../types/country.js";
 
 const VALID_REGIONS = new Set<string>(CONTINENTS);
 
@@ -13,6 +14,101 @@ export type CatalogValidationIssue = {
   path: string;
   message: string;
 };
+
+export type CatalogValidationWarning = {
+  message: string;
+};
+
+const VALID_VIDEO_PROVIDERS = new Set(["pexels", "pixabay"]);
+const DIRECT_MP4_HOST_SUFFIXES = ["pexels.com", "pixabay.com"] as const;
+const PEXELS_PAGE_HOSTS = new Set(["www.pexels.com", "pexels.com"]);
+
+function isDirectCultureVideoUrl(value: string): boolean {
+  try {
+    const url = new URL(value.trim());
+    if (url.protocol !== "https:") return false;
+
+    const host = url.hostname.toLowerCase();
+    if (PEXELS_PAGE_HOSTS.has(host) && !host.startsWith("videos.")) {
+      return false;
+    }
+
+    const isKnownCdn = DIRECT_MP4_HOST_SUFFIXES.some(
+      (suffix) => host === suffix || host.endsWith(`.${suffix}`),
+    );
+    if (!isKnownCdn) return false;
+
+    return url.pathname.endsWith(".mp4") || host.startsWith("videos.");
+  } catch {
+    return false;
+  }
+}
+
+function validateVideos(
+  videos: CountryVideo[] | undefined,
+  prefix: string,
+): CatalogValidationIssue[] {
+  if (videos === undefined) return [];
+
+  const issues: CatalogValidationIssue[] = [];
+
+  if (!Array.isArray(videos)) {
+    issues.push({ path: prefix, message: "videos must be an array" });
+    return issues;
+  }
+
+  if (videos.length > 1) {
+    issues.push({
+      path: prefix,
+      message: `videos.length must be 0-1, got ${videos.length}`,
+    });
+  }
+
+  if (videos.length === 0) return issues;
+
+  const video = videos[0]!;
+
+  if (!video.url?.trim() || !isHttpsUrl(video.url)) {
+    issues.push({
+      path: `${prefix}.videos[0].url`,
+      message: "video URL must be valid https",
+    });
+  } else if (!isDirectCultureVideoUrl(video.url)) {
+    issues.push({
+      path: `${prefix}.videos[0].url`,
+      message: "video URL must be a direct MP4 CDN link, not a watch page",
+    });
+  }
+
+  if (video.poster !== undefined && video.poster !== "") {
+    if (!isHttpsUrl(video.poster)) {
+      issues.push({
+        path: `${prefix}.videos[0].poster`,
+        message: "poster must be https when present",
+      });
+    }
+  }
+
+  if (video.provider !== undefined && video.provider !== "") {
+    if (!VALID_VIDEO_PROVIDERS.has(video.provider)) {
+      issues.push({
+        path: `${prefix}.videos[0].provider`,
+        message: `provider must be pexels or pixabay, got "${video.provider}"`,
+      });
+    }
+  }
+
+  if (video.duration !== undefined) {
+    if (!Number.isInteger(video.duration) || video.duration <= 0) {
+      issues.push({
+        path: `${prefix}.videos[0].duration`,
+        message: "duration must be a positive integer when present",
+      });
+    }
+  }
+
+  return issues;
+}
 
 function isHttpsUrl(value: string): boolean {
   try {
@@ -111,7 +207,48 @@ function validateEntry(
     });
   }
 
+  issues.push(...validateVideos(country.videos, prefix));
+
   return issues;
+}
+
+export function collectCatalogWarnings(
+  catalog: StaticCountryCatalog,
+): CatalogValidationWarning[] {
+  const warnings: CatalogValidationWarning[] = [];
+  const total = catalog.countries.length;
+
+  if (total === 0) return warnings;
+
+  const withVideo = catalog.countries.filter(
+    (country) => (country.videos?.length ?? 0) >= 1,
+  ).length;
+  const coveragePct = (withVideo / total) * 100;
+
+  if (coveragePct < 90) {
+    warnings.push({
+      message: `only ${withVideo}/${total} countries (${coveragePct.toFixed(1)}%) have videos — target ≥ 90%`,
+    });
+  }
+
+  const urlToCountries = new Map<string, string[]>();
+  for (const country of catalog.countries) {
+    const url = country.videos?.[0]?.url?.trim();
+    if (!url) continue;
+    const existing = urlToCountries.get(url) ?? [];
+    existing.push(country.name);
+    urlToCountries.set(url, existing);
+  }
+
+  for (const [url, countries] of urlToCountries) {
+    if (countries.length > 1) {
+      warnings.push({
+        message: `duplicate video URL shared by ${countries.join(", ")}: ${url}`,
+      });
+    }
+  }
+
+  return warnings;
 }
 
 export function validateStaticCountryCatalog(

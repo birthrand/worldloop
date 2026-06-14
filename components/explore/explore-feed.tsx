@@ -7,6 +7,7 @@ import {
   View,
 } from "react-native";
 
+import type { HeroMediaMode } from "@/components/explore/explore-swipe-card";
 import { ExploreSwipeDeck } from "@/components/explore/explore-swipe-deck";
 import { ExploreSwipeHeader } from "@/components/explore/explore-swipe-header";
 import {
@@ -22,7 +23,13 @@ import { useDiscoveryProgressStore } from "@/store/use-discovery-progress-store"
 import { useSavedCountriesStore } from "@/store/use-saved-countries-store";
 import { useSpatialContextStore } from "@/store/use-spatial-context-store";
 
-export function ExploreFeed() {
+export function ExploreFeed({
+  heroMediaMode = "image",
+  onHeroMediaModeChange,
+}: {
+  heroMediaMode?: HeroMediaMode;
+  onHeroMediaModeChange?: (mode: HeroMediaMode) => void;
+} = {}) {
   const countries = useCountryFeedStore((s) => s.countries);
   const places = useCountryFeedStore((s) => s.places);
   const currentIndex = useCountryFeedStore((s) => s.currentIndex);
@@ -75,7 +82,10 @@ export function ExploreFeed() {
 
   return (
     <View style={styles.feed}>
-      <ExploreSwipeHeader />
+      <ExploreSwipeHeader
+        heroMediaMode={heroMediaMode}
+        onHeroMediaModeChange={onHeroMediaModeChange}
+      />
 
       <View
         style={[
@@ -187,6 +197,7 @@ export function ExploreFeed() {
             currentIndex={currentIndex}
             onIndexChange={handleIndexChange}
             onNeedMore={handleNeedMore}
+            heroMediaMode={heroMediaMode}
           />
         )}
       </View>

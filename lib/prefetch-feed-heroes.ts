@@ -60,14 +60,16 @@ export async function prefetchFeedHeroImagesAroundIndex(
   await Promise.all(uris.map((uri) => prefetchCountryImage(uri)));
 }
 
-/** Swipe intent detected — prioritize the immediate next hero, then the window. */
+/** Swipe intent detected — warm the next card's full image set, then the window. */
 export function warmFeedHeroesOnSwipeBegin(
   countries: Country[],
   currentIndex: number,
 ): void {
-  const nextUri = countryHeroUri(countries[currentIndex + 1]);
-  if (nextUri) {
-    void prefetchCountryImage(nextUri);
+  const nextCountry = countries[currentIndex + 1];
+  if (nextCountry) {
+    for (const uri of getCountryImages(nextCountry)) {
+      void prefetchCountryImage(uri);
+    }
   }
 
   void prefetchFeedHeroImagesAroundIndex(countries, currentIndex + 1);

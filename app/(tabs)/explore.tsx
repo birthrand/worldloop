@@ -1,11 +1,15 @@
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { ExploreError } from "@/components/explore/explore-error";
 import { ExploreFeed } from "@/components/explore/explore-feed";
 import { ExploreFeedSkeleton } from "@/components/explore/explore-feed-skeleton";
-import { ExploreSwipeWorldBackground } from "@/components/explore/explore-swipe-world-background";
+import {
+  ExploreSwipeWorldBackground,
+  type ExploreHeroMediaMode,
+} from "@/components/explore/explore-swipe-world-background";
+import { hasCultureVideo } from "@/lib/format-country";
 import { useCountryFeedStore } from "@/store/use-country-feed-store";
 import { useSpatialContextStore } from "@/store/use-spatial-context-store";
 
@@ -94,9 +98,32 @@ export default function ExploreScreen() {
       ? places[currentIndex]?.country
       : countries[currentIndex];
 
+  const [heroMediaMode, setHeroMediaMode] =
+    useState<ExploreHeroMediaMode>("image");
+
+  useEffect(() => {
+    if (
+      heroMediaMode === "video" &&
+      activeCountry &&
+      !hasCultureVideo(activeCountry)
+    ) {
+      setHeroMediaMode("image");
+    }
+  }, [activeCountry?.name, heroMediaMode]);
+
+  const handleHeroMediaModeChange = useCallback(
+    (mode: ExploreHeroMediaMode) => {
+      setHeroMediaMode(mode);
+    },
+    [],
+  );
+
   return (
     <View style={styles.screen}>
-      <ExploreSwipeWorldBackground paletteCountry={activeCountry} />
+      <ExploreSwipeWorldBackground
+        paletteCountry={activeCountry}
+        heroMediaMode={heroMediaMode}
+      />
       <StatusBar style="light" />
 
       {showError ? (
@@ -121,7 +148,10 @@ export default function ExploreScreen() {
       ) : showInitialLoading || showHereLoading || showPlacesLoading ? (
         <ExploreFeedSkeleton />
       ) : showFeed ? (
-        <ExploreFeed />
+        <ExploreFeed
+          heroMediaMode={heroMediaMode}
+          onHeroMediaModeChange={handleHeroMediaModeChange}
+        />
       ) : (
         <ExploreFeedSkeleton />
       )}
