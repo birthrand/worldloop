@@ -1,5 +1,6 @@
 import { router } from "expo-router";
 
+import type { HeroMediaMode } from "@/components/explore/explore-swipe-card";
 import { seedCachedCountryProfile } from "@/lib/country-profile-cache";
 import {
   prefetchCountryProfile,
@@ -16,6 +17,7 @@ export type CountryDetailOrigin = "explore" | "saved" | "search" | "profile";
 type OpenCountryDetailOptions = {
   from: CountryDetailOrigin;
   heroIndex?: number;
+  heroMediaMode?: HeroMediaMode;
 };
 
 /** Start warming hero + profile as soon as the user touches a country entry point. */
@@ -54,7 +56,12 @@ export function openCountryDetail(
     params: {
       name: country.name,
       ...(options.from === "explore"
-        ? { heroIndex: String(options.heroIndex ?? 0) }
+        ? {
+            heroIndex: String(options.heroIndex ?? 0),
+            ...(options.heroMediaMode === "video"
+              ? { heroMediaMode: "video" }
+              : {}),
+          }
         : {}),
     },
   });

@@ -11,6 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CountryDetailCollapsingHeader } from "@/components/ai-explorer/country-detail-collapsing-header";
 import { CountryProfileCard } from "@/components/ai-explorer/country-profile-card";
+import type { HeroMediaMode } from "@/components/explore/explore-swipe-card";
 import { getCountryDetailContentPaddingBottom } from "@/constants/country-detail-layout";
 import { EXPLORE_SWIPE_SCREEN_BG } from "@/constants/explore-swipe-layout";
 import { useAiExplorerCountry } from "@/hooks/use-ai-explorer-country";
@@ -28,6 +29,13 @@ function parseHeroIndex(value: string | string[] | undefined): number {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
 }
 
+function parseHeroMediaMode(
+  value: string | string[] | undefined,
+): HeroMediaMode {
+  const raw = Array.isArray(value) ? value[0] : value;
+  return raw === "video" ? "video" : "image";
+}
+
 type CountryDetailScreenBodyProps = {
   country: Country;
   images: string[];
@@ -35,6 +43,7 @@ type CountryDetailScreenBodyProps = {
   landmarks: CountryLandmark[];
   overviewLoading: boolean;
   initialHeroIndex: number;
+  initialHeroMediaMode: HeroMediaMode;
   screenHeight: number;
   scrollY: SharedValue<number>;
   onBack: () => void;
@@ -48,6 +57,7 @@ function CountryDetailScreenBody({
   landmarks,
   overviewLoading,
   initialHeroIndex,
+  initialHeroMediaMode,
   screenHeight,
   scrollY,
   onBack,
@@ -90,6 +100,7 @@ function CountryDetailScreenBody({
           scrollY={scrollY}
           onShowMap={onShowMap}
           initialHeroIndex={initialHeroIndex}
+          initialHeroMediaMode={initialHeroMediaMode}
         />
       </Animated.ScrollView>
     </>
@@ -98,9 +109,14 @@ function CountryDetailScreenBody({
 
 /** Country detail — profile-style deep dive for a single country. */
 export default function CountryDetailScreen() {
-  const { name, heroIndex: heroIndexParam } = useLocalSearchParams<{
+  const {
+    name,
+    heroIndex: heroIndexParam,
+    heroMediaMode: heroMediaModeParam,
+  } = useLocalSearchParams<{
     name: string;
     heroIndex?: string;
+    heroMediaMode?: string;
   }>();
   const routeName =
     typeof name === "string" ? decodeURIComponent(name).trim() : "";
@@ -108,6 +124,9 @@ export default function CountryDetailScreen() {
   const { height: screenHeight } = useWindowDimensions();
   const scrollY = useSharedValue(0);
   const [initialHeroIndex] = useState(() => parseHeroIndex(heroIndexParam));
+  const [initialHeroMediaMode] = useState(() =>
+    parseHeroMediaMode(heroMediaModeParam),
+  );
 
   const overviewLoading = refreshing && !wikipedia?.extract?.trim();
   const images = getCountryImages(country);
@@ -135,6 +154,7 @@ export default function CountryDetailScreen() {
         landmarks={landmarks}
         overviewLoading={overviewLoading}
         initialHeroIndex={initialHeroIndex}
+        initialHeroMediaMode={initialHeroMediaMode}
         screenHeight={screenHeight}
         scrollY={scrollY}
         onBack={handleBack}

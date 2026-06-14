@@ -193,10 +193,15 @@ export function ExploreSwipeCard({
     }
   }, [images]);
 
-  const openDetail = useCallback(() => {
+  const openDetailFromImage = useCallback(() => {
     warmCountryDetail(country);
     openCountryDetail(country, { from: "explore", heroIndex });
   }, [country, heroIndex]);
+
+  const openDetailFromVideo = useCallback(() => {
+    warmCountryDetail(country);
+    openCountryDetail(country, { from: "explore", heroMediaMode: "video" });
+  }, [country]);
 
   const handleToggleSaved = () => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -235,14 +240,44 @@ export function ExploreSwipeCard({
                   ]}
                   pointerEvents={heroMode === "video" ? "auto" : "none"}
                 >
-                  <CultureVideoSlide
-                    video={cultureVideo}
-                    isActive={heroMode === "video" && interactive}
-                    width={heroSize.width}
-                    height={heroSize.height}
-                    flag={country.flag}
-                    iso2={country.cca2}
-                  />
+                  {heroMode === "video" ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Open ${country.name} details`}
+                      accessibilityHint="Opens country detail with culture video"
+                      disabled={!interactive}
+                      onPress={interactive ? openDetailFromVideo : undefined}
+                      style={StyleSheet.absoluteFill}
+                    >
+                      {({ pressed }) => (
+                        <>
+                          <CultureVideoSlide
+                            video={cultureVideo}
+                            isActive={interactive}
+                            width={heroSize.width}
+                            height={heroSize.height}
+                            flag={country.flag}
+                            iso2={country.cca2}
+                          />
+                          {pressed && interactive ? (
+                            <View
+                              style={styles.heroPressOverlay}
+                              pointerEvents="none"
+                            />
+                          ) : null}
+                        </>
+                      )}
+                    </Pressable>
+                  ) : (
+                    <CultureVideoSlide
+                      video={cultureVideo}
+                      isActive={false}
+                      width={heroSize.width}
+                      height={heroSize.height}
+                      flag={country.flag}
+                      iso2={country.cca2}
+                    />
+                  )}
                 </View>
               ) : null}
 
@@ -260,7 +295,7 @@ export function ExploreSwipeCard({
                     activeIndex={heroIndex}
                     onIndexChange={updateHeroIndex}
                     scrollEnabled={heroScrollEnabled}
-                    onImagePress={interactive ? openDetail : undefined}
+                    onImagePress={interactive ? openDetailFromImage : undefined}
                     onActiveImageLoadChange={setIsActiveHeroLoaded}
                   />
                 </View>
@@ -300,7 +335,7 @@ export function ExploreSwipeCard({
           accessibilityLabel={`Open ${country.name} details`}
           accessibilityHint="Opens country detail"
           disabled={!interactive}
-          onPress={interactive ? openDetail : undefined}
+          onPress={interactive ? openDetailFromImage : undefined}
           style={styles.infoRegion}
         >
           {({ pressed }) => (
@@ -427,6 +462,10 @@ const styles = StyleSheet.create({
     flex: 1,
     width: "100%",
     zIndex: 1,
+  },
+  heroPressOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: EXPLORE_SWIPE_CARD_PRESS_OVERLAY,
   },
   videoLoadingShell: {
     overflow: "hidden",

@@ -1,6 +1,6 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { VideoView, type VideoPlayer } from "expo-video";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   AppState,
@@ -25,10 +25,11 @@ import {
   captureFirstFrameFromPlayer,
   isFirstFrameReady,
   markFirstFrameReady,
-  subscribeFirstFrame,
 } from "@/lib/video-first-frame-registry";
 import { useCultureFeedStore } from "@/store/use-culture-feed-store";
 import type { CountryVideo } from "@/types/country";
+
+export type CultureVideoContentPosition = "center" | "top";
 
 type CultureVideoSlideProps = {
   video: CountryVideo;
@@ -37,13 +38,34 @@ type CultureVideoSlideProps = {
   height: number;
   flag?: string;
   iso2?: string;
+  /** Cover crop anchor — `top` keeps the upper frame visible in short heroes. */
+  contentPosition?: CultureVideoContentPosition;
 };
+
+function getTopFocusedCoverHeight(
+  containerWidth: number,
+  containerHeight: number,
+  videoWidth: number,
+  videoHeight: number,
+): number {
+  if (videoWidth <= 0 || videoHeight <= 0) return containerHeight;
+
+  const widthScale = containerWidth / videoWidth;
+  const heightScale = containerHeight / videoHeight;
+
+  if (widthScale >= heightScale) {
+    return containerHeight;
+  }
+
+  return videoHeight * widthScale;
+}
 
 const FLAG_LOAD_WIDTH = 88;
 const FLAG_LOAD_HEIGHT = 58;
 const SHIMMER_BAND_WIDTH = 56;
 /** Keep flag shimmer until playback passes this mark — avoids black lead-in frames. */
 const REVEAL_MIN_PLAYBACK_SECONDS = 1;
+const SHIMMER_FADE_OUT_MS = 150;
 
 export function CultureVideoFlagShimmer({
   flag = "",
@@ -149,6 +171,7 @@ export function CultureVideoSlide({
   height,
   flag = "",
   iso2,
+  contentPosition = "center",
 }: CultureVideoSlideProps) {
   const isMuted = useCultureFeedStore((s) => s.isMuted);
   const source = resolveVideoSource(video);
@@ -161,41 +184,77 @@ export function CultureVideoSlide({
   const prevSourceKeyRef = useRef(sourceKey);
   const revealQueuedRef = useRef(false);
   const hasRevealedOnceRef = useRef(false);
-  const hasMountPaintRef = useRef(false);
+  const hasMountFrameRenderedRef = useRef(false);
+  const hasPlaybackPastRevealRef = useRef(false);
+  const shimmerOpacity = useRef(new Animated.Value(1)).current;
   const isActiveRef = useRef(isActive);
   isActiveRef.current = isActive;
 
-  const [videoRevealed, setVideoRevealed] = useState(false);
+  const [shimmerMounted, setShimmerMounted] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [videoSize, setVideoSize] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
 
-  const resetLoadingState = useCallback((force = false) => {
-    if (!force && hasRevealedOnceRef.current) return;
+  const topFocusedCoverHeight = useMemo(() => {
+    if (contentPosition !== "top" || !videoSize) return height;
 
-    revealQueuedRef.current = false;
-    hasRevealedOnceRef.current = false;
-    hasMountPaintRef.current = false;
-    setVideoRevealed(false);
-  }, []);
+    return getTopFocusedCoverHeight(
+      width,
+      height,
+      videoSize.width,
+      videoSize.height,
+    );
+  }, [contentPosition, height, videoSize, width]);
 
-  /** Reveal only after this mount observes a decoded frame via timeUpdate. */
-  const tryRevealAfterMountPaint = useCallback(() => {
+  const resetLoadingState = useCallback(
+    (force = false) => {
+      if (!force && hasRevealedOnceRef.current) return;
+
+      revealQueuedRef.current = false;
+      hasRevealedOnceRef.current = false;
+      hasMountFrameRenderedRef.current = false;
+      hasPlaybackPastRevealRef.current = false;
+      shimmerOpacity.setValue(1);
+      setShimmerMounted(true);
+    },
+    [shimmerOpacity],
+  );
+
+  /** Reveal only when this mount's VideoView painted, playback is live, and t > 1s. */
+  const tryReveal = useCallback(() => {
     if (revealQueuedRef.current) return;
-    if (!hasMountPaintRef.current) return;
+    if (!hasMountFrameRenderedRef.current) return;
+    if (!hasPlaybackPastRevealRef.current) return;
 
     const pooledPlayer = playerRef.current;
     if (!pooledPlayer) return;
 
     try {
+      if (!pooledPlayer.playing) return;
       if (pooledPlayer.currentTime <= REVEAL_MIN_PLAYBACK_SECONDS) return;
     } catch {
       return;
     }
 
-    markFirstFrameReady(sourceKey);
     revealQueuedRef.current = true;
     hasRevealedOnceRef.current = true;
-    setVideoRevealed(true);
-  }, [sourceKey]);
+    markFirstFrameReady(sourceKey);
+
+    Animated.timing(shimmerOpacity, {
+      toValue: 0,
+      duration: SHIMMER_FADE_OUT_MS,
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) setShimmerMounted(false);
+    });
+  }, [shimmerOpacity, sourceKey]);
+
+  const handleFirstFrameRender = useCallback(() => {
+    hasMountFrameRenderedRef.current = true;
+    tryReveal();
+  }, [tryReveal]);
 
   // Mount lifecycle: one pooled player + listener owner per slide instance.
   useEffect(() => {
@@ -231,9 +290,17 @@ export function CultureVideoSlide({
       "timeUpdate",
       ({ currentTime }) => {
         if (currentTime <= REVEAL_MIN_PLAYBACK_SECONDS) return;
-        hasMountPaintRef.current = true;
+        hasPlaybackPastRevealRef.current = true;
         markFirstFrameReady(sourceKey);
-        tryRevealAfterMountPaint();
+        tryReveal();
+      },
+    );
+
+    const playingSubscription = pooledPlayer.addListener(
+      "playingChange",
+      ({ isPlaying }) => {
+        if (!isPlaying) return;
+        tryReveal();
       },
     );
 
@@ -263,6 +330,7 @@ export function CultureVideoSlide({
     return () => {
       try {
         timeSubscription.remove();
+        playingSubscription.remove();
         statusSubscription.remove();
       } catch {
         // Player released before listener teardown.
@@ -276,17 +344,12 @@ export function CultureVideoSlide({
       heldSourceKeyRef.current = null;
       setPlayer(null);
     };
-  }, [resetLoadingState, source, sourceKey, tryRevealAfterMountPaint]);
+  }, [resetLoadingState, source, sourceKey, tryReveal]);
 
   useEffect(() => {
     if (!isActive) return;
-
-    tryRevealAfterMountPaint();
-
-    return subscribeFirstFrame((key) => {
-      if (key === sourceKey) tryRevealAfterMountPaint();
-    });
-  }, [isActive, sourceKey, tryRevealAfterMountPaint]);
+    tryReveal();
+  }, [isActive, tryReveal]);
 
   useEffect(() => {
     if (!player) return;
@@ -338,14 +401,7 @@ export function CultureVideoSlide({
 
     const subscription = AppState.addEventListener("change", handleAppState);
     return () => subscription.remove();
-  }, [
-    isActive,
-    isMuted,
-    player,
-    sourceKey,
-    resetLoadingState,
-    tryRevealAfterMountPaint,
-  ]);
+  }, [isActive, isMuted, player, sourceKey, resetLoadingState]);
 
   useEffect(() => {
     setHasError(false);
@@ -353,21 +409,56 @@ export function CultureVideoSlide({
     if (prevSourceKeyRef.current === sourceKey) return;
 
     prevSourceKeyRef.current = sourceKey;
+    setVideoSize(null);
 
     resetLoadingState(true);
   }, [video.url, sourceKey, resetLoadingState]);
 
-  const isVideoVisible = videoRevealed && !hasError;
-  const showFlagShimmer = !isVideoVisible && !hasError;
+  useEffect(() => {
+    if (!player) {
+      setVideoSize(null);
+      return;
+    }
+
+    const syncVideoSize = () => {
+      safePlayerOp(player, (activePlayer) => {
+        const size = activePlayer.videoTrack?.size;
+        if (!size?.width || !size?.height) return;
+
+        setVideoSize((prev) =>
+          prev?.width === size.width && prev?.height === size.height
+            ? prev
+            : { width: size.width, height: size.height },
+        );
+      });
+    };
+
+    syncVideoSize();
+
+    const statusSubscription = player.addListener("statusChange", () => {
+      syncVideoSize();
+    });
+
+    return () => {
+      try {
+        statusSubscription.remove();
+      } catch {
+        // Player released before listener teardown.
+      }
+    };
+  }, [player, sourceKey]);
+
+  const showFlagShimmer = shimmerMounted && !hasError;
+  const usesTopFocusedCover = contentPosition === "top";
 
   return (
     <View style={[styles.shell, { width, height }]}>
       {!hasError && player ? (
         <View
           style={[
-            StyleSheet.absoluteFill,
-            styles.videoSurface,
-            { opacity: isVideoVisible ? 1 : 0 },
+            usesTopFocusedCover
+              ? [styles.videoSurfaceTop, { height: topFocusedCoverHeight }]
+              : [StyleSheet.absoluteFill, styles.videoSurface],
           ]}
           pointerEvents="none"
         >
@@ -377,14 +468,22 @@ export function CultureVideoSlide({
             contentFit="cover"
             nativeControls={false}
             allowsPictureInPicture={false}
+            onFirstFrameRender={handleFirstFrameRender}
           />
         </View>
       ) : null}
 
       {showFlagShimmer ? (
-        <View style={[StyleSheet.absoluteFill, styles.loadingOverlay]}>
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            styles.loadingOverlay,
+            { opacity: shimmerOpacity },
+          ]}
+          pointerEvents="none"
+        >
           <CultureVideoFlagShimmer flag={flag} iso2={iso2} />
-        </View>
+        </Animated.View>
       ) : null}
     </View>
   );
@@ -396,6 +495,14 @@ const styles = StyleSheet.create({
     backgroundColor: EXPLORE_SWIPE_CARD_IMAGE_FALLBACK,
   },
   videoSurface: {
+    zIndex: 2,
+    backgroundColor: "transparent",
+  },
+  videoSurfaceTop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
     zIndex: 2,
     backgroundColor: "transparent",
   },
