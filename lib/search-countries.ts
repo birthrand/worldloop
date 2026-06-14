@@ -7,6 +7,10 @@ import {
 import { getClientCache, staleWhileRevalidate } from "@/lib/client-cache";
 import { fetchExploreRegionCountries } from "@/lib/explore-region-countries";
 import { mapCountryToCountry } from "@/lib/map-country";
+import {
+  getStaticCountries,
+  isStaticCountryCatalogEnabled,
+} from "@/lib/static-countries";
 import { useCountryFeedStore } from "@/store/use-country-feed-store";
 import { useMapStore } from "@/store/use-map-store";
 import type { Country, MapCountry } from "@/types/country";
@@ -42,6 +46,10 @@ function mergeCatalog(sources: Country[][]): Country[] {
 }
 
 function getMemoryCatalog(): Country[] {
+  if (isStaticCountryCatalogEnabled()) {
+    return getStaticCountries();
+  }
+
   const sources: Country[][] = [];
 
   const mapCountries = useMapStore.getState().countries;
@@ -136,6 +144,12 @@ export function getSyncLocalSearchResults(
 
 async function hydrateBaseDiskCatalog(): Promise<void> {
   if (baseDiskHydrated) return;
+
+  if (isStaticCountryCatalogEnabled()) {
+    diskCatalogSnapshot = getStaticCountries();
+    baseDiskHydrated = true;
+    return;
+  }
 
   if (baseDiskHydratePromise) {
     await baseDiskHydratePromise;
@@ -258,6 +272,11 @@ export async function fetchSearchCountriesResolved(
 
   if (!q && !r) {
     throw new Error("At least one of query or region is required");
+  }
+
+  if (isStaticCountryCatalogEnabled()) {
+    const { searchStaticCountries } = await import("@/lib/static-countries");
+    return searchStaticCountries(q || undefined, r || undefined);
   }
 
   if (!q && r) {

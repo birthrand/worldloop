@@ -52,6 +52,7 @@ export default function CountryDetailScreen() {
       <StatusBar style="light" />
 
       <CountryDetailCollapsingHeader
+        country={country}
         countryName={country.name}
         scrollY={scrollY}
         screenHeight={screenHeight}

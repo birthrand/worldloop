@@ -9,6 +9,10 @@ import { countryToMapCountry, isValidLatLng } from "@/lib/map-country";
 import { createMapPresentationIntent } from "@/lib/map-navigation-intent";
 import { prefetchMapCountryDetails } from "@/lib/prefetch-country-details";
 import {
+  getStaticMapCountries,
+  isStaticCountryCatalogEnabled,
+} from "@/lib/static-countries";
+import {
   useIdentityStore,
   type SelectionSource,
 } from "@/store/use-identity-store";
@@ -120,6 +124,20 @@ export const useMapStore = create<MapState>()((set, get) => ({
     }
     if (mapCountriesLoadPromise) {
       return mapCountriesLoadPromise;
+    }
+
+    if (isStaticCountryCatalogEnabled()) {
+      const countries = withValidCoordinates(getStaticMapCountries());
+      set({
+        countries,
+        status: "idle",
+        error: null,
+        mapCountriesFullyLoaded: countries.length > 0,
+      });
+      if (countries.length > 0) {
+        void prefetchMapCountryDetails(countries);
+      }
+      return;
     }
 
     mapCountriesLoadPromise = (async () => {

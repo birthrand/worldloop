@@ -1,5 +1,12 @@
 import { API_BASE_URL } from "@/constants/api";
 import { getHeroDisplayPixelWidth } from "@/lib/display-pixel-width";
+import {
+  getStaticCountryByName,
+  getStaticFeedPage,
+  getStaticMapCountries,
+  isStaticCountryCatalogEnabled,
+  searchStaticCountries,
+} from "@/lib/static-countries";
 import type { Country, MapCountry } from "@/types/country";
 
 function appendHeroDisplayWidth(url: URL): void {
@@ -24,6 +31,14 @@ export async function fetchFeedCountries(
   cursor?: string,
   limit?: number,
 ): Promise<FeedCountriesResponse> {
+  if (isStaticCountryCatalogEnabled()) {
+    const page = getStaticFeedPage(cursor, limit ?? 20);
+    return Promise.resolve({
+      data: page.countries,
+      nextCursor: page.nextCursor,
+    });
+  }
+
   const url = new URL(`${API_BASE_URL}/feed/countries`);
 
   if (cursor !== undefined && cursor !== "") {
@@ -81,13 +96,26 @@ export async function fetchSearchCountries(
   query?: string,
   region?: string,
 ): Promise<SearchCountriesResponse> {
-  const url = new URL(`${API_BASE_URL}/search`);
   const q = query?.trim() ?? "";
   const r = region?.trim() ?? "";
 
   if (!q && !r) {
     throw new Error("At least one of query or region is required");
   }
+
+  if (isStaticCountryCatalogEnabled()) {
+    const data = searchStaticCountries(q || undefined, r || undefined);
+    return Promise.resolve({
+      data,
+      meta: {
+        query: q || null,
+        region: r || null,
+        count: data.length,
+      },
+    });
+  }
+
+  const url = new URL(`${API_BASE_URL}/search`);
 
   if (q) url.searchParams.set("query", q);
   if (r) url.searchParams.set("region", r);
@@ -107,6 +135,10 @@ export type MapCountriesResponse = {
 };
 
 export async function fetchMapCountries(): Promise<MapCountriesResponse> {
+  if (isStaticCountryCatalogEnabled()) {
+    return Promise.resolve({ data: getStaticMapCountries() });
+  }
+
   const response = await fetch(`${API_BASE_URL}/map/countries`);
 
   if (!response.ok) {
@@ -183,7 +215,20 @@ type CountryDetailResponse = {
 };
 
 export async function fetchCountryByName(name: string): Promise<Country> {
-  const encoded = encodeURIComponent(name.trim());
+  const trimmed = name.trim();
+  if (!trimmed) {
+    throw new Error("Country name is required");
+  }
+
+  if (isStaticCountryCatalogEnabled()) {
+    const country = getStaticCountryByName(trimmed);
+    if (!country) {
+      throw new Error(`Country not found: ${trimmed}`);
+    }
+    return Promise.resolve(country);
+  }
+
+  const encoded = encodeURIComponent(trimmed);
   const url = new URL(`${API_BASE_URL}/country/${encoded}`);
   appendHeroDisplayWidth(url);
   const response = await fetch(url.toString());

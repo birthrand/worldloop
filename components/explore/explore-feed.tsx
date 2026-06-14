@@ -1,5 +1,4 @@
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -11,17 +10,19 @@ import {
 import { ExploreSwipeDeck } from "@/components/explore/explore-swipe-deck";
 import { ExploreSwipeHeader } from "@/components/explore/explore-swipe-header";
 import {
+  EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING,
   EXPLORE_SWIPE_DECK_VERTICAL_GAP,
   EXPLORE_SWIPE_TEXT_BODY,
   EXPLORE_SWIPE_TEXT_HEADER,
+  EXPLORE_SWIPE_WORLD_WASH_SCRIM,
 } from "@/constants/explore-swipe-layout";
 import { prefetchCountryProfiles } from "@/lib/prefetch-country-profiles";
 import { useCountryFeedStore } from "@/store/use-country-feed-store";
 import { useDiscoveryProgressStore } from "@/store/use-discovery-progress-store";
+import { useSavedCountriesStore } from "@/store/use-saved-countries-store";
 import { useSpatialContextStore } from "@/store/use-spatial-context-store";
 
 export function ExploreFeed() {
-  const tabBarHeight = useBottomTabBarHeight();
   const countries = useCountryFeedStore((s) => s.countries);
   const currentIndex = useCountryFeedStore((s) => s.currentIndex);
   const selectedRegion = useCountryFeedStore((s) => s.selectedRegion);
@@ -32,7 +33,15 @@ export function ExploreFeed() {
   const loadMoreFeed = useCountryFeedStore((s) => s.loadMoreFeed);
   const setRegionFilter = useCountryFeedStore((s) => s.setRegionFilter);
   const loadHereFeed = useCountryFeedStore((s) => s.loadHereFeed);
+  const loadSavedFeed = useCountryFeedStore((s) => s.loadSavedFeed);
+  const restoreForYouFeed = useCountryFeedStore((s) => s.restoreForYouFeed);
   const viewportCountries = useSpatialContextStore((s) => s.viewportCountries);
+  const savedCountries = useSavedCountriesStore((s) => s.savedCountries);
+
+  useEffect(() => {
+    if (discoveryMode !== "saved") return;
+    void loadSavedFeed();
+  }, [discoveryMode, loadSavedFeed, savedCountries]);
 
   const handleIndexChange = useCallback(
     (index: number) => {
@@ -68,14 +77,41 @@ export function ExploreFeed() {
           </View>
         ) : null}
 
-        {status === "error" &&
+        {discoveryMode === "saved" &&
         countries.length === 0 &&
-        (selectedRegion !== null || discoveryMode === "here") ? (
+        status !== "loading" ? (
+          <View style={styles.emptyOverlay}>
+            <Text style={styles.errorTitle}>No saved countries yet</Text>
+            <Text style={styles.errorMessage}>
+              Explore the world and tap Save on places you love, then come back
+              here to swipe through them.
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Browse For You feed"
+              onPress={() => {
+                void restoreForYouFeed();
+              }}
+              style={({ pressed }) => [
+                styles.retryButton,
+                pressed && styles.retryPressed,
+              ]}
+            >
+              <Text style={styles.retryText}>Browse For You</Text>
+            </Pressable>
+          </View>
+        ) : status === "error" &&
+          countries.length === 0 &&
+          (selectedRegion !== null ||
+            discoveryMode === "here" ||
+            discoveryMode === "saved") ? (
           <View style={styles.errorOverlay}>
             <Text style={styles.errorTitle}>
               {discoveryMode === "here"
                 ? "Couldn't load this map area"
-                : `Couldn't load ${selectedRegion}`}
+                : discoveryMode === "saved"
+                  ? "Couldn't load saved countries"
+                  : `Couldn't load ${selectedRegion}`}
             </Text>
             <Text style={styles.errorMessage}>
               {error ?? "Check that the backend is running and try again."}
@@ -86,6 +122,10 @@ export function ExploreFeed() {
               onPress={() => {
                 if (discoveryMode === "here") {
                   void loadHereFeed(viewportCountries);
+                  return;
+                }
+                if (discoveryMode === "saved") {
+                  void loadSavedFeed();
                   return;
                 }
                 void setRegionFilter(selectedRegion);
@@ -115,6 +155,7 @@ const styles = StyleSheet.create({
   feed: {
     flex: 1,
     backgroundColor: "transparent",
+    paddingHorizontal: EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING,
   },
   deckRegion: {
     flex: 1,
@@ -123,10 +164,17 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.72)",
+    backgroundColor: EXPLORE_SWIPE_WORLD_WASH_SCRIM,
     zIndex: 5,
   },
   errorOverlay: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+    gap: 12,
+  },
+  emptyOverlay: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",

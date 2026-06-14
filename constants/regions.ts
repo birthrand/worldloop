@@ -4,6 +4,9 @@ export const FOR_YOU_TAB = "For You" as const;
 /** Viewport-driven feed from the Map tab — not a continent filter. */
 export const HERE_TAB = "Here" as const;
 
+/** Bookmarked countries from the Saved tab — swipe deck of saved items. */
+export const SAVED_TAB = "Saved" as const;
+
 /** REST Countries `region` values (continents) used for browse filters. */
 export const CONTINENTS = [
   "Africa",
@@ -44,7 +47,8 @@ export const EXPLORE_HEADER_TABS = [FOR_YOU_TAB, ...CONTINENTS] as const;
 
 export type ExploreHeaderTab =
   | (typeof EXPLORE_HEADER_TABS)[number]
-  | typeof HERE_TAB;
+  | typeof HERE_TAB
+  | typeof SAVED_TAB;
 
 export function isContinent(value: string): value is Continent {
   return (CONTINENTS as readonly string[]).includes(value);

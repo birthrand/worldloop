@@ -3,6 +3,10 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 import { buildFlagCdnUrl } from "@/lib/flag-url";
+import {
+  getStaticCountries,
+  isStaticCountryCatalogEnabled,
+} from "@/lib/static-countries";
 import type { Country } from "@/types/country";
 
 export type SavedCategory = "favorites" | "want-to-visit";
@@ -262,13 +266,16 @@ export const useSavedCountriesStore = create<SavedCountriesState>()(
       },
 
       enrichFromFeed: (feedCountries: Country[]) => {
-        if (feedCountries.length === 0) return;
-
         const { savedCountries } = get();
         if (savedCountries.length === 0) return;
 
+        const sources = isStaticCountryCatalogEnabled()
+          ? getStaticCountries()
+          : feedCountries;
+        if (sources.length === 0) return;
+
         const enriched = savedCountries.map((country) =>
-          mergeCountryFromFeed(country, feedCountries),
+          mergeCountryFromFeed(country, sources),
         );
 
         const changed = enriched.some(

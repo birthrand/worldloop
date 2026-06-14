@@ -1,14 +1,14 @@
-/** Profile-specific chrome — soft white on explore feed body tone. */
-import { EXPLORE_FEED_CARD_SURFACE } from "@/constants/explore-feed-layout";
+/** Profile-specific chrome — aligned with Explore swipe world background. */
+import { EXPLORE_SWIPE_SCREEN_BG } from "@/constants/explore-swipe-layout";
 
-/** Profile screens — matches explore country info card surface. */
-export const PROFILE_SCREEN_BG = EXPLORE_FEED_CARD_SURFACE;
+/** Profile screens — matches Explore tab base background. */
+export const PROFILE_SCREEN_BG = EXPLORE_SWIPE_SCREEN_BG;
 /** Lifted rows/cards on the profile body tone. */
 export const PROFILE_CARD_BG = "rgba(255, 255, 255, 0.06)";
-/** Hero scrim + fade tints derived from the profile body tone (rgb 7, 14, 31). */
-export const PROFILE_HERO_SCRIM = "rgba(7, 14, 31, 0.38)";
-export const PROFILE_HERO_BOTTOM_FADE =
-  "linear-gradient(to bottom, rgba(7, 14, 31, 0) 0%, rgba(7, 14, 31, 0.35) 55%, rgba(7, 14, 31, 0.92) 88%, #070e1f 100%)";
+/** Hero scrim + fade tints derived from Explore world bg (rgb 6, 9, 12). */
+export const PROFILE_HERO_SCRIM = "rgba(6, 9, 12, 0.38)";
+export const PROFILE_HERO_BOTTOM_FADE = `linear-gradient(to bottom, rgba(6, 9, 12, 0) 0%, rgba(6, 9, 12, 0.35) 55%, rgba(6, 9, 12, 0.92) 88%, ${EXPLORE_SWIPE_SCREEN_BG} 100%)`;
+export const PROFILE_HERO_WEB_FALLBACK = "rgba(6, 9, 12, 0.9)";
 
 export const PROFILE_ICON = "rgba(255, 255, 255, 0.82)";
 export const PROFILE_ICON_MUTED = "rgba(255, 255, 255, 0.55)";

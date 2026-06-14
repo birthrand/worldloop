@@ -1,13 +1,21 @@
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
-import { SavedCountriesList } from "@/components/saved/saved-countries-list";
+import { TAB_BAR_CONTENT_HEIGHT } from "@/components/bottom-tab-bar";
+import { ExploreSwipeWorldBackground } from "@/components/explore/explore-swipe-world-background";
+import {
+  SavedCountriesList,
+  type SavedCountriesLayout,
+} from "@/components/saved/saved-countries-list";
 import { SavedEmptyState } from "@/components/saved/saved-empty-state";
-import { SavedSpaceBackground } from "@/components/saved/saved-space-background";
 import { SavedSpaceHeader } from "@/components/saved/saved-space-header";
+import { EXPLORE_SWIPE_SCREEN_BG } from "@/constants/explore-swipe-layout";
 import { useCountryFeedStore } from "@/store/use-country-feed-store";
 import { useSavedCountriesStore } from "@/store/use-saved-countries-store";
 import type { Country } from "@/types/country";
@@ -24,7 +32,13 @@ function sortBySavedAt(
   });
 }
 
+const TAB_BAR_CLEARANCE = -32;
+
 export default function SavedScreen() {
+  const insets = useSafeAreaInsets();
+  const scrollBottomPadding =
+    TAB_BAR_CONTENT_HEIGHT + insets.bottom + TAB_BAR_CLEARANCE;
+  const [layout, setLayout] = useState<SavedCountriesLayout>("grid");
   const savedCountries = useSavedCountriesStore((s) => s.savedCountries);
   const savedAtByName = useSavedCountriesStore((s) => s.savedAtByName);
   const seedIfEmpty = useSavedCountriesStore((s) => s.seedIfEmpty);
@@ -64,16 +78,16 @@ export default function SavedScreen() {
   const isEmpty = listCountries.length === 0;
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={["top", "left", "right"]}>
       <StatusBar style="light" />
-      <SavedSpaceBackground />
+      <ExploreSwipeWorldBackground />
 
       <View style={styles.content}>
         {isEmpty ? (
           <Animated.View
             entering={FadeIn.duration(320)}
             exiting={FadeOut.duration(200)}
-            style={styles.emptyWrap}
+            style={[styles.emptyWrap, { paddingBottom: scrollBottomPadding }]}
           >
             <SavedSpaceHeader />
             <SavedEmptyState
@@ -87,8 +101,12 @@ export default function SavedScreen() {
             exiting={FadeOut.duration(200)}
             style={styles.listWrap}
           >
-            <SavedSpaceHeader />
-            <SavedCountriesList countries={listCountries} />
+            <SavedSpaceHeader layout={layout} onLayoutChange={setLayout} />
+            <SavedCountriesList
+              countries={listCountries}
+              layout={layout}
+              scrollBottomPadding={scrollBottomPadding}
+            />
           </Animated.View>
         )}
       </View>
@@ -99,13 +117,12 @@ export default function SavedScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#0b132b",
+    backgroundColor: EXPLORE_SWIPE_SCREEN_BG,
   },
   content: {
     flex: 1,
     paddingHorizontal: 24,
     paddingTop: 8,
-    paddingBottom: 112,
   },
   listWrap: {
     flex: 1,

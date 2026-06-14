@@ -10,7 +10,6 @@ import {
 import { ExploreFeedMenuSheet } from "@/components/explore/explore-feed-menu-sheet";
 import {
   EXPLORE_SWIPE_CARD_ACTION_GAP,
-  EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING,
   EXPLORE_SWIPE_DECK_VERTICAL_GAP,
   EXPLORE_SWIPE_HEADER_BUTTON_SIZE,
   EXPLORE_SWIPE_HEADER_ICON_COLOR,
@@ -41,6 +40,7 @@ function HeaderIconButton({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
+      hitSlop={8}
       onPress={onPress}
       style={({ pressed }) => [
         styles.iconButton,
@@ -71,11 +71,14 @@ export function ExploreSwipeHeader({
   const currentIndex = useCountryFeedStore((s) => s.currentIndex);
   const sortField = useCountryFeedStore((s) => s.sortField);
   const sortOrder = useCountryFeedStore((s) => s.sortOrder);
+  const discoveryMode = useCountryFeedStore((s) => s.discoveryMode);
   const currentCountry = countries[currentIndex];
   const hasCustomSort = getExploreHasCustomSort(sortField, sortOrder);
 
   const [isFeedMenuOpen, setIsFeedMenuOpen] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const feedMenuActive =
+    isFeedMenuOpen || discoveryMode === "saved" || discoveryMode === "region";
 
   useEffect(() => {
     setIsFeedMenuOpen(false);
@@ -85,12 +88,14 @@ export function ExploreSwipeHeader({
   return (
     <View style={[styles.root, { paddingTop: insets.top + 8 }]}>
       <View style={styles.row}>
-        <HeaderIconButton
-          icon="reorder-three-outline"
-          accessibilityLabel="Browse feed filters"
-          onPress={() => setIsFeedMenuOpen(true)}
-          active={isFeedMenuOpen}
-        />
+        <View style={styles.leftSlot}>
+          <HeaderIconButton
+            icon="reorder-three-outline"
+            accessibilityLabel="Browse feed filters"
+            onPress={() => setIsFeedMenuOpen(true)}
+            active={feedMenuActive}
+          />
+        </View>
 
         <View style={styles.rightActions}>
           <HeaderIconButton
@@ -126,9 +131,12 @@ export function ExploreSwipeHeader({
   );
 }
 
+const HEADER_SIDE_SLOT_WIDTH =
+  EXPLORE_SWIPE_HEADER_BUTTON_SIZE * 2 + EXPLORE_SWIPE_CARD_ACTION_GAP;
+
 const styles = StyleSheet.create({
   root: {
-    paddingHorizontal: EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING,
+    zIndex: 20,
     paddingBottom: EXPLORE_SWIPE_DECK_VERTICAL_GAP,
   },
   row: {
@@ -138,8 +146,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     minHeight: EXPLORE_SWIPE_HEADER_BUTTON_SIZE,
   },
+  leftSlot: {
+    zIndex: 2,
+    width: HEADER_SIDE_SLOT_WIDTH,
+    alignItems: "flex-start",
+    justifyContent: "center",
+  },
   iconButton: {
-    zIndex: 1,
     width: EXPLORE_SWIPE_HEADER_BUTTON_SIZE,
     height: EXPLORE_SWIPE_HEADER_BUTTON_SIZE,
     alignItems: "center",
@@ -150,15 +163,17 @@ const styles = StyleSheet.create({
     opacity: 0.82,
   },
   rightActions: {
-    zIndex: 1,
+    zIndex: 2,
+    width: HEADER_SIDE_SLOT_WIDTH,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "flex-end",
     gap: EXPLORE_SWIPE_CARD_ACTION_GAP,
   },
   title: {
     position: "absolute",
-    left: 0,
-    right: 0,
+    left: HEADER_SIDE_SLOT_WIDTH,
+    right: HEADER_SIDE_SLOT_WIDTH,
     textAlign: "center",
     fontFamily: "Poppins-SemiBold",
     fontSize: EXPLORE_SWIPE_HEADER_TITLE_SIZE,

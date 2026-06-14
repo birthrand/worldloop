@@ -138,20 +138,26 @@ export function useAiExplorerCountry(): UseAiExplorerCountryResult {
       setLandmarks(profile.landmarks);
 
       setLoading(false);
-      setRefreshing(!profile.wikipedia?.extract?.trim());
       setError(null);
     };
 
+    const needsWikipedia =
+      !getCachedCountryProfile(targetName)?.wikipedia?.extract?.trim();
+
     syncFromCache();
+    if (needsWikipedia) {
+      setRefreshing(true);
+    }
 
     void hydrateCountryProfileFromDisk(targetName).then(() => {
       if (cancelled) return;
       syncFromCache();
     });
 
-    void prefetchCountryProfile(targetName).then(() => {
+    void prefetchCountryProfile(targetName).finally(() => {
       if (cancelled) return;
       syncFromCache();
+      setRefreshing(false);
     });
 
     return () => {

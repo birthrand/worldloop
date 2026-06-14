@@ -440,7 +440,7 @@ export function CountryProfileCard({
                       onPress={() => setOverviewExpanded((value) => !value)}
                       style={styles.readMoreRow}
                     >
-                      <Text style={styles.linkText}>
+                      <Text style={styles.readMoreText}>
                         {overviewExpanded ? "Read less" : "Read more"}
                       </Text>
                     </Pressable>
@@ -613,6 +613,11 @@ const styles = StyleSheet.create({
   readMoreRow: {
     alignSelf: "flex-start",
     marginTop: 2,
+  },
+  readMoreText: {
+    fontFamily: "Poppins-Regular",
+    fontSize: 13,
+    color: EXPLORE_SWIPE_ACCENT_COLOR,
   },
   linkText: {
     fontFamily: "Poppins-Medium",

@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { Pressable, StyleSheet, View } from "react-native";
 import Animated, {
   Extrapolation,
@@ -9,18 +10,29 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
+  COUNTRY_DETAIL_STICKY_HEADER_ROW_HEIGHT,
   COUNTRY_DETAIL_TITLE_CROSSFADE_RANGE,
   getCountryDetailTitleCollapseThreshold,
 } from "@/constants/country-detail-layout";
 import {
+  EXPLORE_SWIPE_ACCENT_COLOR,
+  EXPLORE_SWIPE_CARD_ACTION_ICON_COLOR,
+  EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE,
   EXPLORE_SWIPE_CARD_TITLE_COLOR,
   EXPLORE_SWIPE_TEXT_HEADER,
 } from "@/constants/explore-swipe-layout";
+import { useSavedCountriesStore } from "@/store/use-saved-countries-store";
+import type { Country } from "@/types/country";
 
 const COUNTRY_NAME_FONT_SIZE = EXPLORE_SWIPE_TEXT_HEADER;
-const COUNTRY_NAME_MIN_FONT_SIZE = 14;
+const HEADER_HORIZONTAL_PADDING = 16;
+const HEADER_SIDE_BUTTON_SIZE = 40;
+const HEADER_TITLE_GAP = 8;
+const HEADER_SIDE_INSET =
+  HEADER_HORIZONTAL_PADDING + HEADER_SIDE_BUTTON_SIZE + HEADER_TITLE_GAP;
 
 type CountryDetailCollapsingHeaderProps = {
+  country: Country;
   countryName: string;
   scrollY: SharedValue<number>;
   screenHeight: number;
@@ -28,12 +40,16 @@ type CountryDetailCollapsingHeaderProps = {
 };
 
 export function CountryDetailCollapsingHeader({
+  country,
   countryName,
   scrollY,
   screenHeight,
   onBack,
 }: CountryDetailCollapsingHeaderProps) {
   const insets = useSafeAreaInsets();
+  const toggleSaved = useSavedCountriesStore((s) => s.toggleSaved);
+  const isSaved = useSavedCountriesStore((s) => s.isSaved(country.name));
+  const saved = isSaved;
   const collapseThreshold = getCountryDetailTitleCollapseThreshold(
     screenHeight,
     insets.top,
@@ -101,6 +117,19 @@ export function CountryDetailCollapsingHeader({
     return { opacity };
   });
 
+  const handleToggleSaved = () => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    toggleSaved(country);
+  };
+
+  const savedIcon = saved ? "bookmark" : "bookmark-outline";
+  const heroSavedColor = saved
+    ? EXPLORE_SWIPE_ACCENT_COLOR
+    : EXPLORE_SWIPE_CARD_TITLE_COLOR;
+  const stickySavedColor = saved
+    ? EXPLORE_SWIPE_ACCENT_COLOR
+    : EXPLORE_SWIPE_CARD_ACTION_ICON_COLOR;
+
   return (
     <Animated.View
       pointerEvents="box-none"
@@ -137,6 +166,47 @@ export function CountryDetailCollapsingHeader({
           </Animated.View>
         </Pressable>
 
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={
+            saved ? `Unsave ${country.name}` : `Save ${country.name}`
+          }
+          accessibilityHint={
+            saved
+              ? "Removes this country from your saved list"
+              : "Adds this country to your saved list"
+          }
+          onPress={handleToggleSaved}
+          style={({ pressed }) => [
+            styles.actionSlot,
+            pressed && styles.actionSlotPressed,
+          ]}
+        >
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.actionLayer, heroBackStyle]}
+          >
+            <View style={styles.heroActionButton}>
+              <Ionicons
+                name={savedIcon}
+                size={EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE}
+                color={heroSavedColor}
+              />
+            </View>
+          </Animated.View>
+
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.actionLayer, stickyBackStyle]}
+          >
+            <Ionicons
+              name={savedIcon}
+              size={EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE}
+              color={stickySavedColor}
+            />
+          </Animated.View>
+        </Pressable>
+
         <Animated.View
           pointerEvents="none"
           style={[styles.titleWrap, headerTitleStyle]}
@@ -145,10 +215,6 @@ export function CountryDetailCollapsingHeader({
             style={styles.headerTitle}
             numberOfLines={1}
             ellipsizeMode="tail"
-            adjustsFontSizeToFit
-            minimumFontScale={
-              COUNTRY_NAME_MIN_FONT_SIZE / COUNTRY_NAME_FONT_SIZE
-            }
           >
             {countryName}
           </Animated.Text>
@@ -167,15 +233,17 @@ const styles = StyleSheet.create({
     zIndex: 20,
   },
   row: {
+    position: "relative",
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     minHeight: 44,
-    paddingHorizontal: 16,
-    gap: 8,
+    paddingHorizontal: HEADER_HORIZONTAL_PADDING,
   },
   backSlot: {
-    width: 40,
-    height: 40,
+    zIndex: 2,
+    width: HEADER_SIDE_BUTTON_SIZE,
+    height: HEADER_SIDE_BUTTON_SIZE,
     flexShrink: 0,
     alignItems: "center",
     justifyContent: "center",
@@ -190,8 +258,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   heroBackButton: {
-    width: 40,
-    height: 40,
+    width: HEADER_SIDE_BUTTON_SIZE,
+    height: HEADER_SIDE_BUTTON_SIZE,
     borderRadius: 20,
     backgroundColor: "rgba(0, 0, 0, 0.18)",
     borderWidth: StyleSheet.hairlineWidth,
@@ -200,15 +268,53 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   titleWrap: {
-    flex: 1,
-    minWidth: 0,
+    zIndex: 1,
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    paddingHorizontal: HEADER_SIDE_INSET,
     justifyContent: "center",
+    alignItems: "center",
   },
   headerTitle: {
+    width: "100%",
+    maxWidth: "100%",
+    textAlign: "center",
     fontFamily: "Poppins-SemiBold",
     fontSize: COUNTRY_NAME_FONT_SIZE,
-    lineHeight: 22,
+    lineHeight: COUNTRY_DETAIL_STICKY_HEADER_ROW_HEIGHT,
     letterSpacing: -0.2,
     color: EXPLORE_SWIPE_CARD_TITLE_COLOR,
+    includeFontPadding: false,
+    textAlignVertical: "center",
+  },
+  actionSlot: {
+    zIndex: 2,
+    width: HEADER_SIDE_BUTTON_SIZE,
+    height: HEADER_SIDE_BUTTON_SIZE,
+    flexShrink: 0,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  actionSlotPressed: {
+    opacity: 0.88,
+    transform: [{ scale: 0.96 }],
+  },
+  actionLayer: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroActionButton: {
+    width: HEADER_SIDE_BUTTON_SIZE,
+    height: HEADER_SIDE_BUTTON_SIZE,
+    borderRadius: 20,
+    backgroundColor: "rgba(0, 0, 0, 0.18)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255, 255, 255, 0.16)",
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

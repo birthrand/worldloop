@@ -4,6 +4,17 @@ import {
 } from "@/lib/normalize-image-url";
 import type { Country, CountryVideo } from "@/types/country";
 
+const MISSING_CAPITAL_MARKERS = new Set(["—", "-", "N/A", "NA", "n/a"]);
+
+/** Capital for feed/card subtitles; missing capitals use a fixed territory label. */
+export function formatCountryCapitalDisplay(capital?: string): string {
+  const value = capital?.trim();
+  if (!value || MISSING_CAPITAL_MARKERS.has(value)) {
+    return "NO SOVEREIGN GOVERNMENT";
+  }
+  return value;
+}
+
 /** Ensure landmark copy always starts with a capital letter. */
 export function formatLandmarkDescription(description: string): string {
   const trimmed = description.trim();

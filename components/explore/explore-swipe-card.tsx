@@ -14,7 +14,6 @@ import {
   isCountryImageReady,
   prefetchCountryImage,
 } from "@/components/explore/country-image";
-import { ExploreSwipeCardInfoSkeleton } from "@/components/explore/explore-swipe-card-info-skeleton";
 import { HeroImagePager } from "@/components/explore/hero-image-pager";
 import { MediaCarousel } from "@/components/explore/media-carousel";
 import {
@@ -26,16 +25,24 @@ import {
   EXPLORE_SWIPE_CARD_ELEVATION,
   EXPLORE_SWIPE_CARD_FACT_FONT_FAMILY,
   EXPLORE_SWIPE_CARD_FACT_FONT_SIZE,
+  EXPLORE_SWIPE_CARD_FACT_LABEL_COLOR,
+  EXPLORE_SWIPE_CARD_FACT_LABEL_FONT_SIZE,
+  EXPLORE_SWIPE_CARD_FACT_LABEL_GAP,
+  EXPLORE_SWIPE_CARD_FACT_LABEL_LINE_HEIGHT,
   EXPLORE_SWIPE_CARD_FACT_LINE_HEIGHT,
   EXPLORE_SWIPE_CARD_FACT_MAX_LINES,
-  EXPLORE_SWIPE_CARD_FACT_MIN_HEIGHT,
   EXPLORE_SWIPE_CARD_FACT_TEXT_COLOR,
-  EXPLORE_SWIPE_CARD_FOOTER_ACTION_GAP,
+  EXPLORE_SWIPE_CARD_HORIZONTAL_PADDING,
   EXPLORE_SWIPE_CARD_IMAGE_FALLBACK,
   EXPLORE_SWIPE_CARD_INFO_BG,
   EXPLORE_SWIPE_CARD_INFO_BORDER,
-  EXPLORE_SWIPE_CARD_INFO_TEXT_GAP,
-  EXPLORE_SWIPE_CARD_INFO_TOP_ROW_MIN_HEIGHT,
+  EXPLORE_SWIPE_CARD_INFO_HEADER_GAP,
+  EXPLORE_SWIPE_CARD_INFO_HEADER_MAX_HEIGHT,
+  EXPLORE_SWIPE_CARD_INFO_REGION_GAP,
+  EXPLORE_SWIPE_CARD_INFO_REGION_HEIGHT,
+  EXPLORE_SWIPE_CARD_INFO_REGION_PADDING_BOTTOM,
+  EXPLORE_SWIPE_CARD_INFO_REGION_PADDING_TOP,
+  EXPLORE_SWIPE_CARD_INFO_TITLE_ACTION_GAP,
   EXPLORE_SWIPE_CARD_RADIUS,
   EXPLORE_SWIPE_CARD_SHADOW,
   EXPLORE_SWIPE_CARD_SHADOW_OFFSET_Y,
@@ -44,14 +51,17 @@ import {
   EXPLORE_SWIPE_CARD_SUBTITLE_COLOR,
   EXPLORE_SWIPE_CARD_TITLE_COLOR,
   EXPLORE_SWIPE_CARD_TITLE_MAX_LINES,
-  EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING,
   EXPLORE_SWIPE_TEXT_BODY,
   EXPLORE_SWIPE_TEXT_BODY_LINE_HEIGHT,
   EXPLORE_SWIPE_TEXT_HEADER,
   EXPLORE_SWIPE_TEXT_HEADER_LINE_HEIGHT,
 } from "@/constants/explore-swipe-layout";
 import { continentDisplayLabel } from "@/constants/regions";
-import { getAiFactByIndex, getCountryImages } from "@/lib/format-country";
+import {
+  formatCountryCapitalDisplay,
+  getAiFactByIndex,
+  getCountryImages,
+} from "@/lib/format-country";
 import {
   openCountryDetail,
   warmCountryDetail,
@@ -59,12 +69,21 @@ import {
 import { useSavedCountriesStore } from "@/store/use-saved-countries-store";
 import type { Country } from "@/types/country";
 
-const CARD_ACTION_COUNT = 1;
-const CARD_ACTION_RAIL_WIDTH =
-  EXPLORE_SWIPE_ACTION_BUTTON_SIZE * CARD_ACTION_COUNT +
-  EXPLORE_SWIPE_CARD_FOOTER_ACTION_GAP * (CARD_ACTION_COUNT - 1);
-const CARD_ACTION_OPTICAL_INSET =
-  (EXPLORE_SWIPE_ACTION_BUTTON_SIZE - EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE) / 2;
+/** Keeps the glyph on the content edge while preserving a 40×40 touch target. */
+const BOOKMARK_HIT_SLOP = {
+  top:
+    (EXPLORE_SWIPE_ACTION_BUTTON_SIZE - EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE) /
+    2,
+  bottom:
+    (EXPLORE_SWIPE_ACTION_BUTTON_SIZE - EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE) /
+    2,
+  left:
+    (EXPLORE_SWIPE_ACTION_BUTTON_SIZE - EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE) /
+    2,
+  right:
+    (EXPLORE_SWIPE_ACTION_BUTTON_SIZE - EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE) /
+    2,
+} as const;
 
 function isCountryHeroReady(images: string[]): boolean {
   const heroUri = images[0];
@@ -78,7 +97,11 @@ type ExploreSwipeCardProps = {
   height: number;
   /** When false, card is a static stack layer (no press/actions). */
   interactive?: boolean;
+  /** Controlled hero slide — used by the swipe deck for release-time axis routing. */
+  heroIndex?: number;
   onHeroIndexChange?: (index: number) => void;
+  /** When false, horizontal swipes are handled by the deck gesture instead. */
+  heroScrollEnabled?: boolean;
 };
 
 export function ExploreSwipeCard({
@@ -86,20 +109,56 @@ export function ExploreSwipeCard({
   width,
   height,
   interactive = true,
+  heroIndex: heroIndexProp,
   onHeroIndexChange,
+  heroScrollEnabled = true,
 }: ExploreSwipeCardProps) {
   const images = useMemo(() => getCountryImages(country), [country]);
-  const capital = country.capital?.trim() || "—";
+  const capitalLabel = formatCountryCapitalDisplay(country.capital);
   const regionLabel = continentDisplayLabel(country.region?.trim() || "—");
 
   const toggleSaved = useSavedCountriesStore((s) => s.toggleSaved);
   const isSaved = useSavedCountriesStore((s) => s.isSaved(country.name));
 
-  const [heroIndex, setHeroIndex] = useState(0);
-  const [heroLayout, setHeroLayout] = useState({ width: 0, height: 0 });
+  const [internalHeroIndex, setInternalHeroIndex] = useState(0);
+  const heroIndex = heroIndexProp ?? internalHeroIndex;
+
+  const updateHeroIndex = useCallback(
+    (index: number) => {
+      if (heroIndexProp === undefined) {
+        setInternalHeroIndex(index);
+      }
+      onHeroIndexChange?.(index);
+    },
+    [heroIndexProp, onHeroIndexChange],
+  );
   const [isActiveHeroLoaded, setIsActiveHeroLoaded] = useState(() =>
     isCountryHeroReady(images),
   );
+  const estimatedHeroHeight = Math.max(
+    0,
+    height - EXPLORE_SWIPE_CARD_INFO_REGION_HEIGHT,
+  );
+  const [heroSize, setHeroSize] = useState({
+    width,
+    height: estimatedHeroHeight,
+  });
+
+  useEffect(() => {
+    setHeroSize({
+      width,
+      height: estimatedHeroHeight,
+    });
+  }, [estimatedHeroHeight, width]);
+
+  const onImageRegionLayout = useCallback((event: LayoutChangeEvent) => {
+    const { width: layoutWidth, height: layoutHeight } =
+      event.nativeEvent.layout;
+    setHeroSize({
+      width: Math.round(layoutWidth),
+      height: Math.round(layoutHeight),
+    });
+  }, []);
 
   const fact = useMemo(
     () => getAiFactByIndex(country, heroIndex),
@@ -107,28 +166,22 @@ export function ExploreSwipeCard({
   );
 
   useEffect(() => {
-    setHeroIndex(0);
+    if (heroIndexProp === undefined) {
+      setInternalHeroIndex(0);
+    }
     setIsActiveHeroLoaded(isCountryHeroReady(images));
-  }, [country.name, images]);
+  }, [country.name, heroIndexProp, images]);
 
   useEffect(() => {
+    if (heroIndexProp !== undefined) return;
     onHeroIndexChange?.(heroIndex);
-  }, [heroIndex, onHeroIndexChange]);
+  }, [heroIndex, heroIndexProp, onHeroIndexChange]);
 
   useEffect(() => {
     for (const uri of images) {
       void prefetchCountryImage(uri);
     }
   }, [images]);
-
-  const onHeroLayout = useCallback((event: LayoutChangeEvent) => {
-    const { width: layoutWidth, height: layoutHeight } =
-      event.nativeEvent.layout;
-    setHeroLayout({
-      width: Math.round(layoutWidth),
-      height: Math.round(layoutHeight),
-    });
-  }, []);
 
   const openDetail = () => {
     openCountryDetail(country, { from: "explore" });
@@ -164,16 +217,17 @@ export function ExploreSwipeCard({
           },
         ]}
       >
-        <View style={styles.imageRegion} onLayout={onHeroLayout}>
-          {heroLayout.width > 0 && heroLayout.height > 0 ? (
+        <View style={styles.imageRegion} onLayout={onImageRegionLayout}>
+          {heroSize.width > 0 && heroSize.height > 0 ? (
             <HeroImagePager
               images={images}
               flag={country.flag}
               iso2={country.cca2}
-              heroWidth={heroLayout.width}
-              heroHeight={heroLayout.height}
+              heroWidth={heroSize.width}
+              heroHeight={heroSize.height}
               activeIndex={heroIndex}
-              onIndexChange={setHeroIndex}
+              onIndexChange={updateHeroIndex}
+              scrollEnabled={heroScrollEnabled}
               onImagePress={interactive ? openDetail : undefined}
               onImagePressIn={interactive ? warmDetail : undefined}
               onActiveImageLoadChange={setIsActiveHeroLoaded}
@@ -185,7 +239,7 @@ export function ExploreSwipeCard({
               <MediaCarousel
                 images={images}
                 activeIndex={heroIndex}
-                onImageIndexChange={setHeroIndex}
+                onImageIndexChange={updateHeroIndex}
                 disabled={!interactive}
                 variant="segments"
               />
@@ -194,83 +248,72 @@ export function ExploreSwipeCard({
         </View>
 
         <View style={styles.infoRegion}>
-          {!isActiveHeroLoaded ? (
-            <ExploreSwipeCardInfoSkeleton interactive={interactive} />
-          ) : (
-            <>
-              <View style={styles.infoTopRow}>
-                <View
-                  style={[
-                    styles.infoText,
-                    interactive && styles.infoTextWithActions,
-                  ]}
-                >
-                  <Text
-                    style={styles.countryName}
-                    numberOfLines={EXPLORE_SWIPE_CARD_TITLE_MAX_LINES}
-                  >
-                    {country.name}
-                  </Text>
-                  <Text style={styles.subtitle} numberOfLines={1}>
-                    {regionLabel} · {capital}
-                  </Text>
-                </View>
-
-                {interactive ? (
-                  <View style={styles.actions} pointerEvents="box-none">
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={
-                        isSaved
-                          ? `Unsave ${country.name}`
-                          : `Save ${country.name}`
-                      }
-                      accessibilityHint={
-                        isSaved
-                          ? "Removes this country from your saved list"
-                          : "Adds this country to your saved list"
-                      }
-                      onPress={handleToggleSaved}
-                      style={({ pressed }) => [
-                        styles.actionButton,
-                        pressed && styles.actionButtonPressed,
-                      ]}
-                    >
-                      <Ionicons
-                        name={isSaved ? "bookmark" : "bookmark-outline"}
-                        size={EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE}
-                        color={
-                          isSaved
-                            ? EXPLORE_SWIPE_ACCENT_COLOR
-                            : EXPLORE_SWIPE_CARD_ACTION_ICON_COLOR
-                        }
-                      />
-                    </Pressable>
-                  </View>
-                ) : null}
-              </View>
-
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Fun fact about ${country.name}`}
-                accessibilityHint="Opens country detail"
-                disabled={!interactive}
-                onPress={interactive ? openDetail : undefined}
-                onPressIn={interactive ? warmDetail : undefined}
-                style={({ pressed }) => [
-                  styles.factSection,
-                  pressed && interactive && styles.factSectionPressed,
-                ]}
+          <View style={styles.titleRow}>
+            <View style={styles.titleBlock}>
+              <Text
+                style={styles.countryName}
+                numberOfLines={EXPLORE_SWIPE_CARD_TITLE_MAX_LINES}
               >
-                <Text
-                  style={styles.factText}
-                  numberOfLines={EXPLORE_SWIPE_CARD_FACT_MAX_LINES}
-                >
-                  {fact}
-                </Text>
-              </Pressable>
-            </>
-          )}
+                {country.name}
+              </Text>
+
+              <Text style={styles.subtitle} numberOfLines={1}>
+                {regionLabel} · {capitalLabel}
+              </Text>
+            </View>
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={
+                isSaved ? `Unsave ${country.name}` : `Save ${country.name}`
+              }
+              accessibilityHint={
+                isSaved
+                  ? "Removes this country from your saved list"
+                  : "Adds this country to your saved list"
+              }
+              disabled={!interactive}
+              onPress={handleToggleSaved}
+              hitSlop={BOOKMARK_HIT_SLOP}
+              style={({ pressed }) => [
+                styles.bookmarkButton,
+                pressed && interactive && styles.bookmarkButtonPressed,
+              ]}
+            >
+              <Ionicons
+                name={isSaved ? "bookmark" : "bookmark-outline"}
+                size={EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE}
+                color={
+                  isSaved
+                    ? EXPLORE_SWIPE_ACCENT_COLOR
+                    : EXPLORE_SWIPE_CARD_ACTION_ICON_COLOR
+                }
+              />
+            </Pressable>
+          </View>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Did you know about ${country.name}`}
+            accessibilityHint="Opens country detail"
+            disabled={!interactive}
+            onPress={interactive ? openDetail : undefined}
+            onPressIn={interactive ? warmDetail : undefined}
+            style={({ pressed }) => [
+              styles.factSection,
+              pressed && interactive && styles.factSectionPressed,
+            ]}
+          >
+            <Text style={styles.factLabel}>Did you know</Text>
+            <Text
+              style={styles.factText}
+              numberOfLines={EXPLORE_SWIPE_CARD_FACT_MAX_LINES}
+            >
+              {fact}
+            </Text>
+          </Pressable>
+
+          <View style={styles.infoRegionSpacer} />
         </View>
       </View>
     </View>
@@ -279,6 +322,7 @@ export function ExploreSwipeCard({
 
 const styles = StyleSheet.create({
   cardShadow: {
+    overflow: "visible",
     ...Platform.select({
       ios: {
         shadowColor: EXPLORE_SWIPE_CARD_SHADOW,
@@ -308,6 +352,8 @@ const styles = StyleSheet.create({
     minHeight: 0,
     overflow: "hidden",
     backgroundColor: EXPLORE_SWIPE_CARD_IMAGE_FALLBACK,
+    borderTopLeftRadius: EXPLORE_SWIPE_CARD_RADIUS,
+    borderTopRightRadius: EXPLORE_SWIPE_CARD_RADIUS,
   },
   carouselOverlay: {
     position: "absolute",
@@ -319,26 +365,28 @@ const styles = StyleSheet.create({
   },
   infoRegion: {
     flexShrink: 0,
-    paddingTop: 14,
-    paddingBottom: 16,
-    gap: 12,
+    height: EXPLORE_SWIPE_CARD_INFO_REGION_HEIGHT,
+    paddingTop: EXPLORE_SWIPE_CARD_INFO_REGION_PADDING_TOP,
+    paddingBottom: EXPLORE_SWIPE_CARD_INFO_REGION_PADDING_BOTTOM,
+    paddingHorizontal: EXPLORE_SWIPE_CARD_HORIZONTAL_PADDING,
     backgroundColor: EXPLORE_SWIPE_CARD_INFO_BG,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: EXPLORE_SWIPE_CARD_INFO_BORDER,
   },
-  infoTopRow: {
-    position: "relative",
-    minHeight: EXPLORE_SWIPE_CARD_INFO_TOP_ROW_MIN_HEIGHT,
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: EXPLORE_SWIPE_CARD_INFO_HEADER_MAX_HEIGHT,
+    gap: EXPLORE_SWIPE_CARD_INFO_TITLE_ACTION_GAP,
   },
-  infoText: {
-    gap: EXPLORE_SWIPE_CARD_INFO_TEXT_GAP,
-    paddingHorizontal: EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING,
+  infoRegionSpacer: {
+    flex: 1,
+    minHeight: 0,
   },
-  infoTextWithActions: {
-    paddingRight:
-      EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING +
-      CARD_ACTION_RAIL_WIDTH -
-      CARD_ACTION_OPTICAL_INSET,
+  titleBlock: {
+    flex: 1,
+    minWidth: 0,
+    gap: EXPLORE_SWIPE_CARD_INFO_HEADER_GAP,
   },
   countryName: {
     fontFamily: "Poppins-SemiBold",
@@ -352,35 +400,44 @@ const styles = StyleSheet.create({
     lineHeight: EXPLORE_SWIPE_TEXT_BODY_LINE_HEIGHT,
     color: EXPLORE_SWIPE_CARD_SUBTITLE_COLOR,
   },
-  actions: {
-    position: "absolute",
-    right: EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING - CARD_ACTION_OPTICAL_INSET,
-    bottom: 0,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: EXPLORE_SWIPE_CARD_FOOTER_ACTION_GAP,
-  },
-  actionButton: {
-    width: EXPLORE_SWIPE_ACTION_BUTTON_SIZE,
+  bookmarkButton: {
+    width: EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE,
     height: EXPLORE_SWIPE_ACTION_BUTTON_SIZE,
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
   },
-  actionButtonPressed: {
+  bookmarkButtonPressed: {
     opacity: 0.78,
   },
   factSection: {
     alignSelf: "stretch",
-    paddingHorizontal: EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING,
+    marginTop: EXPLORE_SWIPE_CARD_INFO_REGION_GAP,
+    gap: EXPLORE_SWIPE_CARD_FACT_LABEL_GAP,
   },
   factSectionPressed: {
     opacity: 0.82,
+  },
+  factLabel: {
+    fontFamily: "Poppins-Medium",
+    fontSize: EXPLORE_SWIPE_CARD_FACT_LABEL_FONT_SIZE,
+    lineHeight: EXPLORE_SWIPE_CARD_FACT_LABEL_LINE_HEIGHT,
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+    color: EXPLORE_SWIPE_CARD_FACT_LABEL_COLOR,
+    ...Platform.select({
+      android: { includeFontPadding: false },
+      default: {},
+    }),
   },
   factText: {
     fontFamily: EXPLORE_SWIPE_CARD_FACT_FONT_FAMILY,
     fontSize: EXPLORE_SWIPE_CARD_FACT_FONT_SIZE,
     lineHeight: EXPLORE_SWIPE_CARD_FACT_LINE_HEIGHT,
-    minHeight: EXPLORE_SWIPE_CARD_FACT_MIN_HEIGHT,
     color: EXPLORE_SWIPE_CARD_FACT_TEXT_COLOR,
+    ...Platform.select({
+      android: { includeFontPadding: false },
+      default: {},
+    }),
   },
 });

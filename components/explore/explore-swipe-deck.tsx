@@ -1,13 +1,17 @@
 import * as Haptics from "expo-haptics";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { StyleSheet, Text, View, type LayoutChangeEvent } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
+  Easing,
+  Extrapolation,
+  interpolate,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
   withTiming,
+  type WithSpringConfig,
 } from "react-native-reanimated";
 
 import { ExploreRegionCompleteState } from "@/components/explore/explore-region-complete-state";
@@ -17,12 +21,14 @@ import {
   EXPLORE_SWIPE_CARD_RADIUS,
   EXPLORE_SWIPE_CARD_SUBTITLE_COLOR,
   EXPLORE_SWIPE_CARD_TITLE_COLOR,
-  EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING,
   EXPLORE_SWIPE_DISMISS_THRESHOLD,
+  EXPLORE_SWIPE_GESTURE_AXIS_ACTIVATION,
   EXPLORE_SWIPE_MAX_ROTATION,
-  EXPLORE_SWIPE_STACK_DEPTH,
+  EXPLORE_SWIPE_STACK_OFFSET_Y,
+  EXPLORE_SWIPE_STACK_SCALE_STEP,
   EXPLORE_SWIPE_TEXT_BODY,
   EXPLORE_SWIPE_TEXT_HEADER,
+  EXPLORE_SWIPE_VELOCITY_THRESHOLD,
 } from "@/constants/explore-swipe-layout";
 import { isContinent } from "@/constants/regions";
 import {
@@ -32,134 +38,316 @@ import {
 import { useCountryFeedStore } from "@/store/use-country-feed-store";
 import type { Country } from "@/types/country";
 
-type SwipeDirection = "left" | "right";
+const RETURN_SPRING: WithSpringConfig = {
+  damping: 24,
+  stiffness: 220,
+  mass: 0.85,
+};
+
+const DISMISS_EASING = Easing.out(Easing.cubic);
+
+function rubberBandOffset(value: number, factor = 0.3): number {
+  "worklet";
+  return value * factor;
+}
+
+function dismissDuration(distance: number, velocity: number): number {
+  "worklet";
+  const remaining = Math.max(0, distance);
+  const speed = Math.max(Math.abs(velocity), 640);
+  return Math.min(320, Math.max(180, (remaining / speed) * 1000));
+}
 
 type SwipeableTopCardProps = {
   country: Country;
+  nextCountry?: Country;
+  previousCountry?: Country;
   cardWidth: number;
   cardHeight: number;
   canGoBack: boolean;
-  onDismiss: (direction: SwipeDirection) => void;
-  onGoBack: () => void;
+  onSwipeNext: () => void;
+  onSwipePrevious: () => void;
   onSwipeBegin: () => void;
 };
 
 function SwipeableTopCard({
   country,
+  nextCountry,
+  previousCountry,
   cardWidth,
   cardHeight,
   canGoBack,
-  onDismiss,
-  onGoBack,
+  onSwipeNext,
+  onSwipePrevious,
   onSwipeBegin,
 }: SwipeableTopCardProps) {
-  const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
+  const translateX = useSharedValue(0);
   const isDismissing = useSharedValue(false);
+  const canSwipeBackSv = useSharedValue(canGoBack ? 1 : 0);
+  const hasNextSv = useSharedValue(nextCountry ? 1 : 0);
   const [heroIndex, setHeroIndex] = useState(0);
+
+  const canSwipeBack = canGoBack && heroIndex === 0;
 
   useEffect(() => {
     setHeroIndex(0);
   }, [country.name]);
 
-  const dismissCard = useCallback(
-    (direction: SwipeDirection) => {
-      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      onDismiss(direction);
-    },
-    [onDismiss],
-  );
+  useEffect(() => {
+    canSwipeBackSv.value = canSwipeBack ? 1 : 0;
+  }, [canSwipeBack, canSwipeBackSv]);
 
-  const goBack = useCallback(() => {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onGoBack();
-  }, [onGoBack]);
+  useEffect(() => {
+    hasNextSv.value = nextCountry ? 1 : 0;
+  }, [hasNextSv, nextCountry]);
+
+  const triggerSwipeHaptic = useCallback(() => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  }, []);
+
+  const completeSwipeNext = useCallback(() => {
+    onSwipeNext();
+  }, [onSwipeNext]);
+
+  const completeSwipePrevious = useCallback(() => {
+    onSwipePrevious();
+  }, [onSwipePrevious]);
 
   const pan = Gesture.Pan()
+    .activeOffsetY([
+      -EXPLORE_SWIPE_GESTURE_AXIS_ACTIVATION,
+      EXPLORE_SWIPE_GESTURE_AXIS_ACTIVATION,
+    ])
+    .failOffsetX([
+      -EXPLORE_SWIPE_GESTURE_AXIS_ACTIVATION,
+      EXPLORE_SWIPE_GESTURE_AXIS_ACTIVATION,
+    ])
     .onBegin(() => {
+      if (isDismissing.value) return;
       runOnJS(onSwipeBegin)();
     })
     .onUpdate((event) => {
       if (isDismissing.value) return;
+
+      let y = event.translationY;
+
+      if (y > 0 && canSwipeBackSv.value === 0) {
+        y = rubberBandOffset(y);
+      } else if (y < 0 && hasNextSv.value === 0) {
+        y = rubberBandOffset(y);
+      }
+
+      translateY.value = y;
       translateX.value = event.translationX;
-      translateY.value = event.translationY * 0.35;
     })
     .onEnd((event) => {
       if (isDismissing.value) return;
 
-      const threshold = cardWidth * EXPLORE_SWIPE_DISMISS_THRESHOLD;
+      const y = translateY.value;
+      const threshold = cardHeight * EXPLORE_SWIPE_DISMISS_THRESHOLD;
       const shouldDismiss =
-        Math.abs(translateX.value) > threshold ||
-        Math.abs(event.velocityX) > 900;
+        Math.abs(y) > threshold ||
+        Math.abs(event.velocityY) > EXPLORE_SWIPE_VELOCITY_THRESHOLD;
 
-      if (shouldDismiss) {
-        isDismissing.value = true;
-        const direction: SwipeDirection =
-          translateX.value + event.velocityX * 0.08 > 0 ? "right" : "left";
-
-        if (direction === "right") {
-          if (!canGoBack || heroIndex > 0) {
-            isDismissing.value = false;
-            translateX.value = withSpring(0, { damping: 18, stiffness: 220 });
-            translateY.value = withSpring(0, { damping: 18, stiffness: 220 });
-            return;
-          }
-
-          translateX.value = withTiming(
-            cardWidth * 1.4,
-            { duration: 220 },
-            (finished) => {
-              if (finished) {
-                runOnJS(goBack)();
-              }
-            },
-          );
-          return;
-        }
-
-        const targetX = -cardWidth * 1.4;
-
-        translateX.value = withTiming(
-          targetX,
-          { duration: 220 },
-          (finished) => {
-            if (finished) {
-              runOnJS(dismissCard)(direction);
-            }
-          },
-        );
+      if (!shouldDismiss) {
+        translateY.value = withSpring(0, RETURN_SPRING);
+        translateX.value = withSpring(0, RETURN_SPRING);
         return;
       }
 
-      translateX.value = withSpring(0, { damping: 18, stiffness: 220 });
-      translateY.value = withSpring(0, { damping: 18, stiffness: 220 });
+      const goingUp = y + event.velocityY * 0.08 < 0;
+
+      if (goingUp) {
+        if (hasNextSv.value === 0) {
+          translateY.value = withSpring(0, RETURN_SPRING);
+          translateX.value = withSpring(0, RETURN_SPRING);
+          return;
+        }
+
+        isDismissing.value = true;
+        runOnJS(triggerSwipeHaptic)();
+
+        const target = -cardHeight * 1.45;
+        const duration = dismissDuration(Math.abs(target - y), event.velocityY);
+
+        translateY.value = withTiming(
+          target,
+          { duration, easing: DISMISS_EASING },
+          (finished) => {
+            if (finished) {
+              runOnJS(completeSwipeNext)();
+            }
+          },
+        );
+        translateX.value = withTiming(translateX.value * 1.55, {
+          duration,
+          easing: DISMISS_EASING,
+        });
+        return;
+      }
+
+      if (canSwipeBackSv.value === 0) {
+        translateY.value = withSpring(0, RETURN_SPRING);
+        translateX.value = withSpring(0, RETURN_SPRING);
+        return;
+      }
+
+      isDismissing.value = true;
+      runOnJS(triggerSwipeHaptic)();
+
+      const target = cardHeight * 1.45;
+      const duration = dismissDuration(Math.abs(target - y), event.velocityY);
+
+      translateY.value = withTiming(
+        target,
+        { duration, easing: DISMISS_EASING },
+        (finished) => {
+          if (finished) {
+            runOnJS(completeSwipePrevious)();
+          }
+        },
+      );
+      translateX.value = withTiming(translateX.value * 1.55, {
+        duration,
+        easing: DISMISS_EASING,
+      });
     });
 
+  const nextStackAnimatedStyle = useAnimatedStyle(() => {
+    const restingScale = 1 - EXPLORE_SWIPE_STACK_SCALE_STEP;
+
+    if (translateY.value >= 0) {
+      return {
+        opacity: 1,
+        transform: [
+          { translateY: EXPLORE_SWIPE_STACK_OFFSET_Y },
+          { scale: restingScale },
+        ],
+      };
+    }
+
+    const dragProgress = Math.min(
+      Math.abs(translateY.value) / (cardHeight * 0.42),
+      1,
+    );
+
+    return {
+      opacity: 1,
+      transform: [
+        {
+          translateY: EXPLORE_SWIPE_STACK_OFFSET_Y * (1 - dragProgress),
+        },
+        {
+          scale: restingScale + EXPLORE_SWIPE_STACK_SCALE_STEP * dragProgress,
+        },
+      ],
+    };
+  });
+
+  const previousStackAnimatedStyle = useAnimatedStyle(() => {
+    const restingScale = 1 - EXPLORE_SWIPE_STACK_SCALE_STEP;
+
+    if (translateY.value <= 0 || canSwipeBackSv.value === 0) {
+      return {
+        opacity: 0,
+        transform: [
+          { translateY: -EXPLORE_SWIPE_STACK_OFFSET_Y },
+          { scale: restingScale },
+        ],
+      };
+    }
+
+    const dragProgress = Math.min(translateY.value / (cardHeight * 0.42), 1);
+
+    return {
+      opacity: dragProgress,
+      transform: [
+        {
+          translateY: -EXPLORE_SWIPE_STACK_OFFSET_Y * (1 - dragProgress),
+        },
+        {
+          scale: restingScale + EXPLORE_SWIPE_STACK_SCALE_STEP * dragProgress,
+        },
+      ],
+    };
+  });
+
   const animatedStyle = useAnimatedStyle(() => {
+    const dragDistance = Math.hypot(translateX.value, translateY.value);
+
+    const dragOpacity = interpolate(
+      dragDistance,
+      [0, cardHeight * 0.5, cardHeight * 1.1],
+      [1, 0.94, 0.72],
+      Extrapolation.CLAMP,
+    );
+
+    const dragScale = interpolate(
+      dragDistance,
+      [0, cardHeight * 0.8],
+      [1, 0.96],
+      Extrapolation.CLAMP,
+    );
+
     const rotation =
       (translateX.value / Math.max(cardWidth, 1)) * EXPLORE_SWIPE_MAX_ROTATION;
 
     return {
+      opacity: dragOpacity,
       transform: [
         { translateX: translateX.value },
         { translateY: translateY.value },
         { rotate: `${rotation}deg` },
+        { scale: dragScale },
       ],
     };
   });
 
   return (
-    <GestureDetector gesture={pan}>
-      <Animated.View style={[styles.topCard, animatedStyle]}>
-        <ExploreSwipeCard
-          country={country}
-          width={cardWidth}
-          height={cardHeight}
-          interactive
-          onHeroIndexChange={setHeroIndex}
-        />
-      </Animated.View>
-    </GestureDetector>
+    <>
+      {nextCountry ? (
+        <Animated.View
+          style={[styles.stackCard, nextStackAnimatedStyle]}
+          pointerEvents="none"
+        >
+          <ExploreSwipeCard
+            country={nextCountry}
+            width={cardWidth}
+            height={cardHeight}
+            interactive={false}
+          />
+        </Animated.View>
+      ) : null}
+
+      {previousCountry ? (
+        <Animated.View
+          style={[styles.stackCard, previousStackAnimatedStyle]}
+          pointerEvents="none"
+        >
+          <ExploreSwipeCard
+            country={previousCountry}
+            width={cardWidth}
+            height={cardHeight}
+            interactive={false}
+          />
+        </Animated.View>
+      ) : null}
+
+      <GestureDetector gesture={pan}>
+        <Animated.View style={[styles.topCard, animatedStyle]}>
+          <ExploreSwipeCard
+            country={country}
+            width={cardWidth}
+            height={cardHeight}
+            interactive
+            heroIndex={heroIndex}
+            heroScrollEnabled
+            onHeroIndexChange={setHeroIndex}
+          />
+        </Animated.View>
+      </GestureDetector>
+    </>
   );
 }
 
@@ -180,19 +368,12 @@ export function ExploreSwipeDeck({
   const selectedRegion = useCountryFeedStore((s) => s.selectedRegion);
   const setRegionFilter = useCountryFeedStore((s) => s.setRegionFilter);
   const [deckLayout, setDeckLayout] = useState({ width: 0, height: 0 });
+  const currentCountry = countries[currentIndex];
+  const nextCountry = countries[currentIndex + 1];
+  const previousCountry =
+    currentIndex > 0 ? countries[currentIndex - 1] : undefined;
 
-  const visibleCountries = useMemo(() => {
-    const slice = countries.slice(
-      currentIndex,
-      currentIndex + EXPLORE_SWIPE_STACK_DEPTH + 1,
-    );
-    return slice.reverse();
-  }, [countries, currentIndex]);
-
-  const innerWidth = Math.max(
-    0,
-    deckLayout.width - EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING * 2,
-  );
+  const innerWidth = Math.max(0, deckLayout.width);
   const cardWidth = innerWidth;
   const cardHeight = Math.max(0, Math.round(deckLayout.height));
 
@@ -205,26 +386,23 @@ export function ExploreSwipeDeck({
     warmFeedHeroesOnSwipeBegin(countries, currentIndex);
   }, [countries, currentIndex]);
 
-  const handleDismiss = useCallback(
-    (_direction: SwipeDirection) => {
-      onIndexChange(currentIndex + 1);
+  const handleSwipeNext = useCallback(() => {
+    onIndexChange(currentIndex + 1);
 
-      const state = useCountryFeedStore.getState();
-      const nextIndex = currentIndex + 1;
-      if (
-        state.discoveryMode === "forYou" &&
-        state.nextCursor !== null &&
-        nextIndex >= state.countries.length - 2 &&
-        state.status !== "loading" &&
-        state.status !== "loadingMore"
-      ) {
-        onNeedMore();
-      }
-    },
-    [currentIndex, onIndexChange, onNeedMore],
-  );
+    const state = useCountryFeedStore.getState();
+    const nextIndex = currentIndex + 1;
+    if (
+      state.discoveryMode === "forYou" &&
+      state.nextCursor !== null &&
+      nextIndex >= state.countries.length - 2 &&
+      state.status !== "loading" &&
+      state.status !== "loadingMore"
+    ) {
+      onNeedMore();
+    }
+  }, [currentIndex, onIndexChange, onNeedMore]);
 
-  const handleGoBack = useCallback(() => {
+  const handleSwipePrevious = useCallback(() => {
     if (currentIndex <= 0) return;
     onIndexChange(currentIndex - 1);
   }, [currentIndex, onIndexChange]);
@@ -249,92 +427,68 @@ export function ExploreSwipeDeck({
 
     return (
       <View style={styles.deck} onLayout={onDeckLayout}>
-        {showRegionComplete ? (
-          <ExploreRegionCompleteState
-            region={selectedRegion}
-            cardWidth={cardWidth}
-            cardHeight={cardHeight}
-            onContinue={(nextRegion) => {
-              void setRegionFilter(nextRegion);
-            }}
-          />
-        ) : (
-          <View
-            style={[
-              styles.emptyState,
-              { width: cardWidth, height: cardHeight },
-            ]}
-          >
-            <Text style={styles.emptyTitle}>All caught up</Text>
-            <Text style={styles.emptySubtitle}>
-              Change your feed filters to discover more countries
-            </Text>
-          </View>
-        )}
+        <View style={styles.cardStage} pointerEvents="box-none">
+          {showRegionComplete ? (
+            <ExploreRegionCompleteState
+              region={selectedRegion}
+              cardWidth={cardWidth}
+              cardHeight={cardHeight}
+              onContinue={(nextRegion) => {
+                void setRegionFilter(nextRegion);
+              }}
+            />
+          ) : (
+            <View
+              style={[
+                styles.emptyState,
+                { width: cardWidth, height: cardHeight },
+              ]}
+            >
+              <Text style={styles.emptyTitle}>
+                {discoveryMode === "saved"
+                  ? "All saved countries viewed"
+                  : "All caught up"}
+              </Text>
+              <Text style={styles.emptySubtitle}>
+                {discoveryMode === "saved"
+                  ? "Save more countries or switch feeds to keep exploring"
+                  : "Change your feed filters to discover more countries"}
+              </Text>
+            </View>
+          )}
+        </View>
       </View>
     );
   }
 
   return (
     <View style={styles.deck} onLayout={onDeckLayout}>
-      <View
-        style={[
-          styles.stack,
-          {
-            width: cardWidth,
-            height: cardHeight,
-          },
-        ]}
-        pointerEvents="box-none"
-      >
-        {visibleCountries.map((country, reversedIndex) => {
-          const stackIndex = visibleCountries.length - 1 - reversedIndex;
-          const isTop = stackIndex === 0;
-
-          if (isTop) {
-            return (
-              <SwipeableTopCard
-                key={`${country.name}-${currentIndex}`}
-                country={country}
-                cardWidth={cardWidth}
-                cardHeight={cardHeight}
-                canGoBack={currentIndex > 0}
-                onDismiss={handleDismiss}
-                onGoBack={handleGoBack}
-                onSwipeBegin={handleSwipeBegin}
-              />
-            );
-          }
-
-          const scale = 1 - stackIndex * 0.03;
-          const offsetX = stackIndex * -6;
-          const offsetY = stackIndex * -8;
-
-          return (
-            <View
-              key={`${country.name}-${currentIndex + stackIndex}`}
-              style={[
-                styles.stackCard,
-                {
-                  transform: [
-                    { scale },
-                    { translateX: offsetX },
-                    { translateY: offsetY },
-                  ],
-                  zIndex: -stackIndex,
-                },
-              ]}
-              pointerEvents="none"
-            >
-              <ExploreSwipeCard
-                country={country}
-                width={cardWidth}
-                height={cardHeight}
-                interactive={false}
-              />
-            </View>
-          );
-        })}
+      <View style={styles.cardStage} pointerEvents="box-none">
+        <View
+          style={[
+            styles.stack,
+            {
+              width: cardWidth,
+              height: cardHeight,
+            },
+          ]}
+          pointerEvents="box-none"
+        >
+          {currentCountry ? (
+            <SwipeableTopCard
+              key={`${currentCountry.name}-${currentIndex}`}
+              country={currentCountry}
+              nextCountry={nextCountry}
+              previousCountry={previousCountry}
+              cardWidth={cardWidth}
+              cardHeight={cardHeight}
+              canGoBack={currentIndex > 0}
+              onSwipeNext={handleSwipeNext}
+              onSwipePrevious={handleSwipePrevious}
+              onSwipeBegin={handleSwipeBegin}
+            />
+          ) : null}
+        </View>
       </View>
     </View>
   );
@@ -343,22 +497,28 @@ export function ExploreSwipeDeck({
 const styles = StyleSheet.create({
   deck: {
     flex: 1,
+    position: "relative",
+    backgroundColor: "transparent",
+  },
+  cardStage: {
+    flex: 1,
+    zIndex: 1,
     justifyContent: "flex-start",
     alignItems: "center",
-    paddingHorizontal: EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING,
-    backgroundColor: "transparent",
   },
   stack: {
     position: "relative",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "flex-start",
+    overflow: "visible",
+  },
+  stackCard: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1,
   },
   topCard: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 10,
-  },
-  stackCard: {
-    ...StyleSheet.absoluteFillObject,
   },
   emptyState: {
     alignSelf: "center",

@@ -419,6 +419,16 @@ async function fetchImageHitsFromApis(
   return [];
 }
 
+/** Catalog build script — bypass Redis; hits upstream APIs directly. */
+export async function fetchCountryImageUrlsUncached(
+  countryName: string,
+  options?: ImageDisplayOptions,
+): Promise<string[]> {
+  const displayWidthPx = normalizeImageDisplayWidth(options?.displayWidthPx);
+  const hits = await fetchImageHitsFromApis(countryName);
+  return hitsToDisplayUrls(hits, displayWidthPx);
+}
+
 export async function getImagesForCountry(
   countryName: string,
   options?: ImageDisplayOptions,

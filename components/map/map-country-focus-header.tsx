@@ -7,15 +7,21 @@ import {
   EXPLORE_SWIPE_CARD_TITLE_COLOR,
   EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING,
   EXPLORE_SWIPE_TEXT_HEADER,
-  EXPLORE_SWIPE_TEXT_HEADER_LINE_HEIGHT,
   EXPLORE_SWIPE_TOUCH_TARGET,
 } from "@/constants/explore-swipe-layout";
 
 const HEADER_ROW_HEIGHT = EXPLORE_SWIPE_TOUCH_TARGET;
 const SCRIM_EXTRA_HEIGHT = 72;
 const COUNTRY_NAME_FONT_SIZE = EXPLORE_SWIPE_TEXT_HEADER;
-const COUNTRY_NAME_MIN_FONT_SIZE = 14;
 const HEADER_PADDING_TOP = 8;
+const HEADER_HORIZONTAL_PADDING = EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING;
+const HEADER_SIDE_BUTTON_SIZE = EXPLORE_SWIPE_TOUCH_TARGET;
+const HEADER_TITLE_GAP = 8;
+const HEADER_SIDE_INSET =
+  HEADER_HORIZONTAL_PADDING + HEADER_SIDE_BUTTON_SIZE + HEADER_TITLE_GAP;
+/** Matches trailing space in country detail sticky header title wrap. */
+const HEADER_TITLE_TRAILING_INSET =
+  HEADER_SIDE_INSET + HEADER_HORIZONTAL_PADDING;
 
 type MapCountryFocusHeaderProps = {
   countryName: string;
@@ -74,18 +80,12 @@ export function MapCountryFocusHeader({
           </Pressable>
 
           <View style={styles.titleWrap}>
-            <Text
-              style={styles.title}
-              numberOfLines={1}
-              ellipsizeMode="tail"
-              adjustsFontSizeToFit
-              minimumFontScale={
-                COUNTRY_NAME_MIN_FONT_SIZE / COUNTRY_NAME_FONT_SIZE
-              }
-            >
+            <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">
               {countryName}
             </Text>
           </View>
+
+          <View style={styles.titleTrailingInset} />
         </View>
       </View>
     </View>
@@ -121,12 +121,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     height: HEADER_ROW_HEIGHT,
-    paddingHorizontal: EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING,
-    gap: 8,
+    paddingHorizontal: HEADER_HORIZONTAL_PADDING,
+    gap: HEADER_TITLE_GAP,
   },
   backSlot: {
-    width: EXPLORE_SWIPE_TOUCH_TARGET,
-    height: EXPLORE_SWIPE_TOUCH_TARGET,
+    width: HEADER_SIDE_BUTTON_SIZE,
+    height: HEADER_SIDE_BUTTON_SIZE,
     flexShrink: 0,
     alignItems: "center",
     justifyContent: "center",
@@ -141,10 +141,16 @@ const styles = StyleSheet.create({
     height: HEADER_ROW_HEIGHT,
     justifyContent: "center",
   },
+  titleTrailingInset: {
+    width: HEADER_TITLE_TRAILING_INSET,
+    flexShrink: 0,
+  },
   title: {
+    width: "100%",
+    maxWidth: "100%",
     fontFamily: "Poppins-SemiBold",
     fontSize: COUNTRY_NAME_FONT_SIZE,
-    lineHeight: EXPLORE_SWIPE_TEXT_HEADER_LINE_HEIGHT,
+    lineHeight: HEADER_ROW_HEIGHT,
     letterSpacing: -0.2,
     color: EXPLORE_SWIPE_CARD_TITLE_COLOR,
     includeFontPadding: false,

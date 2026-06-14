@@ -1,14 +1,26 @@
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Platform, StyleSheet, View } from "react-native";
 
-import { ExploreSwipeCardInfoSkeleton } from "@/components/explore/explore-swipe-card-info-skeleton";
 import { ExploreSwipeHeader } from "@/components/explore/explore-swipe-header";
 import {
   SkeletonBone,
   useSkeletonPulse,
 } from "@/components/explore/skeleton-bone";
 import {
+  EXPLORE_SWIPE_ACTION_BUTTON_SIZE,
+  EXPLORE_SWIPE_CARD_BORDER,
+  EXPLORE_SWIPE_CARD_ELEVATION,
+  EXPLORE_SWIPE_CARD_FACT_LABEL_LINE_HEIGHT,
+  EXPLORE_SWIPE_CARD_HORIZONTAL_PADDING,
+  EXPLORE_SWIPE_CARD_IMAGE_FALLBACK,
   EXPLORE_SWIPE_CARD_INFO_BG,
+  EXPLORE_SWIPE_CARD_INFO_BORDER,
+  EXPLORE_SWIPE_CARD_INFO_HEADER_GAP,
+  EXPLORE_SWIPE_CARD_INFO_HEADER_MAX_HEIGHT,
+  EXPLORE_SWIPE_CARD_INFO_REGION_GAP,
+  EXPLORE_SWIPE_CARD_INFO_REGION_HEIGHT,
+  EXPLORE_SWIPE_CARD_INFO_REGION_PADDING_BOTTOM,
+  EXPLORE_SWIPE_CARD_INFO_REGION_PADDING_TOP,
+  EXPLORE_SWIPE_CARD_INFO_TITLE_ACTION_GAP,
   EXPLORE_SWIPE_CARD_RADIUS,
   EXPLORE_SWIPE_CARD_SHADOW,
   EXPLORE_SWIPE_CARD_SHADOW_OFFSET_Y,
@@ -19,10 +31,11 @@ import {
   EXPLORE_SWIPE_CAROUSEL_SEGMENT_WIDTH,
   EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING,
   EXPLORE_SWIPE_DECK_VERTICAL_GAP,
+  EXPLORE_SWIPE_TEXT_BODY_LINE_HEIGHT,
+  EXPLORE_SWIPE_TEXT_HEADER_LINE_HEIGHT,
 } from "@/constants/explore-swipe-layout";
 
 export function ExploreFeedSkeleton() {
-  const tabBarHeight = useBottomTabBarHeight();
   const pulse = useSkeletonPulse();
 
   return (
@@ -33,7 +46,7 @@ export function ExploreFeedSkeleton() {
         style={[
           styles.deckRegion,
           {
-            paddingBottom: tabBarHeight + EXPLORE_SWIPE_DECK_VERTICAL_GAP,
+            paddingBottom: EXPLORE_SWIPE_DECK_VERTICAL_GAP + 24,
           },
         ]}
       >
@@ -67,8 +80,58 @@ export function ExploreFeedSkeleton() {
               ))}
             </View>
           </View>
-          <View style={styles.infoBone}>
-            <ExploreSwipeCardInfoSkeleton />
+
+          <View style={styles.infoRegion}>
+            <View style={styles.titleRow}>
+              <View style={styles.titleBlock}>
+                <SkeletonBone
+                  pulse={pulse}
+                  width="62%"
+                  height={EXPLORE_SWIPE_TEXT_HEADER_LINE_HEIGHT}
+                  borderRadius={6}
+                  tone="info"
+                />
+                <SkeletonBone
+                  pulse={pulse}
+                  width="48%"
+                  height={EXPLORE_SWIPE_TEXT_BODY_LINE_HEIGHT}
+                  borderRadius={6}
+                  tone="info"
+                  style={{ marginTop: EXPLORE_SWIPE_CARD_INFO_HEADER_GAP }}
+                />
+              </View>
+              <SkeletonBone
+                pulse={pulse}
+                width={EXPLORE_SWIPE_ACTION_BUTTON_SIZE}
+                height={EXPLORE_SWIPE_ACTION_BUTTON_SIZE}
+                borderRadius={999}
+                tone="ring"
+              />
+            </View>
+
+            <View style={styles.factSection}>
+              <SkeletonBone
+                pulse={pulse}
+                width={88}
+                height={EXPLORE_SWIPE_CARD_FACT_LABEL_LINE_HEIGHT}
+                borderRadius={4}
+                tone="info"
+              />
+              <SkeletonBone
+                pulse={pulse}
+                width="100%"
+                height={EXPLORE_SWIPE_TEXT_BODY_LINE_HEIGHT}
+                borderRadius={6}
+                tone="info"
+              />
+              <SkeletonBone
+                pulse={pulse}
+                width="92%"
+                height={EXPLORE_SWIPE_TEXT_BODY_LINE_HEIGHT}
+                borderRadius={6}
+                tone="info"
+              />
+            </View>
           </View>
         </View>
       </View>
@@ -80,12 +143,12 @@ const styles = StyleSheet.create({
   feed: {
     flex: 1,
     backgroundColor: "transparent",
+    paddingHorizontal: EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING,
   },
   deckRegion: {
     flex: 1,
     justifyContent: "flex-start",
     alignItems: "center",
-    paddingHorizontal: EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING,
   },
   cardShell: {
     alignSelf: "stretch",
@@ -94,6 +157,8 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderRadius: EXPLORE_SWIPE_CARD_RADIUS,
     backgroundColor: EXPLORE_SWIPE_CARD_INFO_BG,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: EXPLORE_SWIPE_CARD_BORDER,
     ...Platform.select({
       ios: {
         shadowColor: EXPLORE_SWIPE_CARD_SHADOW,
@@ -105,7 +170,7 @@ const styles = StyleSheet.create({
         shadowRadius: EXPLORE_SWIPE_CARD_SHADOW_RADIUS,
       },
       android: {
-        elevation: 8,
+        elevation: EXPLORE_SWIPE_CARD_ELEVATION,
       },
       default: {},
     }),
@@ -113,6 +178,7 @@ const styles = StyleSheet.create({
   heroBoneShell: {
     flex: 1,
     minHeight: 0,
+    backgroundColor: EXPLORE_SWIPE_CARD_IMAGE_FALLBACK,
   },
   segmentBoneTrack: {
     position: "absolute",
@@ -129,13 +195,28 @@ const styles = StyleSheet.create({
   segmentBoneActive: {
     backgroundColor: "rgba(255, 255, 255, 0.28)",
   },
-  infoBone: {
+  infoRegion: {
     flexShrink: 0,
-    paddingTop: 14,
-    paddingBottom: 16,
-    gap: 12,
+    height: EXPLORE_SWIPE_CARD_INFO_REGION_HEIGHT,
+    paddingTop: EXPLORE_SWIPE_CARD_INFO_REGION_PADDING_TOP,
+    paddingBottom: EXPLORE_SWIPE_CARD_INFO_REGION_PADDING_BOTTOM,
+    paddingHorizontal: EXPLORE_SWIPE_CARD_HORIZONTAL_PADDING,
     backgroundColor: EXPLORE_SWIPE_CARD_INFO_BG,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(255, 255, 255, 0.1)",
+    borderTopColor: EXPLORE_SWIPE_CARD_INFO_BORDER,
+  },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: EXPLORE_SWIPE_CARD_INFO_HEADER_MAX_HEIGHT,
+    gap: EXPLORE_SWIPE_CARD_INFO_TITLE_ACTION_GAP,
+  },
+  titleBlock: {
+    flex: 1,
+    minWidth: 0,
+  },
+  factSection: {
+    marginTop: EXPLORE_SWIPE_CARD_INFO_REGION_GAP,
+    gap: 8,
   },
 });

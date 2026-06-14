@@ -127,7 +127,7 @@ export default function ProfileScreen() {
               trailing="flags"
               visitedCountries={stats.topVisitedCountries}
               totalVisited={stats.countriesExplored}
-              onPress={() => router.push("/(tabs)/map")}
+              interactive={false}
             />
             <ProfileNavRow
               icon="map-outline"
