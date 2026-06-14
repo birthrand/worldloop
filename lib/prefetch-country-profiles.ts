@@ -5,9 +5,14 @@ import {
   getCachedCountryProfile,
   hydrateCountryProfileFromDisk,
   isCountryProfileEnriched,
+  seedStaticCountryProfileIfAvailable,
   setCachedCountryProfile,
   type CachedCountryProfile,
 } from "@/lib/country-profile-cache";
+import {
+  isStaticCountryProfileCatalogEnabled,
+  isStaticCountryProfileEnriched,
+} from "@/lib/static-country-profiles";
 import type { Country } from "@/types/country";
 
 const PREFETCH_AHEAD = 2;
@@ -21,22 +26,33 @@ function profileKey(name: string): string {
   return name.trim().toLowerCase();
 }
 
+function shouldFetchCountryProfile(name: string): boolean {
+  if (
+    isStaticCountryProfileCatalogEnabled() &&
+    isStaticCountryProfileEnriched(name)
+  ) {
+    return false;
+  }
+
+  return !isCountryProfileEnriched(getCachedCountryProfile(name), name);
+}
+
 async function fetchAndCacheProfile(name: string): Promise<void> {
   const trimmed = name.trim();
   if (!trimmed) return;
 
   await hydrateCountryProfileFromDisk(trimmed);
+  seedStaticCountryProfileIfAvailable(trimmed);
 
   const cachedProfile = getCachedCountryProfile(trimmed);
-  if (isCountryProfileEnriched(cachedProfile)) {
+  if (!shouldFetchCountryProfile(trimmed)) {
     return;
   }
 
   await staleWhileRevalidate({
     key: CLIENT_CACHE_KEYS.countryProfile(trimmed),
     ttlSeconds: CLIENT_CACHE_TTL.countryProfile,
-    // Bypass a "fresh" disk entry that lacks Wikipedia — always revalidate until enriched.
-    force: !isCountryProfileEnriched(cachedProfile),
+    force: !isCountryProfileEnriched(cachedProfile, trimmed),
     fetcher: async () => {
       const data = await fetchCountryProfile(trimmed);
       const profile: CachedCountryProfile = {
@@ -47,7 +63,9 @@ async function fetchAndCacheProfile(name: string): Promise<void> {
       return setCachedCountryProfile(trimmed, profile);
     },
     onCached: (profile) => {
-      if (!isCountryProfileEnriched(getCachedCountryProfile(trimmed))) {
+      if (
+        !isCountryProfileEnriched(getCachedCountryProfile(trimmed), trimmed)
+      ) {
         setCachedCountryProfile(trimmed, profile);
       }
     },
@@ -105,7 +123,13 @@ export async function ensureCountryProfileReady(
   await hydrateCountryProfileFromDisk(trimmed);
 
   let cached = getCachedCountryProfile(trimmed);
-  if (isCountryProfileEnriched(cached)) {
+  if (isCountryProfileEnriched(cached, trimmed)) {
+    return cached ?? null;
+  }
+
+  seedStaticCountryProfileIfAvailable(trimmed);
+  cached = getCachedCountryProfile(trimmed);
+  if (isCountryProfileEnriched(cached, trimmed)) {
     return cached ?? null;
   }
 

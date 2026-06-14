@@ -14,7 +14,9 @@
     "catalog:build": "tsx scripts/build-countries-catalog.ts",
     "catalog:refresh-ai": "tsx scripts/refresh-catalog-ai.ts",
     "catalog:sync-ai-redis": "tsx scripts/sync-catalog-ai-from-redis.ts",
-    "catalog:validate": "tsx scripts/validate-countries-catalog.ts"
+    "catalog:validate": "tsx scripts/validate-countries-catalog.ts",
+    "profiles:build": "tsx scripts/build-country-profiles.ts",
+    "profiles:validate": "tsx scripts/validate-country-profiles.ts"
   },
   "dependencies": {
     "@clerk/expo": "^3.4.1",

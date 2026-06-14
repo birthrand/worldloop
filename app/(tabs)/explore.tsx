@@ -11,6 +11,7 @@ import { useSpatialContextStore } from "@/store/use-spatial-context-store";
 
 export default function ExploreScreen() {
   const countries = useCountryFeedStore((s) => s.countries);
+  const places = useCountryFeedStore((s) => s.places);
   const currentIndex = useCountryFeedStore((s) => s.currentIndex);
   const selectedRegion = useCountryFeedStore((s) => s.selectedRegion);
   const discoveryMode = useCountryFeedStore((s) => s.discoveryMode);
@@ -21,7 +22,13 @@ export default function ExploreScreen() {
   const viewportCountries = useSpatialContextStore((s) => s.viewportCountries);
 
   useEffect(() => {
-    if (discoveryMode === "here" || discoveryMode === "saved") return;
+    if (
+      discoveryMode === "here" ||
+      discoveryMode === "saved" ||
+      discoveryMode === "places"
+    ) {
+      return;
+    }
     if (
       countries.length === 0 &&
       status === "idle" &&
@@ -60,20 +67,32 @@ export default function ExploreScreen() {
     discoveryMode === "here" &&
     countries.length === 0 &&
     (status === "loading" || status === "idle");
+  const showPlacesLoading =
+    discoveryMode === "places" &&
+    places.length === 0 &&
+    (status === "loading" || status === "idle");
   const showError =
-    countries.length === 0 &&
+    (discoveryMode === "places"
+      ? places.length === 0
+      : countries.length === 0) &&
     status === "error" &&
     (discoveryMode === "forYou"
       ? selectedRegion === null
       : discoveryMode === "here" ||
         discoveryMode === "saved" ||
+        discoveryMode === "places" ||
         selectedRegion !== null);
   const showFeed =
     countries.length > 0 ||
+    places.length > 0 ||
     selectedRegion !== null ||
     discoveryMode === "here" ||
-    discoveryMode === "saved";
-  const activeCountry = countries[currentIndex];
+    discoveryMode === "saved" ||
+    discoveryMode === "places";
+  const activeCountry =
+    discoveryMode === "places"
+      ? places[currentIndex]?.country
+      : countries[currentIndex];
 
   return (
     <View style={styles.screen}>
@@ -92,10 +111,14 @@ export default function ExploreScreen() {
               void useCountryFeedStore.getState().loadSavedFeed();
               return;
             }
+            if (discoveryMode === "places") {
+              void useCountryFeedStore.getState().loadPlacesFeed();
+              return;
+            }
             void loadInitialFeed();
           }}
         />
-      ) : showInitialLoading || showHereLoading ? (
+      ) : showInitialLoading || showHereLoading || showPlacesLoading ? (
         <ExploreFeedSkeleton />
       ) : showFeed ? (
         <ExploreFeed />

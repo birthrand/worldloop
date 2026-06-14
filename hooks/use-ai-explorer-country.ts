@@ -8,8 +8,18 @@ import {
   hydrateCountryProfileFromDisk,
   isCountryProfileEnriched,
   seedCachedCountryProfile,
+  seedStaticCountryProfileIfAvailable,
 } from "@/lib/country-profile-cache";
 import { prefetchCountryProfile } from "@/lib/prefetch-country-profiles";
+import {
+  getStaticCountryByName,
+  isStaticCountryCatalogEnabled,
+} from "@/lib/static-countries";
+import {
+  getStaticCountryProfileByName,
+  isStaticCountryProfileCatalogEnabled,
+  isStaticCountryProfileEnriched,
+} from "@/lib/static-country-profiles";
 import { useCountryFeedStore } from "@/store/use-country-feed-store";
 import type { Country } from "@/types/country";
 
@@ -17,58 +27,100 @@ type UseAiExplorerCountryResult = {
   country: Country;
   wikipedia: CountryWikipediaSummary | null;
   landmarks: CountryLandmark[];
-  /** True only when there is no cached/feed data to show yet. */
+  /** True only when there is no cached/feed/static data to show yet. */
   loading: boolean;
   /** Background refresh while stale content is visible. */
   refreshing: boolean;
   error: string | null;
 };
 
-function resolveInitialProfile(
-  routeName: string,
-  feedMatch: Country | null | undefined,
-): {
+type ResolvedProfile = {
   country: Country;
   wikipedia: CountryWikipediaSummary | null;
   landmarks: CountryLandmark[];
-} {
-  const cached = routeName ? getCachedCountryProfile(routeName) : undefined;
-  if (cached) {
-    return {
-      country: cached.country,
-      wikipedia: cached.wikipedia,
-      landmarks: cached.landmarks,
-    };
-  }
-  if (feedMatch) {
-    seedCachedCountryProfile(feedMatch);
-    return { country: feedMatch, wikipedia: null, landmarks: [] };
-  }
-  return {
-    country: NIGERIA_FALLBACK_COUNTRY,
-    wikipedia: null,
-    landmarks: [],
-  };
-}
+};
 
-function applyCachedProfile(
+function resolveCountry(
   targetName: string,
   feedMatch: Country | null | undefined,
-): ReturnType<typeof resolveInitialProfile> {
+): Country {
+  const cached = getCachedCountryProfile(targetName)?.country;
+  if (cached) return cached;
+  if (feedMatch) return feedMatch;
+
+  if (isStaticCountryCatalogEnabled()) {
+    return getStaticCountryByName(targetName) ?? NIGERIA_FALLBACK_COUNTRY;
+  }
+
+  return NIGERIA_FALLBACK_COUNTRY;
+}
+
+function resolveEnrichment(targetName: string): {
+  wikipedia: CountryWikipediaSummary | null;
+  landmarks: CountryLandmark[];
+} {
   const cached = getCachedCountryProfile(targetName);
   if (cached) {
     return {
-      country: cached.country,
       wikipedia: cached.wikipedia,
       landmarks: cached.landmarks,
     };
   }
 
-  if (feedMatch?.name.toLowerCase() === targetName.toLowerCase()) {
-    return { country: feedMatch, wikipedia: null, landmarks: [] };
+  const staticProfile = getStaticCountryProfileByName(targetName);
+  if (staticProfile) {
+    return {
+      wikipedia: staticProfile.wikipedia,
+      landmarks: staticProfile.landmarks,
+    };
   }
 
-  return resolveInitialProfile(targetName, feedMatch);
+  return { wikipedia: null, landmarks: [] };
+}
+
+function resolveProfile(
+  targetName: string,
+  feedMatch: Country | null | undefined,
+): ResolvedProfile {
+  seedStaticCountryProfileIfAvailable(
+    targetName,
+    feedMatch ?? getStaticCountryByName(targetName) ?? undefined,
+  );
+
+  if (feedMatch) {
+    seedCachedCountryProfile(feedMatch);
+  }
+
+  const country = resolveCountry(targetName, feedMatch);
+  const enrichment = resolveEnrichment(targetName);
+
+  return {
+    country,
+    wikipedia: enrichment.wikipedia,
+    landmarks: enrichment.landmarks,
+  };
+}
+
+function hasImmediateOverview(
+  country: Country,
+  wikipedia: CountryWikipediaSummary | null,
+): boolean {
+  return Boolean(
+    wikipedia?.extract?.trim() ||
+    country.ai?.caption?.trim() ||
+    country.ai?.fact?.trim(),
+  );
+}
+
+function hasResolvableCountry(
+  targetName: string,
+  feedMatch: Country | null | undefined,
+): boolean {
+  return Boolean(
+    getCachedCountryProfile(targetName)?.country ||
+    feedMatch ||
+    (isStaticCountryCatalogEnabled() && getStaticCountryByName(targetName)),
+  );
 }
 
 export function useAiExplorerCountry(): UseAiExplorerCountryResult {
@@ -90,7 +142,7 @@ export function useAiExplorerCountry(): UseAiExplorerCountryResult {
   const targetName = routeName || NIGERIA_FALLBACK_COUNTRY.name;
 
   const initial = useMemo(
-    () => resolveInitialProfile(targetName, feedMatch),
+    () => resolveProfile(targetName, feedMatch),
     [targetName, feedMatch],
   );
 
@@ -102,13 +154,9 @@ export function useAiExplorerCountry(): UseAiExplorerCountryResult {
     initial.landmarks,
   );
   const [loading, setLoading] = useState(
-    () =>
-      !isCountryProfileEnriched(getCachedCountryProfile(targetName)) &&
-      !feedMatch,
+    () => !hasResolvableCountry(targetName, feedMatch),
   );
-  const [refreshing, setRefreshing] = useState(
-    () => !getCachedCountryProfile(targetName)?.wikipedia?.extract?.trim(),
-  );
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -131,28 +179,41 @@ export function useAiExplorerCountry(): UseAiExplorerCountryResult {
   useEffect(() => {
     let cancelled = false;
 
-    const syncFromCache = () => {
-      const profile = applyCachedProfile(targetName, feedMatch);
+    const syncFromCache = (): ResolvedProfile => {
+      const profile = resolveProfile(targetName, feedMatch);
       setCountry(profile.country);
       setWikipedia(profile.wikipedia);
       setLandmarks(profile.landmarks);
-
       setLoading(false);
       setError(null);
+      return profile;
     };
 
-    const needsWikipedia =
-      !getCachedCountryProfile(targetName)?.wikipedia?.extract?.trim();
-
-    syncFromCache();
-    if (needsWikipedia) {
-      setRefreshing(true);
-    }
+    const profile = syncFromCache();
 
     void hydrateCountryProfileFromDisk(targetName).then(() => {
       if (cancelled) return;
       syncFromCache();
     });
+
+    const needsNetwork =
+      !(
+        isStaticCountryProfileCatalogEnabled() &&
+        isStaticCountryProfileEnriched(targetName)
+      ) &&
+      !isCountryProfileEnriched(
+        getCachedCountryProfile(targetName),
+        targetName,
+      );
+
+    if (!needsNetwork) {
+      setRefreshing(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setRefreshing(!hasImmediateOverview(profile.country, profile.wikipedia));
 
     void prefetchCountryProfile(targetName).finally(() => {
       if (cancelled) return;

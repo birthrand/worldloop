@@ -68,17 +68,24 @@ export function ExploreSwipeHeader({
   const openSearch = useSearchUiStore((s) => s.openSearch);
   const isSearchOpen = useSearchUiStore((s) => s.isOpen && s.context !== "map");
   const countries = useCountryFeedStore((s) => s.countries);
+  const places = useCountryFeedStore((s) => s.places);
   const currentIndex = useCountryFeedStore((s) => s.currentIndex);
   const sortField = useCountryFeedStore((s) => s.sortField);
   const sortOrder = useCountryFeedStore((s) => s.sortOrder);
   const discoveryMode = useCountryFeedStore((s) => s.discoveryMode);
-  const currentCountry = countries[currentIndex];
+  const currentCountry =
+    discoveryMode === "places"
+      ? places[currentIndex]?.country
+      : countries[currentIndex];
   const hasCustomSort = getExploreHasCustomSort(sortField, sortOrder);
 
   const [isFeedMenuOpen, setIsFeedMenuOpen] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const feedMenuActive =
-    isFeedMenuOpen || discoveryMode === "saved" || discoveryMode === "region";
+    isFeedMenuOpen ||
+    discoveryMode === "saved" ||
+    discoveryMode === "region" ||
+    discoveryMode === "places";
 
   useEffect(() => {
     setIsFeedMenuOpen(false);
@@ -116,6 +123,10 @@ export function ExploreSwipeHeader({
           {title}
         </Text>
       </View>
+
+      {discoveryMode === "places" ? (
+        <Text style={styles.modeSubtitle}>Places</Text>
+      ) : null}
 
       <ExploreFeedMenuSheet
         visible={isFeedMenuOpen}
@@ -181,5 +192,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
     color: EXPLORE_SWIPE_HEADER_TITLE_COLOR,
     includeFontPadding: false,
+  },
+  modeSubtitle: {
+    marginTop: 2,
+    textAlign: "center",
+    fontSize: 11,
+    lineHeight: 14,
+    fontFamily: "Poppins-Regular",
+    color: "rgba(255, 255, 255, 0.82)",
   },
 });

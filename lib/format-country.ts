@@ -24,6 +24,16 @@ export function formatLandmarkDescription(description: string): string {
   return first.toUpperCase() + trimmed.slice(1);
 }
 
+/** Compact landmark type for card subtitles (e.g. UNESCO World Heritage Site → UNESCO Site). */
+export function formatLandmarkTypeDisplay(type?: string): string {
+  const trimmed = type?.trim();
+  if (!trimmed) return "Landmark";
+  if (/^unesco world heritage site$/i.test(trimmed)) {
+    return "UNESCO Site";
+  }
+  return trimmed;
+}
+
 /** Compact population label (e.g. 33.7M). */
 export function formatPopulation(population: number): string {
   // Runtime safety: backend responses can occasionally miss population,

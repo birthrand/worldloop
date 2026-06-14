@@ -25,6 +25,7 @@ import {
   FOR_YOU_TAB,
   HERE_TAB,
   isContinent,
+  PLACES_TAB,
   SAVED_TAB,
   type ExploreHeaderTab,
 } from "@/constants/regions";
@@ -120,9 +121,11 @@ export function ExploreFeedMenuSheet({
   const selectedRegion = useCountryFeedStore((s) => s.selectedRegion);
   const discoveryMode = useCountryFeedStore((s) => s.discoveryMode);
   const countryCount = useCountryFeedStore((s) => s.countries.length);
+  const placesCount = useCountryFeedStore((s) => s.places.length);
   const restoreForYouFeed = useCountryFeedStore((s) => s.restoreForYouFeed);
   const setRegionFilter = useCountryFeedStore((s) => s.setRegionFilter);
   const loadSavedFeed = useCountryFeedStore((s) => s.loadSavedFeed);
+  const loadPlacesFeed = useCountryFeedStore((s) => s.loadPlacesFeed);
   const savedCount = useSavedCountriesStore((s) => s.savedCountries.length);
   const focusedRegion = useSpatialContextStore(
     (s) => s.discoveryScope.focusedRegion,
@@ -130,17 +133,25 @@ export function ExploreFeedMenuSheet({
 
   const headerTabs: ExploreHeaderTab[] =
     discoveryMode === "here"
-      ? [FOR_YOU_TAB, SAVED_TAB, HERE_TAB, ...EXPLORE_HEADER_TABS.slice(1)]
-      : [FOR_YOU_TAB, SAVED_TAB, ...EXPLORE_HEADER_TABS.slice(1)];
+      ? [
+          FOR_YOU_TAB,
+          SAVED_TAB,
+          PLACES_TAB,
+          HERE_TAB,
+          ...EXPLORE_HEADER_TABS.slice(1),
+        ]
+      : [FOR_YOU_TAB, SAVED_TAB, PLACES_TAB, ...EXPLORE_HEADER_TABS.slice(1)];
 
   const selectedTab: ExploreHeaderTab =
     discoveryMode === "saved"
       ? SAVED_TAB
-      : discoveryMode === "here"
-        ? HERE_TAB
-        : selectedRegion === null
-          ? FOR_YOU_TAB
-          : (selectedRegion as ExploreHeaderTab);
+      : discoveryMode === "places"
+        ? PLACES_TAB
+        : discoveryMode === "here"
+          ? HERE_TAB
+          : selectedRegion === null
+            ? FOR_YOU_TAB
+            : (selectedRegion as ExploreHeaderTab);
 
   const hereScopeLabel = focusedRegion
     ? continentDisplayLabel(focusedRegion)
@@ -163,6 +174,16 @@ export function ExploreFeedMenuSheet({
         return;
       }
       void loadSavedFeed();
+      onClose();
+      return;
+    }
+
+    if (name === PLACES_TAB) {
+      if (discoveryMode === "places") {
+        onClose();
+        return;
+      }
+      void loadPlacesFeed();
       onClose();
       return;
     }
@@ -283,11 +304,15 @@ export function ExploreFeedMenuSheet({
                           ? selected
                             ? `Saved countries, ${savedCount} items`
                             : `Show ${savedCount} saved countries as a swipe deck`
-                          : name === HERE_TAB
-                            ? `Here mode: ${hereScopeLabel}, ${countryCount} countries`
-                            : selected
-                              ? `Clear ${name} filter and show For You feed`
-                              : `Show countries in ${name}`;
+                          : name === PLACES_TAB
+                            ? selected
+                              ? `Places mode, ${placesCount} landmarks`
+                              : "Show landmarks from your For You country pool"
+                            : name === HERE_TAB
+                              ? `Here mode: ${hereScopeLabel}, ${countryCount} countries`
+                              : selected
+                                ? `Clear ${name} filter and show For You feed`
+                                : `Show countries in ${name}`;
 
                     const label =
                       name === FOR_YOU_TAB
@@ -296,9 +321,13 @@ export function ExploreFeedMenuSheet({
                           ? savedCount > 0
                             ? `${name} (${savedCount})`
                             : name
-                          : name === HERE_TAB
-                            ? name
-                            : continentTabLabel(name, true);
+                          : name === PLACES_TAB
+                            ? placesCount > 0 && discoveryMode === "places"
+                              ? `${name} (${placesCount})`
+                              : name
+                            : name === HERE_TAB
+                              ? name
+                              : continentTabLabel(name, true);
 
                     return (
                       <View key={name}>

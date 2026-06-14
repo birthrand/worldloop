@@ -1,6 +1,12 @@
 import { CLIENT_CACHE_KEYS, CLIENT_CACHE_TTL } from "@/constants/client-cache";
 import type { CountryLandmark, CountryWikipediaSummary } from "@/lib/api";
 import { getClientCache, setClientCache } from "@/lib/client-cache";
+import { getStaticCountryByName } from "@/lib/static-countries";
+import {
+  getStaticCountryProfileByName,
+  isStaticCountryProfileCatalogEnabled,
+  isStaticCountryProfileEnriched,
+} from "@/lib/static-country-profiles";
 import type { Country } from "@/types/country";
 
 export type CachedCountryProfile = {
@@ -82,11 +88,52 @@ export function getCachedCountryProfile(
 
 export function isCountryProfileEnriched(
   profile: CachedCountryProfile | undefined,
+  countryName?: string,
 ): boolean {
-  return Boolean(
+  if (
     profile?.wikipedia?.extract?.trim() ||
-    (profile?.landmarks?.length ?? 0) > 0,
-  );
+    (profile?.landmarks?.length ?? 0) > 0
+  ) {
+    return true;
+  }
+
+  const name = countryName?.trim() || profile?.country?.name?.trim();
+  if (name && isStaticCountryProfileCatalogEnabled()) {
+    return isStaticCountryProfileEnriched(name);
+  }
+
+  return false;
+}
+
+function resolveStaticEnrichment(name: string): {
+  wikipedia: CountryWikipediaSummary | null;
+  landmarks: CountryLandmark[];
+} {
+  const staticProfile = getStaticCountryProfileByName(name);
+  return {
+    wikipedia: staticProfile?.wikipedia ?? null,
+    landmarks: staticProfile?.landmarks ?? [],
+  };
+}
+
+/** Hydrate memory from bundled profile enrichment when available. */
+export function seedStaticCountryProfileIfAvailable(
+  name: string,
+  country?: Country,
+): CachedCountryProfile | null {
+  const trimmed = name.trim();
+  if (!trimmed || !isStaticCountryProfileCatalogEnabled()) return null;
+  if (!isStaticCountryProfileEnriched(trimmed)) return null;
+
+  const resolvedCountry = country ?? getStaticCountryByName(trimmed);
+  if (!resolvedCountry) return null;
+
+  const enrichment = resolveStaticEnrichment(trimmed);
+  return setMemoryProfile(trimmed, {
+    country: resolvedCountry,
+    wikipedia: enrichment.wikipedia,
+    landmarks: enrichment.landmarks,
+  });
 }
 
 /** Full explorer payload from API — memory always; disk only when Wikipedia is present. */
@@ -107,10 +154,19 @@ export function setCachedCountryProfile(
  */
 export function seedCachedCountryProfile(country: Country): void {
   const existing = getCachedCountryProfile(country.name);
+  const staticEnrichment = isStaticCountryProfileCatalogEnabled()
+    ? resolveStaticEnrichment(country.name)
+    : null;
+
   setMemoryProfile(country.name, {
     country,
-    wikipedia: existing?.wikipedia ?? null,
-    landmarks: existing?.landmarks ?? [],
+    wikipedia: existing?.wikipedia?.extract?.trim()
+      ? existing.wikipedia
+      : (staticEnrichment?.wikipedia ?? null),
+    landmarks:
+      (existing?.landmarks?.length ?? 0) > 0
+        ? (existing?.landmarks ?? [])
+        : (staticEnrichment?.landmarks ?? []),
   });
 }
 
@@ -123,8 +179,14 @@ export async function hydrateCountryProfileFromDisk(
 
   const key = cacheKey(trimmed);
   const inMemory = getCachedCountryProfile(trimmed);
-  if (inMemory && isCountryProfileEnriched(inMemory)) {
+  if (inMemory && isCountryProfileEnriched(inMemory, trimmed)) {
     return inMemory;
+  }
+
+  seedStaticCountryProfileIfAvailable(trimmed);
+  const afterStatic = getCachedCountryProfile(trimmed);
+  if (afterStatic && isCountryProfileEnriched(afterStatic, trimmed)) {
+    return afterStatic;
   }
 
   const inFlight = hydrateInFlight.get(key);

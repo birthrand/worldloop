@@ -13,6 +13,7 @@ import {
   staleWhileRevalidate,
 } from "@/lib/client-cache";
 import { fetchExploreRegionCountries } from "@/lib/explore-region-countries";
+import { flattenLandmarksForFeed } from "@/lib/flatten-landmarks-for-feed";
 import { loadCountriesForDiscovery } from "@/lib/load-countries-for-discovery";
 import { prefetchCountryProfiles } from "@/lib/prefetch-country-profiles";
 import {
@@ -31,11 +32,13 @@ import { useSavedCountriesStore } from "@/store/use-saved-countries-store";
 import { useSpatialContextStore } from "@/store/use-spatial-context-store";
 import type { Country } from "@/types/country";
 import type { DiscoveryScopeMode, GeoEntity } from "@/types/geo";
+import type { PlaceFeedItem } from "@/types/place-feed";
 
 let regionFilterGeneration = 0;
 let regionPrefetchGeneration = 0;
 let hereFeedGeneration = 0;
 let savedFeedGeneration = 0;
+let placesFeedGeneration = 0;
 const regionFetchPromises = new Map<string, Promise<Country[]>>();
 
 const DEFAULT_LIMIT = 20;
@@ -54,6 +57,7 @@ type ForYouSnapshot = {
 
 type CountryFeedState = {
   countries: Country[];
+  places: PlaceFeedItem[];
   nextCursor: string | null;
   currentIndex: number;
   /** Bumped when opening a country from search/home so Explore remounts at index 0. */
@@ -86,6 +90,7 @@ type CountryFeedState = {
     options?: { focusCountryName?: string },
   ) => Promise<void>;
   loadSavedFeed: () => Promise<void>;
+  loadPlacesFeed: () => Promise<void>;
   setDiscoveryMode: (mode: DiscoveryScopeMode) => void;
   restoreForYouFeed: () => Promise<void>;
   getCurrentCountry: () => Country | undefined;
@@ -195,6 +200,26 @@ function cancelRegionPrefetch(): void {
   regionPrefetchGeneration += 1;
 }
 
+function resolvePlacesCountryPool(): Country[] {
+  const { forYouSnapshot, countries, discoveryMode } =
+    useCountryFeedStore.getState();
+
+  if (forYouSnapshot?.countries.length) {
+    return forYouSnapshot.countries;
+  }
+
+  if (discoveryMode === "forYou" && countries.length > 0) {
+    return countries;
+  }
+
+  if (isStaticCountryCatalogEnabled()) {
+    const page = getStaticFeedPage(undefined, DEFAULT_LIMIT);
+    return page.countries;
+  }
+
+  return countries;
+}
+
 function snapshotForYouIfNeeded(): void {
   const { forYouSnapshot, nextCursor, discoveryMode, countries } =
     useCountryFeedStore.getState();
@@ -290,6 +315,7 @@ function prefetchRegionsSequentially(excludeRegion?: string | null): void {
 
 export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
   countries: [],
+  places: [],
   nextCursor: null,
   currentIndex: 0,
   focusEpoch: 0,
@@ -504,6 +530,7 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
     const requestId = ++regionFilterGeneration;
     hereFeedGeneration += 1;
     savedFeedGeneration += 1;
+    placesFeedGeneration += 1;
 
     if (region === null) {
       await get().restoreForYouFeed();
@@ -713,19 +740,24 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
   },
 
   setCurrentIndex: (index: number) => {
-    const { countries } = get();
-    if (countries.length === 0) {
+    const { countries, places, discoveryMode } = get();
+    const queueLength =
+      discoveryMode === "places" ? places.length : countries.length;
+
+    if (queueLength === 0) {
       set({ currentIndex: 0 });
       return;
     }
-    // Allow `countries.length` as a past-end sentinel for the "All caught up" deck state.
-    const clamped = Math.max(0, Math.min(index, countries.length));
+
+    // Allow queue length as a past-end sentinel for the "All caught up" deck state.
+    const clamped = Math.max(0, Math.min(index, queueLength));
     set({ currentIndex: clamped });
   },
 
   loadHereFeed: async (entities, options) => {
     const requestId = ++hereFeedGeneration;
     savedFeedGeneration += 1;
+    placesFeedGeneration += 1;
     const { queue } = useSpatialContextStore.getState();
     const orderedEntities =
       queue.length > 0
@@ -858,6 +890,7 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
     const requestId = ++savedFeedGeneration;
     regionFilterGeneration += 1;
     hereFeedGeneration += 1;
+    placesFeedGeneration += 1;
 
     snapshotForYouIfNeeded();
 
@@ -921,6 +954,63 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
     }
   },
 
+  loadPlacesFeed: async () => {
+    const requestId = ++placesFeedGeneration;
+    regionFilterGeneration += 1;
+    hereFeedGeneration += 1;
+    savedFeedGeneration += 1;
+
+    snapshotForYouIfNeeded();
+
+    set({
+      discoveryMode: "places",
+      selectedRegion: null,
+      places: [],
+      currentIndex: 0,
+      nextCursor: null,
+      status: "loading",
+      error: null,
+    });
+
+    try {
+      const countryPool = resolvePlacesCountryPool();
+      const places = await flattenLandmarksForFeed(countryPool);
+      if (requestId !== placesFeedGeneration) return;
+
+      if (places.length === 0) {
+        set({
+          places: [],
+          currentIndex: 0,
+          discoveryMode: "places",
+          selectedRegion: null,
+          nextCursor: null,
+          status: "idle",
+          error: null,
+        });
+        return;
+      }
+
+      set({
+        places,
+        currentIndex: 0,
+        discoveryMode: "places",
+        selectedRegion: null,
+        nextCursor: null,
+        status: "idle",
+        error: null,
+      });
+    } catch (err) {
+      if (requestId !== placesFeedGeneration) return;
+
+      set({
+        places: [],
+        status: "error",
+        error:
+          err instanceof Error ? err.message : "Failed to load places feed",
+      });
+    }
+  },
+
   setDiscoveryMode: (mode) => {
     set({ discoveryMode: mode });
   },
@@ -929,6 +1019,7 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
     regionFilterGeneration += 1;
     hereFeedGeneration += 1;
     savedFeedGeneration += 1;
+    placesFeedGeneration += 1;
     const restoreRegionGen = regionFilterGeneration;
     const restoreHereGen = hereFeedGeneration;
 
@@ -1038,10 +1129,12 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
     regionFilterGeneration += 1;
     hereFeedGeneration += 1;
     savedFeedGeneration += 1;
+    placesFeedGeneration += 1;
     cancelRegionPrefetch();
     regionFetchPromises.clear();
     set({
       countries: [],
+      places: [],
       nextCursor: null,
       currentIndex: 0,
       focusEpoch: 0,

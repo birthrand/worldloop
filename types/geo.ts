@@ -21,7 +21,12 @@ export type GeoEntity = {
   bbox: BBox;
 };
 
-export type DiscoveryScopeMode = "forYou" | "here" | "region" | "saved";
+export type DiscoveryScopeMode =
+  | "forYou"
+  | "here"
+  | "region"
+  | "saved"
+  | "places";
 
 export type DiscoveryScope = {
   mode: DiscoveryScopeMode;

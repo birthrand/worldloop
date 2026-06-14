@@ -24,6 +24,7 @@ import { useSpatialContextStore } from "@/store/use-spatial-context-store";
 
 export function ExploreFeed() {
   const countries = useCountryFeedStore((s) => s.countries);
+  const places = useCountryFeedStore((s) => s.places);
   const currentIndex = useCountryFeedStore((s) => s.currentIndex);
   const selectedRegion = useCountryFeedStore((s) => s.selectedRegion);
   const discoveryMode = useCountryFeedStore((s) => s.discoveryMode);
@@ -34,9 +35,12 @@ export function ExploreFeed() {
   const setRegionFilter = useCountryFeedStore((s) => s.setRegionFilter);
   const loadHereFeed = useCountryFeedStore((s) => s.loadHereFeed);
   const loadSavedFeed = useCountryFeedStore((s) => s.loadSavedFeed);
+  const loadPlacesFeed = useCountryFeedStore((s) => s.loadPlacesFeed);
   const restoreForYouFeed = useCountryFeedStore((s) => s.restoreForYouFeed);
   const viewportCountries = useSpatialContextStore((s) => s.viewportCountries);
   const savedCountries = useSavedCountriesStore((s) => s.savedCountries);
+  const isPlacesMode = discoveryMode === "places";
+  const queueLength = isPlacesMode ? places.length : countries.length;
 
   useEffect(() => {
     if (discoveryMode !== "saved") return;
@@ -46,13 +50,23 @@ export function ExploreFeed() {
   const handleIndexChange = useCallback(
     (index: number) => {
       setCurrentIndex(index);
+      if (isPlacesMode) {
+        const place = places[index];
+        if (place) {
+          useDiscoveryProgressStore
+            .getState()
+            .recordCountryVisit(place.country);
+        }
+        return;
+      }
+
       const country = countries[index];
       if (country) {
         useDiscoveryProgressStore.getState().recordCountryVisit(country);
         void prefetchCountryProfiles(countries, { aroundIndex: index });
       }
     },
-    [countries, setCurrentIndex],
+    [countries, isPlacesMode, places, setCurrentIndex],
   );
 
   const handleNeedMore = useCallback(() => {
@@ -71,15 +85,37 @@ export function ExploreFeed() {
           },
         ]}
       >
-        {status === "loading" && countries.length === 0 ? (
+        {status === "loading" && queueLength === 0 ? (
           <View style={styles.loadingOverlay} pointerEvents="none">
             <ActivityIndicator size="large" color="#fbbf24" />
           </View>
         ) : null}
 
-        {discoveryMode === "saved" &&
-        countries.length === 0 &&
+        {discoveryMode === "places" &&
+        places.length === 0 &&
         status !== "loading" ? (
+          <View style={styles.emptyOverlay}>
+            <Text style={styles.errorTitle}>No places found yet</Text>
+            <Text style={styles.errorMessage}>
+              Try For You or browse another region to discover landmarks.
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Browse For You feed"
+              onPress={() => {
+                void restoreForYouFeed();
+              }}
+              style={({ pressed }) => [
+                styles.retryButton,
+                pressed && styles.retryPressed,
+              ]}
+            >
+              <Text style={styles.retryText}>Browse For You</Text>
+            </Pressable>
+          </View>
+        ) : discoveryMode === "saved" &&
+          countries.length === 0 &&
+          status !== "loading" ? (
           <View style={styles.emptyOverlay}>
             <Text style={styles.errorTitle}>No saved countries yet</Text>
             <Text style={styles.errorMessage}>
@@ -101,17 +137,20 @@ export function ExploreFeed() {
             </Pressable>
           </View>
         ) : status === "error" &&
-          countries.length === 0 &&
+          queueLength === 0 &&
           (selectedRegion !== null ||
             discoveryMode === "here" ||
-            discoveryMode === "saved") ? (
+            discoveryMode === "saved" ||
+            discoveryMode === "places") ? (
           <View style={styles.errorOverlay}>
             <Text style={styles.errorTitle}>
               {discoveryMode === "here"
                 ? "Couldn't load this map area"
                 : discoveryMode === "saved"
                   ? "Couldn't load saved countries"
-                  : `Couldn't load ${selectedRegion}`}
+                  : discoveryMode === "places"
+                    ? "Couldn't load places"
+                    : `Couldn't load ${selectedRegion}`}
             </Text>
             <Text style={styles.errorMessage}>
               {error ?? "Check that the backend is running and try again."}
@@ -126,6 +165,10 @@ export function ExploreFeed() {
                 }
                 if (discoveryMode === "saved") {
                   void loadSavedFeed();
+                  return;
+                }
+                if (discoveryMode === "places") {
+                  void loadPlacesFeed();
                   return;
                 }
                 void setRegionFilter(selectedRegion);
