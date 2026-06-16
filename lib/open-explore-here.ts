@@ -1,5 +1,6 @@
 import { router } from "expo-router";
 
+import { SPATIAL_VIEWPORT_DISCOVERY_ENABLED } from "@/constants/map-features";
 import { hasCachedCountryInViewport } from "@/lib/load-countries-for-discovery";
 import { useCountryFeedStore } from "@/store/use-country-feed-store";
 import {
@@ -35,6 +36,8 @@ export async function openExploreRegion(region: string): Promise<void> {
 
 /** Open Explore in Here mode with countries from the current map viewport. */
 export async function openExploreHere(): Promise<void> {
+  if (!SPATIAL_VIEWPORT_DISCOVERY_ENABLED) return;
+
   const { viewportCountries, queue } = useSpatialContextStore.getState();
 
   if (viewportCountries.length === 0) return;

@@ -3,7 +3,10 @@ import { Image } from "expo-image";
 import { buildFlagCdnUrl, resolveFlagCdnUrl } from "@/lib/flag-url";
 import { cca2FromFlagUrl } from "@/lib/map-country";
 import { syncMapRegionFocusForCountry } from "@/lib/map-region-focus";
-import type { SelectionSource } from "@/store/use-identity-store";
+import {
+  useIdentityStore,
+  type SelectionSource,
+} from "@/store/use-identity-store";
 import { useMapStore } from "@/store/use-map-store";
 import { useMapUiStore } from "@/store/use-map-ui-store";
 import { useRecentlyViewedStore } from "@/store/use-recently-viewed-store";
@@ -41,6 +44,9 @@ function prepareMapForCountry(
   mapUi.setCountryMarkerMode("flag");
 
   if (source === "explore") {
+    mapUi.setDisplayMode(scope.focusedRegion ? "explore" : "globalPulse");
+    // Region chrome is applied on the map screen after the camera flight.
+  } else if (source === "countryDetail") {
     if (scope.focusedRegion) {
       mapUi.setFocusedRegion(scope.focusedRegion);
       mapUi.setDisplayMode("explore");
@@ -65,8 +71,28 @@ export function focusCountryOnMap(
   country: Country,
   source: Exclude<SelectionSource, null> = "search",
 ): void {
+  const identity = useIdentityStore.getState();
+
+  if (source === "countryDetail") {
+    identity.setCountryDetailReturnName(country.name);
+    const search = useSearchUiStore.getState();
+    search.clearResumeSearchOnReturn();
+    if (search.isOpen) {
+      search.closeSearch();
+    }
+  } else {
+    identity.setCountryDetailReturnName(null);
+  }
+
   const scopeSnapshot = useSpatialContextStore.getState().discoveryScope;
   prepareMapForCountry(country, source, scopeSnapshot);
+
+  if (source === "explore") {
+    identity.setExploreMapSessionActive(true);
+  } else {
+    identity.setExploreMapSessionActive(false);
+  }
+
   const map = useMapStore.getState();
   map.focusCountryFromExternal(country.name, country, source, scopeSnapshot);
 }

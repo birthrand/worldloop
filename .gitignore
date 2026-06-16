@@ -42,6 +42,9 @@ backend/node_modules/
 # typescript
 *.tsbuildinfo
 
+# catalog build cache (partial API results — do not commit)
+scripts/.cache/
+
 app-example
 
 # generated native folders

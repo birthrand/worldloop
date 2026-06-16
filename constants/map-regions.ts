@@ -1,7 +1,7 @@
 import type { Region } from "react-native-maps";
 
+import { CONTINENT_CONTEXT_LATITUDE_DELTA } from "@/constants/map-focus-tiers";
 import { getMapDisplayLatLng } from "@/lib/map-country";
-import { REGION_FOCUS_INITIAL_DELTA } from "@/lib/map-region-markers";
 import type { MapCountry } from "@/types/country";
 
 export const WORLD_INITIAL_REGION: Region = {
@@ -90,5 +90,5 @@ export function regionForClusterFocus(cluster: {
   if (cluster.region === "Antarctic") {
     return ANTARCTIC_FOCUS_REGION;
   }
-  return regionForCountry(cluster.center, REGION_FOCUS_INITIAL_DELTA);
+  return regionForCountry(cluster.center, CONTINENT_CONTEXT_LATITUDE_DELTA);
 }

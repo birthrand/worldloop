@@ -1,5 +1,6 @@
 import { create } from "zustand";
 
+import { SPATIAL_VIEWPORT_DISCOVERY_ENABLED } from "@/constants/map-features";
 import { fetchDiscoverViewportCountries } from "@/lib/discover-viewport";
 import {
   defaultDiscoveryScope,
@@ -67,6 +68,8 @@ export const useSpatialContextStore = create<SpatialContextState>(
     queueSource: "forYou",
 
     commitScopeFromMap: (input) => {
+      if (!SPATIAL_VIEWPORT_DISCOVERY_ENABLED) return;
+
       const previousMode = get().discoveryScope.mode;
       const { scope, viewportCountries } = resolveViewportCountries(
         input,

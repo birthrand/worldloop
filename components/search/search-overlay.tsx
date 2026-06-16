@@ -1,11 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
+import { usePathname } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  BackHandler,
   FlatList,
   InteractionManager,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -16,7 +17,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { FlagBadge } from "@/components/explore/flag-badge";
-import { FeedErrorBanner } from "@/components/home/feed-error-banner";
+import { FeedErrorBanner } from "@/components/feed-error-banner";
 import {
   WORLDLOOP_HEADER_HORIZONTAL_PADDING,
   WORLDLOOP_HEADER_TOP_PADDING,
@@ -32,10 +33,12 @@ import {
 } from "@/constants/map-chrome-styles";
 import { CONTINENTS, continentDisplayLabel } from "@/constants/regions";
 import { SPACE_TAB_BAR_BG } from "@/constants/space-theme";
-import { openCountryInCulture } from "@/features/navigation/open-country-in-culture";
 import { useCountrySearch } from "@/hooks/use-country-search";
 import { getAiFact, getCountryImages } from "@/lib/format-country";
-import { openCountryInExplore } from "@/lib/open-country-in-explore";
+import {
+  openCountryDetail,
+  warmCountryDetail,
+} from "@/lib/open-country-detail";
 import { useSearchUiStore } from "@/store/use-search-ui-store";
 import type { Country } from "@/types/country";
 
@@ -45,6 +48,7 @@ const DISMISS_ICON_SIZE = 20;
 
 export function SearchOverlay() {
   const insets = useSafeAreaInsets();
+  const pathname = usePathname();
   const isOpen = useSearchUiStore((s) => s.isOpen);
   const context = useSearchUiStore((s) => s.context);
   const focusToken = useSearchUiStore((s) => s.focusToken);
@@ -69,6 +73,25 @@ export function SearchOverlay() {
 
   const inputRef = useRef<TextInput>(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  const handleClose = useCallback(() => {
+    setIsFilterOpen(false);
+    closeSearch();
+  }, [closeSearch]);
+
+  useEffect(() => {
+    if (!enabled) return;
+
+    const subscription = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        handleClose();
+        return true;
+      },
+    );
+
+    return () => subscription.remove();
+  }, [enabled, handleClose]);
 
   useEffect(() => {
     if (!enabled) {
@@ -95,20 +118,25 @@ export function SearchOverlay() {
     };
   }, [enabled, focusToken]);
 
-  const handleClose = useCallback(() => {
-    setIsFilterOpen(false);
-    closeSearch();
-  }, [closeSearch]);
+  const handleOpenCountry = useCallback((country: Country) => {
+    openCountryDetail(country, { from: "search" });
+  }, []);
+
+  useEffect(() => {
+    const { resumeSearchOnReturn } = useSearchUiStore.getState();
+    if (!resumeSearchOnReturn || pathname.startsWith("/country/")) return;
+
+    useSearchUiStore.setState((state) => ({
+      resumeSearchOnReturn: false,
+      isOpen: true,
+      focusToken: state.focusToken + 1,
+    }));
+  }, [pathname]);
 
   if (!enabled) return null;
 
   return (
-    <Modal
-      visible={isOpen}
-      animationType="fade"
-      presentationStyle="fullScreen"
-      onRequestClose={handleClose}
-    >
+    <View style={styles.overlay} accessibilityViewIsModal>
       <View
         className="flex-1"
         style={{
@@ -316,11 +344,8 @@ export function SearchOverlay() {
               renderItem={({ item }) => (
                 <SearchResultRow
                   country={item}
-                  onPress={() =>
-                    context === "culture"
-                      ? openCountryInCulture(item)
-                      : openCountryInExplore(item)
-                  }
+                  onPress={() => handleOpenCountry(item)}
+                  onPressIn={() => warmCountryDetail(item)}
                 />
               )}
               keyboardShouldPersistTaps="handled"
@@ -332,16 +357,21 @@ export function SearchOverlay() {
           </View>
         )}
       </View>
-    </Modal>
+    </View>
   );
 }
 
 type SearchResultRowProps = {
   country: Country;
   onPress: () => void;
+  onPressIn?: () => void;
 };
 
-function SearchResultRow({ country, onPress }: SearchResultRowProps) {
+function SearchResultRow({
+  country,
+  onPress,
+  onPressIn,
+}: SearchResultRowProps) {
   const images = getCountryImages(country);
   const heroUri = images[0];
   const fact = getAiFact(country);
@@ -351,6 +381,7 @@ function SearchResultRow({ country, onPress }: SearchResultRowProps) {
       accessibilityRole="button"
       accessibilityLabel={`Open ${country.name}`}
       onPress={onPress}
+      onPressIn={onPressIn}
       style={({ pressed }) => [styles.resultRow, pressed && { opacity: 0.9 }]}
     >
       <View style={styles.thumb}>
@@ -401,6 +432,11 @@ function SearchResultRow({ country, onPress }: SearchResultRowProps) {
 const SEARCH_BODY_TOP_PADDING = 6;
 
 const styles = StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 100,
+    elevation: 100,
+  },
   searchSection: {
     paddingHorizontal: WORLDLOOP_HEADER_HORIZONTAL_PADDING,
     paddingBottom: MAP_SEARCH_PANEL_GAP,

@@ -25,10 +25,20 @@ export const BRIDGE_CROSS_REGION_CAP = 4;
  */
 export const CROSS_CONTINENT_BRIDGE_RANK = 6;
 
-/** Below this latitudeDelta (2D), show every filtered country in the focused region. */
-export const MAP_COUNTRY_ZOOM_LATITUDE_DELTA = 28;
-/** Cluster focus lands here; any zoom-in movement beyond this reveals all flags. */
-export const REGION_FOCUS_INITIAL_DELTA = 45;
+import {
+  CONTINENT_CONTEXT_LATITUDE_DELTA,
+  COUNTRY_FOCUS_LATITUDE_DELTA,
+  DETAIL_ZOOM_LATITUDE_DELTA,
+} from "@/constants/map-focus-tiers";
+
+/** Below this latitudeDelta (2D), show every filtered country in the focused region (Tier 2). */
+export const MAP_COUNTRY_ZOOM_LATITUDE_DELTA = DETAIL_ZOOM_LATITUDE_DELTA;
+
+/** @deprecated Use {@link COUNTRY_FOCUS_LATITUDE_DELTA} or {@link resolveCountryFocusLatitudeDelta}. */
+export const REGION_FOCUS_INITIAL_DELTA = COUNTRY_FOCUS_LATITUDE_DELTA;
+
+/** Re-export for continent cluster framing (wider than single-country focus). */
+export { CONTINENT_CONTEXT_LATITUDE_DELTA, COUNTRY_FOCUS_LATITUDE_DELTA };
 
 /** Globe camera distance at or below this shows every country in the focused region. */
 export const GLOBE_DETAIL_CAMERA_DISTANCE = 2;

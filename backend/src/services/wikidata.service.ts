@@ -110,6 +110,85 @@ LIMIT 35
 `.trim();
 }
 
+/** Territories where POIs use P131 (located in) more than P17 (country). */
+function buildLocatedInTypedQuery(cca2: string): string {
+  const code = cca2.trim().toUpperCase();
+  const typeValues = DIRECT_INSTANCE_TYPES.join(" ");
+
+  return `
+SELECT DISTINCT ?item ?itemLabel ?description ?coord ?image ?instanceLabel ?heritageLabel WHERE {
+  ?country wdt:P297 "${code}" .
+  ?item wdt:P131 ?country .
+  ?item wdt:P625 ?coord .
+
+  {
+    ?item wdt:P31 ?instance .
+    VALUES ?instance { ${typeValues} }
+  } UNION {
+    ?item wdt:P31/wdt:P279* wd:Q23413 .
+  } UNION {
+    ?item wdt:P31/wdt:P279* wd:Q570116 .
+  }
+
+  OPTIONAL {
+    ?item schema:description ?description .
+    FILTER(LANG(?description) = "en")
+  }
+  OPTIONAL { ?item wdt:P18 ?image }
+  OPTIONAL {
+    ?item wdt:P31 ?instance .
+    ?instance rdfs:label ?instanceLabel .
+    FILTER(LANG(?instanceLabel) = "en")
+  }
+  OPTIONAL {
+    ?item wdt:P1435 ?heritage .
+    ?heritage rdfs:label ?heritageLabel .
+    FILTER(LANG(?heritageLabel) = "en")
+  }
+
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+}
+LIMIT 35
+`.trim();
+}
+
+/** Last resort — any geolocated row in country with an image or heritage tag. */
+function buildBroadCountryQuery(cca2: string): string {
+  const code = cca2.trim().toUpperCase();
+
+  return `
+SELECT DISTINCT ?item ?itemLabel ?description ?coord ?image ?instanceLabel ?heritageLabel WHERE {
+  ?country wdt:P297 "${code}" .
+  ?item wdt:P17 ?country .
+  ?item wdt:P625 ?coord .
+
+  {
+    ?item wdt:P18 ?image .
+  } UNION {
+    ?item wdt:P1435 ?heritage .
+  }
+
+  OPTIONAL {
+    ?item schema:description ?description .
+    FILTER(LANG(?description) = "en")
+  }
+  OPTIONAL {
+    ?item wdt:P31 ?instance .
+    ?instance rdfs:label ?instanceLabel .
+    FILTER(LANG(?instanceLabel) = "en")
+  }
+  OPTIONAL {
+    ?item wdt:P1435 ?heritage .
+    ?heritage rdfs:label ?heritageLabel .
+    FILTER(LANG(?heritageLabel) = "en")
+  }
+
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+}
+LIMIT 25
+`.trim();
+}
+
 function parseWikidataPoint(value: string): {
   latitude: number;
   longitude: number;
@@ -219,6 +298,20 @@ async function runSparqlQuery(
   return landmarks;
 }
 
+function mergeUniqueLandmarks(
+  target: CountryLandmark[],
+  incoming: CountryLandmark[],
+  seen: Set<string>,
+  max = 35,
+): void {
+  for (const landmark of incoming) {
+    if (seen.has(landmark.id)) continue;
+    seen.add(landmark.id);
+    target.push(landmark);
+    if (target.length >= max) break;
+  }
+}
+
 export async function fetchWikidataLandmarks(
   cca2: string,
 ): Promise<CountryLandmark[]> {
@@ -241,13 +334,25 @@ export async function fetchWikidataLandmarks(
         code,
         "typed",
       );
+      mergeUniqueLandmarks(landmarks, typed, seen);
+    }
 
-      for (const landmark of typed) {
-        if (seen.has(landmark.id)) continue;
-        seen.add(landmark.id);
-        landmarks.push(landmark);
-        if (landmarks.length >= 35) break;
-      }
+    if (landmarks.length < 5) {
+      const locatedIn = await runSparqlQuery(
+        buildLocatedInTypedQuery(code),
+        code,
+        "located-in",
+      );
+      mergeUniqueLandmarks(landmarks, locatedIn, seen);
+    }
+
+    if (landmarks.length < 3) {
+      const broad = await runSparqlQuery(
+        buildBroadCountryQuery(code),
+        code,
+        "broad",
+      );
+      mergeUniqueLandmarks(landmarks, broad, seen);
     }
 
     logger.info("Wikidata landmarks fetched", {

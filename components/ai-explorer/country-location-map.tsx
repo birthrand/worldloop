@@ -16,6 +16,13 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { AI_EXPLORER_THEME } from "@/constants/ai-explorer-theme";
+import { COUNTRY_DETAIL_MODULE_BG } from "@/constants/country-detail-layout";
+import {
+  EXPLORE_SWIPE_ACCENT_COLOR,
+  EXPLORE_SWIPE_CARD_INFO_BORDER,
+  EXPLORE_SWIPE_CARD_SUBTITLE_COLOR,
+  EXPLORE_SWIPE_CARD_TITLE_COLOR,
+} from "@/constants/explore-swipe-layout";
 import { images } from "@/constants/images";
 import { formatCoordinates } from "@/lib/format-country";
 import {
@@ -143,9 +150,9 @@ const styles = StyleSheet.create({
     height: MODULE_HEIGHT,
     borderRadius: 14,
     overflow: "hidden",
-    backgroundColor: AI_EXPLORER_THEME.surfaceRaised,
+    backgroundColor: COUNTRY_DETAIL_MODULE_BG,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: AI_EXPLORER_THEME.divider,
+    borderColor: EXPLORE_SWIPE_CARD_INFO_BORDER,
   },
   wrapPressed: {
     opacity: 0.92,
@@ -159,7 +166,7 @@ const styles = StyleSheet.create({
   },
   mapTint: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(15, 23, 42, 0.28)",
+    backgroundColor: "rgba(0, 0, 0, 0.32)",
   },
   pinAnchor: {
     position: "absolute",
@@ -187,7 +194,7 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: AI_EXPLORER_THEME.accent,
+    backgroundColor: EXPLORE_SWIPE_ACCENT_COLOR,
     borderWidth: 2,
     borderColor: "rgba(255, 255, 255, 0.9)",
   },
@@ -202,12 +209,12 @@ const styles = StyleSheet.create({
     fontSize: 9,
     letterSpacing: 0.5,
     textTransform: "uppercase",
-    color: AI_EXPLORER_THEME.textMuted,
+    color: EXPLORE_SWIPE_CARD_SUBTITLE_COLOR,
   },
   captionValue: {
     fontFamily: "Poppins-Medium",
     fontSize: 12,
-    color: AI_EXPLORER_THEME.textPrimary,
+    color: EXPLORE_SWIPE_CARD_TITLE_COLOR,
   },
   mapLink: {
     position: "absolute",
@@ -215,6 +222,6 @@ const styles = StyleSheet.create({
     bottom: 12,
     fontFamily: "Poppins-Medium",
     fontSize: 12,
-    color: AI_EXPLORER_THEME.accent,
+    color: EXPLORE_SWIPE_ACCENT_COLOR,
   },
 });

@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { useCountryFeedStore } from "@/store/use-country-feed-store";
 import { useDiscoveryProgressStore } from "@/store/use-discovery-progress-store";
 import { useSavedCountriesStore } from "@/store/use-saved-countries-store";
+import { useSavedLandmarksStore } from "@/store/use-saved-landmarks-store";
 import type { Country } from "@/types/country";
 
 const DEFAULT_CITIES = 56;
@@ -22,6 +23,16 @@ export type VisitedCountryPreview = {
   visitedAt: number;
 };
 
+export function formatVisitedCountriesSubtitle(count: number): string {
+  if (count === 0) {
+    return "Mark countries as you visit them";
+  }
+  if (count === 1) {
+    return "1 country visited";
+  }
+  return `${count} countries visited`;
+}
+
 export function useProfileStats() {
   const countriesExplored = useDiscoveryProgressStore(
     (s) => s.countriesExplored,
@@ -32,7 +43,11 @@ export function useProfileStats() {
   const visitedAtByCountryId = useDiscoveryProgressStore(
     (s) => s.visitedAtByCountryId,
   );
+  const visitedCountryById = useDiscoveryProgressStore(
+    (s) => s.visitedCountryById,
+  );
   const savedCountries = useSavedCountriesStore((s) => s.savedCountries);
+  const savedLandmarks = useSavedLandmarksStore((s) => s.savedLandmarks);
   const feedCountries = useCountryFeedStore((s) => s.countries);
 
   const allKnownCountries = useMemo(() => {
@@ -43,8 +58,21 @@ export function useProfileStats() {
         byId.set(id, country);
       }
     }
+    for (const [id, snapshot] of Object.entries(visitedCountryById)) {
+      if (byId.has(id)) continue;
+      byId.set(id, {
+        name: snapshot.name,
+        cca2: snapshot.cca2,
+        flag: snapshot.flag,
+        population: 0,
+        region: "",
+        capital: "",
+        images: [],
+        latlng: [0, 0],
+      });
+    }
     return byId;
-  }, [feedCountries, savedCountries]);
+  }, [feedCountries, savedCountries, visitedCountryById]);
 
   const citiesCount =
     countriesExplored > 0
@@ -52,7 +80,11 @@ export function useProfileStats() {
       : DEFAULT_CITIES;
 
   const placesCount =
-    savedCountries.length > 0 ? savedCountries.length : DEFAULT_PLACES;
+    savedLandmarks.length > 0
+      ? savedLandmarks.length
+      : savedCountries.length > 0
+        ? savedCountries.length
+        : DEFAULT_PLACES;
 
   const photosCount =
     savedCountries.length > 0 ? savedCountries.length : DEFAULT_PHOTOS;
@@ -72,7 +104,8 @@ export function useProfileStats() {
   const topVisitedCountries = useMemo((): VisitedCountryPreview[] => {
     return visitedCountryIds
       .map((id) => {
-        const country = allKnownCountries.get(id);
+        const country =
+          allKnownCountries.get(id) ?? visitedCountryById[id] ?? null;
         return {
           id,
           cca2: country?.cca2 ?? id,
@@ -81,10 +114,18 @@ export function useProfileStats() {
         };
       })
       .sort((a, b) => b.visitedAt - a.visitedAt);
-  }, [allKnownCountries, visitedAtByCountryId, visitedCountryIds]);
+  }, [
+    allKnownCountries,
+    visitedAtByCountryId,
+    visitedCountryById,
+    visitedCountryIds,
+  ]);
 
   const savedThumbnailUri =
-    savedCountries[0]?.images?.[0] ?? savedCountries[0]?.flag ?? null;
+    savedLandmarks[0]?.landmark.imageUrl ??
+    savedCountries[0]?.images?.[0] ??
+    savedCountries[0]?.flag ??
+    null;
 
   return {
     inlineStats: {
@@ -93,6 +134,7 @@ export function useProfileStats() {
       places: placesCount,
     } satisfies ProfileInlineStats,
     countriesExplored,
+    visitedCountriesSubtitle: formatVisitedCountriesSubtitle(countriesExplored),
     citiesCount,
     placesCount,
     photosCount,

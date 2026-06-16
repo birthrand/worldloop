@@ -7,7 +7,9 @@ export const env = {
   })(),
   redisUrl: process.env.REDIS_URL ?? "redis://127.0.0.1:6379",
   restCountriesBaseUrl:
-    process.env.REST_COUNTRIES_BASE_URL ?? "https://restcountries.com/v3.1",
+    process.env.REST_COUNTRIES_BASE_URL ??
+    "https://api.restcountries.com/countries/v5",
+  restCountriesApiKey: process.env.REST_COUNTRIES_API_KEY ?? "",
   unsplashAccessKey: process.env.UNSPLASH_ACCESS_KEY ?? "",
   pexelsApiKey: process.env.PEXELS_API_KEY ?? "",
   pixabayApiKey: process.env.PIXABAY_API_KEY ?? "",

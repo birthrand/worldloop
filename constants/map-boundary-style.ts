@@ -113,6 +113,18 @@ export const MAP_2D_BOUNDARY_CORE_STROKE_SCALE = 0.64;
 /** 2D map focus outline minimum (react-native-maps strokeWidth). */
 export const MAP_2D_BOUNDARY_CORE_STROKE_WIDTH_MIN = 0.75;
 
+/** Explore → Map: hairline for non-selected neighbor boundaries on the flat map. */
+export const MAP_2D_EXPLORE_HANDOFF_NEIGHBOR_STROKE_WIDTH = 0.35;
+
+export function resolveExploreHandoffNeighborStrokeWidth(
+  settings: MapBoundaryStyleSettings,
+): number {
+  if (!settings.strokeColorEnabled || !settings.strokeWidthEnabled) {
+    return 0;
+  }
+  return MAP_2D_EXPLORE_HANDOFF_NEIGHBOR_STROKE_WIDTH;
+}
+
 function clampHue(value: number): number {
   return ((value % 360) + 360) % 360;
 }

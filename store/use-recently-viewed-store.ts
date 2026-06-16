@@ -3,7 +3,6 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 import { buildFlagCdnUrl } from "@/lib/flag-url";
-import { useDiscoveryProgressStore } from "@/store/use-discovery-progress-store";
 import type { Country } from "@/types/country";
 
 const MAX_RECENT = 8;
@@ -128,7 +127,6 @@ export const useRecentlyViewedStore = create<RecentlyViewedState>()(
           ...without,
         ].slice(0, MAX_RECENT);
         set({ entries: next });
-        useDiscoveryProgressStore.getState().recordCountryVisit(normalized);
       },
 
       seedIfEmpty: () => {

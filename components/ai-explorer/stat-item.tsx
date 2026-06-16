@@ -1,6 +1,9 @@
 import { StyleSheet, Text, View } from "react-native";
 
-import { AI_EXPLORER_THEME } from "@/constants/ai-explorer-theme";
+import {
+  EXPLORE_SWIPE_CARD_SUBTITLE_COLOR,
+  EXPLORE_SWIPE_CARD_TITLE_COLOR,
+} from "@/constants/explore-swipe-layout";
 
 type StatItemProps = {
   label: string;
@@ -80,7 +83,7 @@ const styles = StyleSheet.create({
   value: {
     fontFamily: "Poppins-Medium",
     fontSize: 14,
-    color: AI_EXPLORER_THEME.textPrimary,
+    color: EXPLORE_SWIPE_CARD_TITLE_COLOR,
   },
   valueCompact: {
     fontSize: 12,
@@ -94,7 +97,7 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: "Poppins-Regular",
     fontSize: 11,
-    color: AI_EXPLORER_THEME.textFaint,
+    color: EXPLORE_SWIPE_CARD_SUBTITLE_COLOR,
   },
   labelCompact: {
     fontSize: 10,
@@ -105,6 +108,6 @@ const styles = StyleSheet.create({
     lineHeight: 12,
     letterSpacing: 0.4,
     textTransform: "uppercase",
-    color: AI_EXPLORER_THEME.textMuted,
+    color: EXPLORE_SWIPE_CARD_SUBTITLE_COLOR,
   },
 });

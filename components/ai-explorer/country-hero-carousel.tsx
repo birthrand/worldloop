@@ -1,9 +1,12 @@
-import { ExplorerBackButton } from "@/components/ai-explorer/explorer-back-button";
+import { CountryHeroScrimStack } from "@/components/ai-explorer/country-hero-scrims";
 import { AI_EXPLORER_THEME } from "@/constants/ai-explorer-theme";
+import {
+  getCountryDetailHeroDotsBottom,
+  getCountryDetailHeroHeight,
+} from "@/constants/country-detail-layout";
 import { images as appImages } from "@/constants/images";
 import { Image } from "expo-image";
-import { LinearGradient } from "expo-linear-gradient";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   FlatList,
   NativeScrollEvent,
@@ -13,51 +16,31 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-
-/** Share of screen height for the edge-to-edge hero (reduced so facts appear sooner). */
-const HERO_HEIGHT_RATIO = 0.4;
-
-const HERO_BOTTOM_SCRIM_COLORS = [
-  AI_EXPLORER_THEME.surface,
-  "rgba(15, 23, 42, 0.88)",
-  "rgba(15, 23, 42, 0.45)",
-  "rgba(15, 23, 42, 0)",
-] as const;
-
-const HERO_BOTTOM_SCRIM_LOCATIONS = [0, 0.28, 0.58, 1] as const;
-
-function HeroBottomScrim() {
-  return (
-    <LinearGradient
-      pointerEvents="none"
-      colors={[...HERO_BOTTOM_SCRIM_COLORS]}
-      locations={[...HERO_BOTTOM_SCRIM_LOCATIONS]}
-      start={{ x: 0, y: 1 }}
-      end={{ x: 0, y: 0 }}
-      style={styles.bottomScrim}
-    />
-  );
-}
 
 type CountryHeroCarouselProps = {
   images: string[];
   countryName: string;
-  onBack: () => void;
+  initialIndex?: number;
 };
 
 export function CountryHeroCarousel({
   images,
   countryName,
-  onBack,
+  initialIndex = 0,
 }: CountryHeroCarouselProps) {
-  const insets = useSafeAreaInsets();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
-  const heroHeight = Math.round(screenHeight * HERO_HEIGHT_RATIO);
+  const heroHeight = getCountryDetailHeroHeight(screenHeight);
+  const dotsBottom = getCountryDetailHeroDotsBottom(screenHeight);
   const fallbackWidth = screenWidth;
 
   const [carouselWidth, setCarouselWidth] = useState(fallbackWidth);
-  const [activeIndex, setActiveIndex] = useState(0);
+  const lockedInitialIndex = useRef(initialIndex);
+  const [activeIndex, setActiveIndex] = useState(() =>
+    Math.max(
+      0,
+      Math.min(lockedInitialIndex.current, Math.max(images.length - 1, 0)),
+    ),
+  );
   const listRef = useRef<FlatList<string>>(null);
 
   const slides = images.length > 0 ? images : [];
@@ -88,7 +71,19 @@ export function CountryHeroCarousel({
     }
   };
 
-  const backButtonTop = insets.top + 8;
+  useEffect(() => {
+    if (carouselWidth <= 0 || slides.length === 0) return;
+
+    const clamped = Math.max(
+      0,
+      Math.min(lockedInitialIndex.current, slides.length - 1),
+    );
+    listRef.current?.scrollToOffset({
+      offset: clamped * carouselWidth,
+      animated: false,
+    });
+    setActiveIndex(clamped);
+  }, [carouselWidth, slides.length]);
 
   if (slides.length === 0) {
     return (
@@ -106,10 +101,7 @@ export function CountryHeroCarousel({
             accessibilityLabel={`${countryName} placeholder`}
           />
         </View>
-        <View style={[styles.backOverlay, { top: backButtonTop }]}>
-          <ExplorerBackButton onPress={onBack} />
-        </View>
-        <HeroBottomScrim />
+        <CountryHeroScrimStack containerHeight={heroHeight} />
       </View>
     );
   }
@@ -150,15 +142,11 @@ export function CountryHeroCarousel({
         )}
       />
 
-      <View style={[styles.backOverlay, { top: backButtonTop }]}>
-        <ExplorerBackButton onPress={onBack} />
-      </View>
-
-      <HeroBottomScrim />
+      <CountryHeroScrimStack containerHeight={heroHeight} />
 
       {slides.length > 1 ? (
         <View
-          style={styles.paginationDots}
+          style={[styles.paginationDots, { bottom: dotsBottom }]}
           accessibilityLabel={`Image ${activeIndex + 1} of ${slides.length}`}
         >
           {slides.map((_, index) => {
@@ -205,29 +193,15 @@ const styles = StyleSheet.create({
   },
   placeholder: {
     flex: 1,
-    backgroundColor: "rgba(30, 41, 59, 0.6)",
+    backgroundColor: "rgba(0, 0, 0, 0.55)",
     overflow: "hidden",
   },
   placeholderImage: {
     ...StyleSheet.absoluteFillObject,
     opacity: 0.35,
   },
-  backOverlay: {
-    position: "absolute",
-    left: 16,
-    zIndex: 3,
-  },
-  bottomScrim: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: "55%",
-    zIndex: 1,
-  },
   paginationDots: {
     position: "absolute",
-    bottom: 48,
     left: 0,
     right: 0,
     zIndex: 2,

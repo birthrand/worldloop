@@ -11,6 +11,7 @@ import {
   PROFILE_ICON_BOX_RADIUS,
   PROFILE_ICON_RING,
   PROFILE_NAV_SUBTITLE,
+  PROFILE_SCREEN_BG,
 } from "@/constants/profile-theme";
 import type { VisitedCountryPreview } from "@/hooks/use-profile-stats";
 
@@ -18,7 +19,9 @@ type ProfileNavRowProps = {
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
   subtitle: string;
-  onPress: () => void;
+  onPress?: () => void;
+  /** When false, row is display-only (no navigation affordance). */
+  interactive?: boolean;
   trailing?: "thumbnail" | "flags" | "map" | "none";
   thumbnailUri?: string | null;
   visitedCountries?: VisitedCountryPreview[];
@@ -30,22 +33,28 @@ export function ProfileNavRow({
   title,
   subtitle,
   onPress,
+  interactive = true,
   trailing = "none",
   thumbnailUri,
   visitedCountries = [],
   totalVisited = 0,
 }: ProfileNavRowProps) {
   const handlePress = () => {
+    if (!interactive || !onPress) return;
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onPress();
   };
 
   return (
     <Pressable
-      accessibilityRole="button"
+      accessibilityRole={interactive ? "button" : "text"}
       accessibilityLabel={title}
+      disabled={!interactive}
       onPress={handlePress}
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      style={({ pressed }) => [
+        styles.card,
+        interactive && pressed && styles.cardPressed,
+      ]}
     >
       <View style={styles.row}>
         <View style={styles.iconBox}>
@@ -68,11 +77,13 @@ export function ProfileNavRow({
           ) : trailing === "map" ? (
             <MapThumbnail />
           ) : null}
-          <Ionicons
-            name="chevron-forward"
-            size={18}
-            color="rgba(255,255,255,0.45)"
-          />
+          {interactive ? (
+            <Ionicons
+              name="chevron-forward"
+              size={18}
+              color="rgba(255,255,255,0.45)"
+            />
+          ) : null}
         </View>
       </View>
     </Pressable>
@@ -223,7 +234,7 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 10,
     overflow: "hidden",
-    backgroundColor: "#080c1c",
+    backgroundColor: PROFILE_SCREEN_BG,
   },
   previewCell: {
     borderRadius: 12,
@@ -242,7 +253,7 @@ const styles = StyleSheet.create({
   },
   mapTint: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(8, 12, 28, 0.3)",
+    backgroundColor: "rgba(6, 9, 12, 0.3)",
   },
   mapPin: {
     position: "absolute",

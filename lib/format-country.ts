@@ -4,6 +4,17 @@ import {
 } from "@/lib/normalize-image-url";
 import type { Country, CountryVideo } from "@/types/country";
 
+const MISSING_CAPITAL_MARKERS = new Set(["—", "-", "N/A", "NA", "n/a"]);
+
+/** Capital for feed/card subtitles; missing capitals show N/A. */
+export function formatCountryCapitalDisplay(capital?: string): string {
+  const value = capital?.trim();
+  if (!value || MISSING_CAPITAL_MARKERS.has(value)) {
+    return "N/A";
+  }
+  return value;
+}
+
 /** Ensure landmark copy always starts with a capital letter. */
 export function formatLandmarkDescription(description: string): string {
   const trimmed = description.trim();
@@ -11,6 +22,16 @@ export function formatLandmarkDescription(description: string): string {
   const first = trimmed.charAt(0);
   if (first === first.toUpperCase()) return trimmed;
   return first.toUpperCase() + trimmed.slice(1);
+}
+
+/** Compact landmark type for card subtitles (e.g. UNESCO World Heritage Site → UNESCO Site). */
+export function formatLandmarkTypeDisplay(type?: string): string {
+  const trimmed = type?.trim();
+  if (!trimmed) return "Landmark";
+  if (/^unesco world heritage site$/i.test(trimmed)) {
+    return "UNESCO Site";
+  }
+  return trimmed;
 }
 
 /** Compact population label (e.g. 33.7M). */

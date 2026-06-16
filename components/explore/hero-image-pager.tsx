@@ -1,11 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  FlatList,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Pressable,
   StyleSheet,
 } from "react-native";
+import {
+  FlatList,
+  Gesture,
+  GestureDetector,
+} from "react-native-gesture-handler";
 
 import {
   CountryImage,
@@ -22,7 +26,9 @@ type HeroImagePagerProps = {
   onIndexChange: (index: number) => void;
   onImagePress?: () => void;
   onImagePressIn?: () => void;
+  onImagePressOut?: () => void;
   onActiveImageLoadChange?: (loaded: boolean) => void;
+  scrollEnabled?: boolean;
 };
 
 export function HeroImagePager({
@@ -35,7 +41,9 @@ export function HeroImagePager({
   onIndexChange,
   onImagePress,
   onImagePressIn,
+  onImagePressOut,
   onActiveImageLoadChange,
+  scrollEnabled = true,
 }: HeroImagePagerProps) {
   const listRef = useRef<FlatList<string>>(null);
   const syncedIndexRef = useRef(activeIndex);
@@ -43,6 +51,7 @@ export function HeroImagePager({
     {},
   );
   const slides = images.length > 0 ? images : [""];
+  const heroScrollGesture = useMemo(() => Gesture.Native(), []);
 
   const reportActiveLoadState = useCallback(
     (index: number, loadedMap: Record<number, boolean>) => {
@@ -77,7 +86,13 @@ export function HeroImagePager({
 
   useEffect(() => {
     syncedIndexRef.current = 0;
-    setLoadedByIndex({});
+    const initialLoaded: Record<number, boolean> = {};
+    for (let index = 0; index < images.length; index += 1) {
+      if (isCountryImageReady(images[index])) {
+        initialLoaded[index] = true;
+      }
+    }
+    setLoadedByIndex(initialLoaded);
     scrollToIndex(0, false);
   }, [images, scrollToIndex]);
 
@@ -102,14 +117,15 @@ export function HeroImagePager({
     }
   };
 
-  return (
+  const list = (
     <FlatList
       ref={listRef}
       data={slides}
       keyExtractor={(uri, index) => `${uri}-${index}`}
       horizontal
       pagingEnabled
-      bounces={slides.length > 1}
+      scrollEnabled={scrollEnabled}
+      bounces={scrollEnabled && slides.length > 1}
       showsHorizontalScrollIndicator={false}
       decelerationRate="fast"
       scrollEventThrottle={16}
@@ -127,8 +143,9 @@ export function HeroImagePager({
           accessibilityHint="Opens a detailed AI-powered country profile"
           onPress={onImagePress}
           onPressIn={onImagePressIn}
+          onPressOut={onImagePressOut}
           disabled={!onImagePress}
-          style={{ width: heroWidth, height: heroHeight }}
+          style={{ width: heroWidth, height: heroHeight, overflow: "hidden" }}
         >
           <CountryImage
             uri={item || undefined}
@@ -143,4 +160,10 @@ export function HeroImagePager({
       )}
     />
   );
+
+  if (!scrollEnabled) {
+    return list;
+  }
+
+  return <GestureDetector gesture={heroScrollGesture}>{list}</GestureDetector>;
 }

@@ -1,70 +1,10 @@
-import { env } from "../config/env.js";
-import { normalizeAppRegion } from "../lib/app-region.js";
-import { flagCdnUrlFromIso2 } from "../lib/flag-url.js";
-import { fetchJson, HttpError } from "../lib/http.js";
+import { HttpError } from "../lib/http.js";
 import {
-  assertJsonArray,
-  assertNonEmptyArray,
-} from "../lib/upstream-validation.js";
+  fetchAllRestCountries,
+  fetchRestCountryByName,
+} from "../lib/rest-countries.js";
 import type { CountryBasic } from "../types/country.js";
-import { CACHE_TTL, cacheKeys, getOrSet } from "./cache.service.js";
-
-type RestCountry = {
-  name?: { common?: string };
-  capital?: string[];
-  region?: string;
-  subregion?: string;
-  population?: number;
-  cca2?: string;
-  latlng?: number[];
-  area?: number;
-  landlocked?: boolean;
-  timezones?: string[];
-  languages?: Record<string, string>;
-};
-
-function normalizeCountry(raw: RestCountry): CountryBasic | null {
-  const name = raw.name?.common?.trim();
-  if (!name) return null;
-
-  const lat = raw.latlng?.[0];
-  const lng = raw.latlng?.[1];
-  if (typeof lat !== "number" || typeof lng !== "number") return null;
-
-  const cca2 = raw.cca2?.trim().toUpperCase();
-  if (!cca2 || cca2.length !== 2) return null;
-
-  const apiRegion = raw.region ?? "Unknown";
-  const languages = raw.languages
-    ? Object.values(raw.languages)
-        .map((value) => value?.trim())
-        .filter((value): value is string => Boolean(value))
-    : [];
-
-  return {
-    name,
-    capital: raw.capital?.[0] ?? "N/A",
-    region: normalizeAppRegion(apiRegion, raw.subregion, name),
-    population: raw.population ?? 0,
-    cca2,
-    flag: flagCdnUrlFromIso2(cca2),
-    latlng: [lat, lng],
-    subregion: raw.subregion?.trim() || undefined,
-    area: typeof raw.area === "number" && raw.area > 0 ? raw.area : undefined,
-    landlocked:
-      typeof raw.landlocked === "boolean" ? raw.landlocked : undefined,
-    timezones: raw.timezones
-      ?.map((zone) => zone?.trim())
-      .filter((zone): zone is string => Boolean(zone)),
-    languages,
-  };
-}
-
-function normalizeMany(rawList: RestCountry[]): CountryBasic[] {
-  return rawList
-    .map(normalizeCountry)
-    .filter((c): c is CountryBasic => c !== null);
-}
+import { CACHE_TTL, cacheGet, cacheKeys, getOrSet } from "./cache.service.js";
 
 /** Fisher–Yates shuffle; mutates a copy so feed order stays stable while cached. */
 function shuffleCountries<T>(items: T[]): T[] {
@@ -76,46 +16,41 @@ function shuffleCountries<T>(items: T[]): T[] {
   return list;
 }
 
-async function fetchCountryFromApi(name: string): Promise<CountryBasic> {
-  const encoded = encodeURIComponent(name.trim());
-  const url = `${env.restCountriesBaseUrl}/name/${encoded}`;
-
-  const data = assertJsonArray<RestCountry>(
-    await fetchJson<unknown>(url),
-    "REST Countries API",
-  );
-  const normalized = normalizeMany(data);
-
-  if (normalized.length === 0) {
-    throw new HttpError(`Country not found: ${name}`, 404, "COUNTRY_NOT_FOUND");
+function findCountryInBasics(
+  countries: CountryBasic[] | null | undefined,
+  name: string,
+): CountryBasic | null {
+  const query = name.trim().toLowerCase();
+  if (!query || !countries?.length) {
+    return null;
   }
 
-  const query = name.trim().toLowerCase();
-  const exact = normalized.find((c) => c.name.toLowerCase() === query);
-  return exact ?? normalized[0];
-}
-
-async function fetchAllCountriesFromApi(): Promise<CountryBasic[]> {
-  // REST Countries v3.1 allows at most 10 `fields` per request. Bulk list omits
-  // landlocked/timezones; getCountryByName() loads the full record for profiles.
-  const url = `${env.restCountriesBaseUrl}/all?fields=name,capital,region,subregion,population,cca2,latlng,area,languages`;
-  const data = assertJsonArray<RestCountry>(
-    await fetchJson<unknown>(url),
-    "REST Countries API",
+  return (
+    countries.find((country) => country.name.toLowerCase() === query) ?? null
   );
-  return assertNonEmptyArray(normalizeMany(data), "REST Countries API");
 }
 
 export async function getCountryByName(name: string): Promise<CountryBasic> {
   const key = cacheKeys.country(name);
 
-  return getOrSet(key, CACHE_TTL.country, () => fetchCountryFromApi(name));
+  return getOrSet(key, CACHE_TTL.country, async () => {
+    // Reuse the warmed feed list when available — saves REST Countries quota.
+    const cachedBasics = await cacheGet<CountryBasic[]>(
+      cacheKeys.feedCountries("basics"),
+    );
+    const fromFeed = findCountryInBasics(cachedBasics, name);
+    if (fromFeed) {
+      return fromFeed;
+    }
+
+    return fetchRestCountryByName(name);
+  });
 }
 
 export async function getAllCountryBasics(): Promise<CountryBasic[]> {
   const key = cacheKeys.feedCountries("basics");
 
-  return getOrSet(key, CACHE_TTL.feed, () => fetchAllCountriesFromApi());
+  return getOrSet(key, CACHE_TTL.feed, () => fetchAllRestCountries());
 }
 
 export async function getFeedCountries(): Promise<CountryBasic[]> {
@@ -123,6 +58,13 @@ export async function getFeedCountries(): Promise<CountryBasic[]> {
 
   return getOrSet(key, CACHE_TTL.feed, async () => {
     const countries = await getAllCountryBasics();
+    if (countries.length === 0) {
+      throw new HttpError(
+        "Invalid response from REST Countries API",
+        502,
+        "UPSTREAM_INVALID",
+      );
+    }
     return shuffleCountries(countries);
   });
 }

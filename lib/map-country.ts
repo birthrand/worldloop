@@ -1,4 +1,5 @@
 import { cca3FromCca2 } from "@/lib/cca2-to-cca3";
+import { getStaticCountryByName } from "@/lib/static-countries";
 import type { Country, MapCountry } from "@/types/country";
 
 /** Extract ISO alpha-2 from a flagcdn URL when present. */
@@ -34,7 +35,7 @@ export function mapCountryToCountry(
     cca2: merged?.cca2 ?? cca2FromFlagUrl(map.flag),
     flag: merged?.flag ?? map.flag,
     latlng: merged?.latlng ?? map.latlng,
-    languages: merged?.languages,
+    languages: merged?.languages ?? map.languages,
     images: merged?.images ?? (map.image ? [map.image] : undefined),
     ai: merged?.ai,
   };
@@ -334,6 +335,22 @@ export function latLngToEquirectangularContainPosition(
   };
 }
 
+/** Languages for map preview UI — MapCountry may omit them on older cached payloads. */
+export function languagesForMapCountry(
+  country: Pick<MapCountry, "name" | "languages">,
+  feedCountries?: Country[],
+): string[] | undefined {
+  if (country.languages?.length) return country.languages;
+
+  const staticMatch = getStaticCountryByName(country.name);
+  if (staticMatch?.languages?.length) return staticMatch.languages;
+
+  const feedMatch = feedCountries?.find((item) => item.name === country.name);
+  if (feedMatch?.languages?.length) return feedMatch.languages;
+
+  return undefined;
+}
+
 /** Build a map country from search/feed data when the map list has not loaded yet. */
 export function countryToMapCountry(country: Country): MapCountry {
   return {
@@ -344,5 +361,6 @@ export function countryToMapCountry(country: Country): MapCountry {
     flag: country.flag,
     latlng: country.latlng,
     image: country.images?.[0] ?? null,
+    languages: country.languages,
   };
 }

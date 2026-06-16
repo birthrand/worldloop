@@ -1,17 +1,16 @@
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import { useState } from "react";
-import {
-  Alert,
-  Modal,
-  Pressable,
-  Share,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-import Animated, { SlideInDown } from "react-native-reanimated";
+import { Alert, Pressable, Share, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { SwipeDismissSheet } from "@/components/explore/swipe-dismiss-sheet";
+
+import {
+  EXPLORE_SWIPE_CARD_INFO_BG,
+  EXPLORE_SWIPE_CARD_INFO_BORDER,
+} from "@/constants/explore-swipe-layout";
+import { focusCountryOnMap } from "@/lib/open-country-on-map";
 import {
   DEFAULT_FEED_SORT_FIELD,
   DEFAULT_FEED_SORT_ORDER,
@@ -20,11 +19,6 @@ import {
   type FeedSortOrder,
 } from "@/store/use-country-feed-store";
 import type { Country } from "@/types/country";
-
-const SHEET_ENTER = SlideInDown.springify()
-  .damping(20)
-  .stiffness(150)
-  .mass(0.85);
 
 type ExploreCountryMoreMenusProps = {
   country: Country | undefined;
@@ -143,7 +137,6 @@ function SortCheckboxOption({
 }
 
 type MoreMenuRowProps = {
-  icon: keyof typeof Ionicons.glyphMap;
   label: string;
   subtitle?: string;
   disabled?: boolean;
@@ -152,7 +145,6 @@ type MoreMenuRowProps = {
 };
 
 function MoreMenuRow({
-  icon,
   label,
   subtitle,
   disabled = false,
@@ -172,24 +164,6 @@ function MoreMenuRow({
         pressed && !disabled && styles.optionPressed,
       ]}
     >
-      <View
-        style={[
-          styles.menuIconWrap,
-          active && !disabled && styles.menuIconWrapActive,
-        ]}
-      >
-        <Ionicons
-          name={icon}
-          size={20}
-          color={
-            disabled
-              ? "rgba(255, 255, 255, 0.35)"
-              : active
-                ? "#fbbf24"
-                : "#ffffff"
-          }
-        />
-      </View>
       <View style={styles.menuTextGroup}>
         <Text
           style={[
@@ -281,209 +255,181 @@ export function ExploreCountryMoreMenus({
     void handleShare();
   };
 
+  const handleViewOnMap = () => {
+    if (!country) return;
+    onCloseMoreMenu();
+    focusCountryOnMap(country, "explore");
+    router.push("/(tabs)/map");
+  };
+
   return (
     <>
-      <Modal
+      <SwipeDismissSheet
         visible={isMoreMenuOpen && country != null}
-        animationType="fade"
-        transparent
-        onRequestClose={onCloseMoreMenu}
+        onClose={onCloseMoreMenu}
+        sheetStyle={[styles.sheet, { paddingBottom: insets.bottom + 12 }]}
+        backdropAccessibilityLabel="Close more actions"
+        accessibilityLabel="More actions"
       >
-        <View style={styles.modalOverlay}>
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            accessibilityRole="button"
-            accessibilityLabel="Close more actions"
-            onPress={onCloseMoreMenu}
-          />
-          <Animated.View
-            entering={SHEET_ENTER}
-            style={[styles.sheet, { paddingBottom: insets.bottom + 12 }]}
-            accessibilityViewIsModal
-          >
-            <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>More actions</Text>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Close more actions"
-                hitSlop={10}
-                onPress={onCloseMoreMenu}
-                style={({ pressed }) => [
-                  styles.closeButton,
-                  pressed && styles.optionPressed,
-                ]}
-              >
-                <Ionicons
-                  name="close"
-                  size={20}
-                  color="rgba(255, 255, 255, 0.45)"
-                />
-              </Pressable>
-            </View>
-
-            <View style={styles.menuPanel}>
-              <MoreMenuRow
-                icon="share-social-outline"
-                label="Share"
-                subtitle={`Share ${countryName} with friends`}
-                onPress={handleShareFromMenu}
-              />
-              <View style={styles.menuDivider} />
-              <MoreMenuRow
-                icon="swap-vertical-outline"
-                label="Sort feed"
-                subtitle={currentSortSummary ?? "Shuffled order"}
-                active={hasCustomSort}
-                onPress={handleOpenSortModal}
-              />
-              <View style={styles.menuDivider} />
-              <MoreMenuRow
-                icon="volume-medium-outline"
-                label="Listen"
-                subtitle="Narration coming soon"
-                disabled
-                onPress={() => {}}
-              />
-            </View>
-          </Animated.View>
+        <View style={styles.handleWrap}>
+          <View style={styles.handleBar} />
         </View>
-      </Modal>
 
-      <Modal
+        <View style={styles.sheetHeader}>
+          <Text style={styles.sheetTitle}>More actions</Text>
+        </View>
+
+        <View style={styles.menuPanel}>
+          <MoreMenuRow
+            label="Share"
+            subtitle={`Share ${countryName} with friends`}
+            onPress={handleShareFromMenu}
+          />
+          <View style={styles.menuDivider} />
+          <MoreMenuRow
+            label="View on map"
+            subtitle={`Locate ${countryName} on the world map`}
+            onPress={handleViewOnMap}
+          />
+          <View style={styles.menuDivider} />
+          <MoreMenuRow
+            label="Sort feed"
+            subtitle={currentSortSummary ?? "Shuffled order"}
+            active={hasCustomSort}
+            onPress={handleOpenSortModal}
+          />
+          <View style={styles.menuDivider} />
+          <MoreMenuRow
+            label="Listen"
+            subtitle="Narration coming soon"
+            disabled
+            onPress={() => {}}
+          />
+        </View>
+      </SwipeDismissSheet>
+
+      <SwipeDismissSheet
         visible={isSortModalOpen}
-        animationType="fade"
-        transparent
-        onRequestClose={handleCloseSortModal}
+        onClose={handleCloseSortModal}
+        sheetStyle={[styles.sheet, { paddingBottom: insets.bottom + 12 }]}
+        backdropAccessibilityLabel="Close sort options"
+        accessibilityLabel="Sort feed"
       >
-        <View style={styles.modalOverlay}>
+        <View style={styles.sheetHeaderRow}>
+          <View style={styles.sheetTitleGroup}>
+            <Text style={styles.sheetTitle}>Sort feed</Text>
+            {currentSortSummary ? (
+              <Text style={styles.sheetSubtitle}>{currentSortSummary}</Text>
+            ) : null}
+          </View>
           <Pressable
-            style={StyleSheet.absoluteFill}
             accessibilityRole="button"
             accessibilityLabel="Close sort options"
+            hitSlop={10}
             onPress={handleCloseSortModal}
-          />
-          <Animated.View
-            entering={SHEET_ENTER}
-            style={[styles.sheet, { paddingBottom: insets.bottom + 12 }]}
-            accessibilityViewIsModal
+            style={({ pressed }) => [
+              styles.closeButton,
+              pressed && styles.optionPressed,
+            ]}
           >
-            <View style={styles.sheetHeader}>
-              <View style={styles.sheetTitleGroup}>
-                <Text style={styles.sheetTitle}>Sort feed</Text>
-                {currentSortSummary ? (
-                  <Text style={styles.sheetSubtitle}>{currentSortSummary}</Text>
-                ) : null}
-              </View>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Close sort options"
-                hitSlop={10}
-                onPress={handleCloseSortModal}
-                style={({ pressed }) => [
-                  styles.closeButton,
-                  pressed && styles.optionPressed,
-                ]}
-              >
-                <Ionicons
-                  name="close"
-                  size={20}
-                  color="rgba(255, 255, 255, 0.45)"
-                />
-              </Pressable>
-            </View>
-
-            <View style={styles.tabPanel}>
-              <Text style={styles.sectionLabel}>Shuffle</Text>
-              <SortCheckboxOption
-                label="Random order"
-                checked={draftRandom}
-                onPress={() => setDraftRandom((prev) => !prev)}
-              />
-
-              <View style={styles.sectionDivider} />
-
-              <Text style={styles.sectionLabel}>Sort by</Text>
-              <View
-                accessibilityRole="radiogroup"
-                accessibilityLabel="Sort by"
-                style={styles.radioGroup}
-              >
-                <SortRadioOption
-                  label="Name"
-                  selected={draftField === "name"}
-                  disabled={sortOptionsDisabled}
-                  onPress={() => setDraftField("name")}
-                />
-                <SortRadioOption
-                  label="Population"
-                  selected={draftField === "population"}
-                  disabled={sortOptionsDisabled}
-                  onPress={() => setDraftField("population")}
-                />
-              </View>
-
-              <View style={styles.sectionDivider} />
-
-              <Text style={styles.sectionLabel}>Order</Text>
-              <View
-                accessibilityRole="radiogroup"
-                accessibilityLabel="Order"
-                style={styles.radioGroup}
-              >
-                <SortRadioOption
-                  label={orderLabels.asc}
-                  selected={draftOrder === "asc"}
-                  disabled={sortOptionsDisabled}
-                  onPress={() => setDraftOrder("asc")}
-                />
-                <SortRadioOption
-                  label={orderLabels.desc}
-                  selected={draftOrder === "desc"}
-                  disabled={sortOptionsDisabled}
-                  onPress={() => setDraftOrder("desc")}
-                />
-              </View>
-            </View>
-
-            <View style={styles.modalActions}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Cancel sort changes"
-                onPress={handleCloseSortModal}
-                style={({ pressed }) => [
-                  styles.actionButton,
-                  styles.cancelButton,
-                  pressed && styles.optionPressed,
-                ]}
-              >
-                <Text style={styles.cancelText}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                disabled={!hasSortChanges}
-                accessibilityRole="button"
-                accessibilityLabel="Apply sort changes"
-                accessibilityState={{ disabled: !hasSortChanges }}
-                onPress={handleApplySort}
-                style={({ pressed }) => [
-                  styles.actionButton,
-                  styles.applyButton,
-                  !hasSortChanges && styles.applyButtonDisabled,
-                  pressed && hasSortChanges && styles.optionPressed,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.applyText,
-                    !hasSortChanges && styles.applyTextDisabled,
-                  ]}
-                >
-                  Apply
-                </Text>
-              </Pressable>
-            </View>
-          </Animated.View>
+            <Ionicons
+              name="close"
+              size={20}
+              color="rgba(255, 255, 255, 0.45)"
+            />
+          </Pressable>
         </View>
-      </Modal>
+
+        <View style={styles.tabPanel}>
+          <Text style={styles.sectionLabel}>Shuffle</Text>
+          <SortCheckboxOption
+            label="Random order"
+            checked={draftRandom}
+            onPress={() => setDraftRandom((prev) => !prev)}
+          />
+
+          <View style={styles.sectionDivider} />
+
+          <Text style={styles.sectionLabel}>Sort by</Text>
+          <View
+            accessibilityRole="radiogroup"
+            accessibilityLabel="Sort by"
+            style={styles.radioGroup}
+          >
+            <SortRadioOption
+              label="Name"
+              selected={draftField === "name"}
+              disabled={sortOptionsDisabled}
+              onPress={() => setDraftField("name")}
+            />
+            <SortRadioOption
+              label="Population"
+              selected={draftField === "population"}
+              disabled={sortOptionsDisabled}
+              onPress={() => setDraftField("population")}
+            />
+          </View>
+
+          <View style={styles.sectionDivider} />
+
+          <Text style={styles.sectionLabel}>Order</Text>
+          <View
+            accessibilityRole="radiogroup"
+            accessibilityLabel="Order"
+            style={styles.radioGroup}
+          >
+            <SortRadioOption
+              label={orderLabels.asc}
+              selected={draftOrder === "asc"}
+              disabled={sortOptionsDisabled}
+              onPress={() => setDraftOrder("asc")}
+            />
+            <SortRadioOption
+              label={orderLabels.desc}
+              selected={draftOrder === "desc"}
+              disabled={sortOptionsDisabled}
+              onPress={() => setDraftOrder("desc")}
+            />
+          </View>
+        </View>
+
+        <View style={styles.modalActions}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Cancel sort changes"
+            onPress={handleCloseSortModal}
+            style={({ pressed }) => [
+              styles.actionButton,
+              styles.cancelButton,
+              pressed && styles.optionPressed,
+            ]}
+          >
+            <Text style={styles.cancelText}>Cancel</Text>
+          </Pressable>
+          <Pressable
+            disabled={!hasSortChanges}
+            accessibilityRole="button"
+            accessibilityLabel="Apply sort changes"
+            accessibilityState={{ disabled: !hasSortChanges }}
+            onPress={handleApplySort}
+            style={({ pressed }) => [
+              styles.actionButton,
+              styles.applyButton,
+              !hasSortChanges && styles.applyButtonDisabled,
+              pressed && hasSortChanges && styles.optionPressed,
+            ]}
+          >
+            <Text
+              style={[
+                styles.applyText,
+                !hasSortChanges && styles.applyTextDisabled,
+              ]}
+            >
+              Apply
+            </Text>
+          </Pressable>
+        </View>
+      </SwipeDismissSheet>
     </>
   );
 }
@@ -492,24 +438,32 @@ const styles = StyleSheet.create({
   optionPressed: {
     opacity: 0.78,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.55)",
-    justifyContent: "flex-end",
-  },
   sheet: {
     width: "100%",
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    paddingTop: 12,
+    paddingTop: 8,
     paddingHorizontal: 16,
-    backgroundColor: "#111827",
+    backgroundColor: EXPLORE_SWIPE_CARD_INFO_BG,
     borderWidth: 1,
     borderBottomWidth: 0,
-    borderColor: "rgba(255, 255, 255, 0.14)",
+    borderColor: EXPLORE_SWIPE_CARD_INFO_BORDER,
     gap: 4,
   },
+  handleWrap: {
+    alignItems: "center",
+    paddingBottom: 8,
+  },
+  handleBar: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(255, 255, 255, 0.22)",
+  },
   sheetHeader: {
+    marginBottom: 2,
+  },
+  sheetHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -551,17 +505,6 @@ const styles = StyleSheet.create({
   },
   menuRowDisabled: {
     opacity: 0.55,
-  },
-  menuIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
-  },
-  menuIconWrapActive: {
-    backgroundColor: "rgba(251, 191, 36, 0.15)",
   },
   menuTextGroup: {
     flex: 1,

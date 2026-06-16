@@ -1,5 +1,11 @@
-/** Minimum gap between accepted random-FAB taps (see map screen FAB handler). */
-export const RANDOM_FAB_TAP_COOLDOWN_MS = 650;
+import {
+  isAsyncPickGenerationCurrent,
+  MAP_NAVIGATION_TAP_COOLDOWN_MS,
+  shouldAcceptNavigationTap,
+} from "@/lib/map-navigation-ux-guard";
+
+/** @deprecated Use MAP_NAVIGATION_TAP_COOLDOWN_MS from map-navigation-ux-guard. */
+export const RANDOM_FAB_TAP_COOLDOWN_MS = MAP_NAVIGATION_TAP_COOLDOWN_MS;
 
 export function shouldAcceptRandomFabTap(input: {
   isMapAnimating: boolean;
@@ -7,18 +13,18 @@ export function shouldAcceptRandomFabTap(input: {
   lastTapAtMs: number;
   cooldownMs?: number;
 }): boolean {
-  if (input.isMapAnimating) {
-    return false;
-  }
-
-  const cooldown = input.cooldownMs ?? RANDOM_FAB_TAP_COOLDOWN_MS;
-  return input.nowMs - input.lastTapAtMs >= cooldown;
+  return shouldAcceptNavigationTap({
+    isAnimating: input.isMapAnimating,
+    nowMs: input.nowMs,
+    lastTapAtMs: input.lastTapAtMs,
+    cooldownMs: input.cooldownMs,
+  });
 }
 
-/** Ignore stale async pool resolutions when taps overlap. */
+/** @deprecated Use isAsyncPickGenerationCurrent from map-navigation-ux-guard. */
 export function isRandomPickGenerationCurrent(
   generation: number,
   currentGeneration: number,
 ): boolean {
-  return generation === currentGeneration;
+  return isAsyncPickGenerationCurrent(generation, currentGeneration);
 }

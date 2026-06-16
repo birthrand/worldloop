@@ -219,6 +219,8 @@ Always cache images per country to avoid repeated API calls.
 
 Map Screen Rules
 
+**Current development note (until the user says otherwise):** Only the **2D flat map** is in use. Do not enable 3D globe work, tune 3D-only flows, or spend time debugging globe camera unless explicitly asked. `MAP_3D_ENABLED` is `false` in `constants/map-features.ts`.
+
 The map screen must:
 
 use interactive world map visualization

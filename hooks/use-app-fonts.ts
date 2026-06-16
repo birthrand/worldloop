@@ -11,7 +11,7 @@ export function useAppFonts() {
 
   useEffect(() => {
     if (loaded || error) {
-      SplashScreen.hideAsync();
+      SplashScreen.hideAsync().catch(() => {});
     }
   }, [loaded, error]);
 

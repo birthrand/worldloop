@@ -1,11 +1,17 @@
 import { create } from "zustand";
 
 import { CLIENT_CACHE_KEYS, CLIENT_CACHE_TTL } from "@/constants/client-cache";
+import { MAP_3D_ENABLED } from "@/constants/map-features";
 import { fetchMapCountries } from "@/lib/api";
 import { normalizeCountryRegion } from "@/lib/app-region";
 import { getClientCache, staleWhileRevalidate } from "@/lib/client-cache";
 import { countryToMapCountry, isValidLatLng } from "@/lib/map-country";
+import { createMapPresentationIntent } from "@/lib/map-navigation-intent";
 import { prefetchMapCountryDetails } from "@/lib/prefetch-country-details";
+import {
+  getStaticMapCountries,
+  isStaticCountryCatalogEnabled,
+} from "@/lib/static-countries";
 import {
   useIdentityStore,
   type SelectionSource,
@@ -46,6 +52,8 @@ type MapState = {
   mapCountriesFullyLoaded: boolean;
   /** Set when opening Map from Explore/search; consumed once the map can fly the camera. */
   pendingMapIntent: MapPresentationIntent | null;
+  /** Explore back — map screen snaps to world on blur when true. */
+  exploreSessionDiscardPending: boolean;
   activeChip: MapFilterChip;
   mapMode: MapMode;
   globeCamera: GlobeCameraHandle | null;
@@ -57,6 +65,8 @@ type MapState = {
     scopeSnapshot?: DiscoveryScope,
   ) => void;
   clearPendingMapIntent: () => void;
+  markExploreSessionDiscardPending: () => void;
+  consumeExploreSessionDiscardPending: () => boolean;
   selectRandomCountry: () => MapCountry | null;
   setActiveChip: (chip: MapFilterChip) => void;
   setMapMode: (mode: MapMode) => void;
@@ -106,6 +116,7 @@ export const useMapStore = create<MapState>()((set, get) => ({
   error: null,
   mapCountriesFullyLoaded: false,
   pendingMapIntent: null,
+  exploreSessionDiscardPending: false,
   activeChip: "all",
   mapMode: "2d",
   globeCamera: null,
@@ -118,6 +129,20 @@ export const useMapStore = create<MapState>()((set, get) => ({
     }
     if (mapCountriesLoadPromise) {
       return mapCountriesLoadPromise;
+    }
+
+    if (isStaticCountryCatalogEnabled()) {
+      const countries = withValidCoordinates(getStaticMapCountries());
+      set({
+        countries,
+        status: "idle",
+        error: null,
+        mapCountriesFullyLoaded: countries.length > 0,
+      });
+      if (countries.length > 0) {
+        void prefetchMapCountryDetails(countries);
+      }
+      return;
     }
 
     mapCountriesLoadPromise = (async () => {
@@ -218,17 +243,28 @@ export const useMapStore = create<MapState>()((set, get) => ({
 
     set({
       countries,
-      pendingMapIntent: {
+      pendingMapIntent: createMapPresentationIntent({
         countryName: trimmed,
         mode: "focus",
         source,
         discoveryScope,
         scopeMode: discoveryScope.mode,
-      },
+      }),
     });
   },
 
   clearPendingMapIntent: () => set({ pendingMapIntent: null }),
+
+  markExploreSessionDiscardPending: () =>
+    set({ exploreSessionDiscardPending: true }),
+
+  consumeExploreSessionDiscardPending: () => {
+    const pending = get().exploreSessionDiscardPending;
+    if (pending) {
+      set({ exploreSessionDiscardPending: false });
+    }
+    return pending;
+  },
 
   selectRandomCountry: () => {
     const visible = get().getVisibleCountries();
@@ -237,11 +273,11 @@ export const useMapStore = create<MapState>()((set, get) => ({
     const pick = visible[Math.floor(Math.random() * visible.length)] ?? null;
     if (pick) {
       set({
-        pendingMapIntent: {
+        pendingMapIntent: createMapPresentationIntent({
           countryName: pick.name,
           mode: "focus",
           source: "shuffle",
-        },
+        }),
       });
     }
     return pick;
@@ -249,12 +285,15 @@ export const useMapStore = create<MapState>()((set, get) => ({
 
   setActiveChip: (chip) => set({ activeChip: chip }),
 
-  setMapMode: (mode) => set({ mapMode: mode }),
+  setMapMode: (mode) =>
+    set({ mapMode: mode === "3d" && !MAP_3D_ENABLED ? "2d" : mode }),
 
-  toggleMapMode: () =>
+  toggleMapMode: () => {
+    if (!MAP_3D_ENABLED) return;
     set((state) => ({
       mapMode: state.mapMode === "3d" ? "2d" : "3d",
-    })),
+    }));
+  },
 
   registerGlobeCamera: (handle) => {
     set({ globeCamera: handle });

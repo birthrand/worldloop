@@ -3,9 +3,9 @@ import type { Region } from "react-native-maps";
 import { WORLD_INITIAL_REGION } from "@/constants/map-regions";
 import type { FlightPhase } from "@/hooks/use-map-flight";
 import type { MapCluster } from "@/lib/map-clusters";
-import { REGION_FOCUS_INITIAL_DELTA } from "@/lib/map-region-markers";
+import { resolveCountryFocusLatitudeDelta } from "@/lib/map-country-focus-zoom";
 import {
-  flightRegionForClusterFocus,
+  flightRegionForContinentContextCountry,
   flightRegionForCountry,
   flightRegionForWorldViewCountry,
 } from "@/lib/map-signal-sources";
@@ -15,12 +15,16 @@ import type { MapCountry } from "@/types/country";
 const WORLD_PHASE_MS = 700;
 const CONTINENT_PHASE_MS = 600;
 const COUNTRY_PHASE_MS = 750;
-/** Explore → Map and random FAB — one pan at world zoom to the country. */
+/** Random FAB — one pan at world zoom to the country. */
 const WORLD_VIEW_PAN_MS = 900;
+/** Explore → Map (2D) — one flight to the country-centered continent frame. */
+export const EXPLORE_MAP_FLIGHT_MS = 750;
 /** Direct map taps are already near the target — snap in faster. */
 const COUNTRY_TAP_MS = 520;
 /** Preview shuffle — one continuous retarget from the current camera. */
-const COUNTRY_RETARGET_MS = 680;
+export const COUNTRY_RETARGET_MS = 680;
+/** In-session Explore map country switch — pan from current viewport. */
+export const EXPLORE_MAP_RETARGET_MS = COUNTRY_RETARGET_MS;
 
 /** One continuous camera move — avoids stacked animateToRegion crashes on iOS. */
 const COUNTRY_RETARGET_SOURCES = new Set<Exclude<SelectionSource, null>>([
@@ -37,19 +41,28 @@ export type DiscoveryFlightParams = {
   includeWorld: boolean;
   /** Focus keeps continent framing; preview zooms to country detail. */
   mode?: "focus" | "preview";
+  /** Explore map session — pan from current viewport (not the entry fly-in). */
+  exploreInSession?: boolean;
 };
 
-const WORLD_VIEW_PAN_SOURCES = new Set<Exclude<SelectionSource, null>>([
-  "explore",
-  "fab",
+const WORLD_VIEW_PAN_SOURCES = new Set<Exclude<SelectionSource, null>>(["fab"]);
+
+export const COUNTRY_DETAIL_FLIGHT_MS = 900;
+
+const COUNTRY_DETAIL_SOURCES = new Set<Exclude<SelectionSource, null>>([
+  "countryDetail",
 ]);
 
 /**
  * Builds camera phases for country navigation.
  * Marker density/UI derive separately from live zoom — phases only move the camera.
  *
- * Map tap and preview shuffle retarget in one continuous country-zoom flight from
- * the current viewport. Explore and the random FAB pan at world zoom.
+ * Two zoom intents:
+ * - **Explore → Map (2D)**: one flight to the selected country center (continent frame)
+ * - **FAB**: world-view pan — "where is this country?"
+ * - **Country focus** (detail / search / tap): Tier 1 framing — "show me THIS country"
+ *
+ * Map tap and preview shuffle retarget in one continuous flight from the current viewport.
  */
 export function buildDiscoveryPhases({
   pick,
@@ -57,12 +70,20 @@ export function buildDiscoveryPhases({
   source,
   includeWorld,
   mode = "focus",
+  exploreInSession = false,
 }: DiscoveryFlightParams): FlightPhase[] {
+  const countryFocusDelta = resolveCountryFocusLatitudeDelta(pick);
   const countryRegion = flightRegionForCountry(pick);
-  const continentOnCountry = flightRegionForCountry(
-    pick,
-    REGION_FOCUS_INITIAL_DELTA,
-  );
+  const countryFocusRegion = flightRegionForCountry(pick, countryFocusDelta);
+
+  if (COUNTRY_DETAIL_SOURCES.has(source)) {
+    return [
+      {
+        region: countryFocusRegion,
+        duration: COUNTRY_DETAIL_FLIGHT_MS,
+      },
+    ];
+  }
 
   if (WORLD_VIEW_PAN_SOURCES.has(source)) {
     return [
@@ -73,15 +94,30 @@ export function buildDiscoveryPhases({
     ];
   }
 
+  if (source === "explore") {
+    if (exploreInSession) {
+      return [
+        {
+          region: flightRegionForContinentContextCountry(pick),
+          duration: EXPLORE_MAP_RETARGET_MS,
+        },
+      ];
+    }
+    return [
+      {
+        region: flightRegionForContinentContextCountry(pick),
+        duration: EXPLORE_MAP_FLIGHT_MS,
+      },
+    ];
+  }
+
   if (COUNTRY_RETARGET_SOURCES.has(source)) {
     const duration = source === "mapTap" ? COUNTRY_TAP_MS : COUNTRY_RETARGET_MS;
-    const region = mode === "preview" ? countryRegion : continentOnCountry;
+    const region = mode === "preview" ? countryRegion : countryFocusRegion;
     return [{ region, duration }];
   }
 
-  const continentRegion: Region = cluster
-    ? flightRegionForClusterFocus(cluster)
-    : flightRegionForCountry(pick, REGION_FOCUS_INITIAL_DELTA);
+  const continentRegion: Region = flightRegionForContinentContextCountry(pick);
 
   const phases: FlightPhase[] = [];
   if (includeWorld) {

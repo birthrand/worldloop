@@ -1,110 +1,75 @@
-import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { FlagBadge } from "@/components/explore/flag-badge";
-import { cca3FromFlagUrl } from "@/lib/map-country";
+import {
+  EXPLORE_SWIPE_CARD_BORDER,
+  EXPLORE_SWIPE_CARD_INFO_BG,
+  EXPLORE_SWIPE_CARD_SUBTITLE_COLOR,
+  EXPLORE_SWIPE_CARD_TITLE_COLOR,
+  EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING,
+  EXPLORE_SWIPE_TEXT_BODY,
+  EXPLORE_SWIPE_TEXT_BODY_LINE_HEIGHT,
+} from "@/constants/explore-swipe-layout";
+import { continentDisplayLabel } from "@/constants/regions";
+import { cca2FromFlagUrl, cca3FromFlagUrl } from "@/lib/map-country";
 import type { MapCountry } from "@/types/country";
+
+/** Matches map layout chrome height in `app/(tabs)/map.tsx`. */
+export const MAP_COUNTRY_FOCUS_PILL_HEIGHT = 44;
+
+const FLAG_WIDTH = 32;
+const FLAG_HEIGHT = 22;
+/** Shared text metrics so country code + region sit on one horizontal line. */
+const PILL_TEXT_LINE_HEIGHT = EXPLORE_SWIPE_TEXT_BODY_LINE_HEIGHT;
+/** Outer inset from pill edge — matches explore deck horizontal padding. */
+const PILL_PADDING_HORIZONTAL = EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING;
+/** Space between flag block and the divider. */
+const PILL_FLAG_TRAILING = 8;
+const PILL_CODE_TRAILING = 10;
+const PILL_REGION_LEADING = 10;
 
 type MapCountryFocusPillProps = {
   country: MapCountry;
   bottom: number;
   onOpenDetails: () => void;
-  onShowDiscovery: () => void;
-  discoveryChromeVisible?: boolean;
-  onDismiss: () => void;
 };
-
-const PILL_HEIGHT = 44;
 
 export function MapCountryFocusPill({
   country,
   bottom,
   onOpenDetails,
-  onShowDiscovery,
-  discoveryChromeVisible = false,
-  onDismiss,
 }: MapCountryFocusPillProps) {
   const handleOpenDetails = () => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onOpenDetails();
   };
 
-  const handleShowDiscovery = () => {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onShowDiscovery();
-  };
-
-  const handleDismiss = () => {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onDismiss();
-  };
-
   const countryCode = cca3FromFlagUrl(country.flag);
+  const regionLabel = continentDisplayLabel(country.region?.trim() || "—");
 
   return (
     <View style={[styles.wrap, { bottom }]} pointerEvents="box-none">
-      <View style={styles.pill}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Open details for ${country.name}`}
-          onPress={handleOpenDetails}
-          style={({ pressed }) => [
-            styles.detailsSegment,
-            pressed && styles.pressed,
-          ]}
-        >
-          <View style={styles.detailsIdentity}>
-            <FlagBadge flag={country.flag} width={22} height={15} />
-            <Text style={styles.countryLabel} numberOfLines={1}>
-              {countryCode}
-            </Text>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.detailsAction}>
-            <Text style={styles.detailsLabel}>Details</Text>
-          </View>
-        </Pressable>
-
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Open details for ${country.name}`}
+        onPress={handleOpenDetails}
+        style={({ pressed }) => [styles.pill, pressed && styles.pressed]}
+      >
+        <FlagBadge
+          flag={country.flag}
+          iso2={cca2FromFlagUrl(country.flag)}
+          width={FLAG_WIDTH}
+          height={FLAG_HEIGHT}
+        />
+        <Text style={styles.countryCode} numberOfLines={1}>
+          {countryCode}
+        </Text>
         <View style={styles.divider} />
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={
-            discoveryChromeVisible
-              ? "Hide explore this area"
-              : "Show explore this area"
-          }
-          onPress={handleShowDiscovery}
-          hitSlop={6}
-          style={({ pressed }) => [
-            styles.iconSegment,
-            discoveryChromeVisible && styles.iconSegmentActive,
-            pressed && styles.pressed,
-          ]}
-        >
-          <Ionicons
-            name="information-circle-outline"
-            size={18}
-            color={discoveryChromeVisible ? "#fbbf24" : "#94a3b8"}
-          />
-        </Pressable>
-
-        <View style={styles.divider} />
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Clear focus on ${country.name}`}
-          onPress={handleDismiss}
-          hitSlop={6}
-          style={({ pressed }) => [
-            styles.dismissSegment,
-            pressed && styles.pressed,
-          ]}
-        >
-          <Ionicons name="close" size={18} color="#94a3b8" />
-        </Pressable>
-      </View>
+        <Text style={styles.regionLabel} numberOfLines={1}>
+          {regionLabel}
+        </Text>
+      </Pressable>
     </View>
   );
 }
@@ -120,69 +85,44 @@ const styles = StyleSheet.create({
   pill: {
     flexDirection: "row",
     alignItems: "center",
-    height: PILL_HEIGHT,
-    borderRadius: PILL_HEIGHT / 2,
-    backgroundColor: "#101828",
+    height: MAP_COUNTRY_FOCUS_PILL_HEIGHT,
+    paddingLeft: PILL_PADDING_HORIZONTAL,
+    paddingRight: PILL_PADDING_HORIZONTAL,
+    borderRadius: MAP_COUNTRY_FOCUS_PILL_HEIGHT / 2,
+    backgroundColor: EXPLORE_SWIPE_CARD_INFO_BG,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
+    borderColor: EXPLORE_SWIPE_CARD_BORDER,
     overflow: "hidden",
   },
-  detailsSegment: {
-    flexDirection: "row",
-    alignItems: "center",
-    height: PILL_HEIGHT,
-  },
-  detailsIdentity: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingLeft: 14,
-    paddingRight: 12,
-  },
-  detailsAction: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    height: PILL_HEIGHT,
-    paddingHorizontal: 12,
-  },
-  dismissSegment: {
-    width: PILL_HEIGHT,
-    height: PILL_HEIGHT,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  iconSegment: {
-    width: PILL_HEIGHT,
-    height: PILL_HEIGHT,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  iconSegmentActive: {
-    backgroundColor: "rgba(251, 191, 36, 0.1)",
-  },
   divider: {
-    width: 1,
-    height: PILL_HEIGHT,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    width: StyleSheet.hairlineWidth,
+    alignSelf: "stretch",
+    marginVertical: MAP_COUNTRY_FOCUS_PILL_HEIGHT * 0.2,
+    marginLeft: PILL_CODE_TRAILING,
+    marginRight: PILL_REGION_LEADING,
+    backgroundColor: "rgba(255, 255, 255, 0.18)",
   },
-  countryLabel: {
-    minWidth: 28,
-    fontSize: 13,
-    lineHeight: 18,
-    fontFamily: "Poppins-Medium",
-    color: "#ffffff",
-    textAlign: "left",
+  countryCode: {
+    minWidth: 32,
+    marginLeft: PILL_FLAG_TRAILING,
+    fontFamily: "Poppins-SemiBold",
+    fontSize: EXPLORE_SWIPE_TEXT_BODY,
+    lineHeight: PILL_TEXT_LINE_HEIGHT,
+    letterSpacing: 0.4,
+    color: EXPLORE_SWIPE_CARD_TITLE_COLOR,
+    includeFontPadding: false,
+    textAlignVertical: "center",
   },
-  detailsLabel: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontFamily: "Poppins-Medium",
-    color: "#fbbf24",
-    textAlign: "center",
+  regionLabel: {
+    fontFamily: "Poppins-Regular",
+    fontSize: EXPLORE_SWIPE_TEXT_BODY,
+    lineHeight: PILL_TEXT_LINE_HEIGHT,
+    color: EXPLORE_SWIPE_CARD_SUBTITLE_COLOR,
+    includeFontPadding: false,
+    textAlignVertical: "center",
   },
   pressed: {
-    opacity: 0.95,
-    backgroundColor: "#29303C",
+    opacity: 0.88,
+    backgroundColor: "rgba(255, 255, 255, 0.06)",
   },
 });

@@ -2,11 +2,11 @@ import { BlurView } from "expo-blur";
 import { Image } from "expo-image";
 import { Platform, StyleSheet, View } from "react-native";
 
-import { EXPLORE_FEED_HEADER_BACKDROP_WEB_FALLBACK } from "@/constants/explore-feed-layout";
 import { images } from "@/constants/images";
 import {
   PROFILE_HERO_BOTTOM_FADE,
   PROFILE_HERO_SCRIM,
+  PROFILE_HERO_WEB_FALLBACK,
   PROFILE_SCREEN_BG,
 } from "@/constants/profile-theme";
 
@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
   },
   webFallback: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: EXPLORE_FEED_HEADER_BACKDROP_WEB_FALLBACK,
+    backgroundColor: PROFILE_HERO_WEB_FALLBACK,
   },
   scrim: {
     ...StyleSheet.absoluteFillObject,

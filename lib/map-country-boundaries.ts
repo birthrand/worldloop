@@ -49,7 +49,7 @@ export type BoundaryMapContext = {
 const GEO_ADMIN_ALIASES_BY_API_NAME: Record<string, readonly string[]> = {
   "United States": ["United States of America"],
   Czechia: ["Czechia", "Czech Republic"],
-  "Cape Verde": ["Cabo Verde"],
+  "Cabo Verde": ["Cabo Verde", "Cape Verde"],
   "Ivory Coast": ["Côte d'Ivoire", "Cote d'Ivoire"],
   Eswatini: ["eSwatini", "Swaziland"],
   Myanmar: ["Myanmar", "Burma"],
@@ -57,10 +57,15 @@ const GEO_ADMIN_ALIASES_BY_API_NAME: Record<string, readonly string[]> = {
   "South Korea": ["Republic of Korea", "South Korea"],
   "North Macedonia": ["Macedonia", "North Macedonia"],
   "Republic of the Congo": ["Republic of the Congo"],
+  /** Bundled catalog short name — geo ADMIN is the full republic label. */
+  Congo: ["Republic of the Congo"],
+  Tanzania: ["United Republic of Tanzania"],
   "Democratic Republic of the Congo": [
     "Dem. Rep. Congo",
     "Democratic Republic of the Congo",
   ],
+  /** Bundled catalog + REST short name — geo uses Natural Earth ADMIN label. */
+  DRC: ["Dem. Rep. Congo", "Democratic Republic of the Congo"],
   /** REST Countries `name.common` — geo uses full ADMIN label. */
   "DR Congo": ["Dem. Rep. Congo", "Democratic Republic of the Congo"],
   "South Georgia": ["South Georgia and the Islands"],

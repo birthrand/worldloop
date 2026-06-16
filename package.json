@@ -10,7 +10,15 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "catalog:build": "tsx scripts/build-countries-catalog.ts",
+    "catalog:refresh-ai": "tsx scripts/refresh-catalog-ai.ts",
+    "catalog:sync-ai-redis": "tsx scripts/sync-catalog-ai-from-redis.ts",
+    "catalog:sync-videos-redis": "tsx scripts/sync-catalog-videos-from-redis.ts",
+    "catalog:repair-video-duplicates": "tsx scripts/repair-catalog-video-duplicates.ts",
+    "catalog:validate": "tsx scripts/validate-countries-catalog.ts",
+    "profiles:build": "tsx scripts/build-country-profiles.ts",
+    "profiles:validate": "tsx scripts/validate-country-profiles.ts"
   },
   "dependencies": {
     "@clerk/expo": "^3.4.1",
@@ -61,10 +69,12 @@
     "@tailwindcss/postcss": "^4.3.0",
     "@types/react": "~19.1.0",
     "@types/three": "^0.160.0",
+    "dotenv": "^16.6.1",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
     "postcss": "^8.5.15",
     "tailwindcss": "^4.3.0",
+    "tsx": "^4.22.4",
     "typescript": "~5.9.2",
     "vitest": "^3.2.4"
   },

@@ -24,6 +24,7 @@ app.use(express.json());
 
 logger.info("ENV CHECK", {
   nodeEnv: env.nodeEnv,
+  restCountriesConfigured: Boolean(env.restCountriesApiKey.trim()),
 });
 
 app.use("/health", healthRouter);

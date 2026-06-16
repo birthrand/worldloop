@@ -1,14 +1,18 @@
-import { fetchFeedCountries, fetchSearchCountries } from "@/lib/api";
 import {
   filterCountriesForExploreRegion,
   isSplitAmericasRegion,
 } from "@/lib/app-region";
+import {
+  getStaticExploreRegionCountries,
+  isStaticCountryCatalogEnabled,
+} from "@/lib/static-countries";
 import type { Country } from "@/types/country";
 
 const FEED_PAGE_LIMIT = 30;
 const MAX_FEED_PAGES = 15;
 
-async function fetchAllFeedCountries(): Promise<Country[]> {
+async function fetchAllFeedCountriesFromApi(): Promise<Country[]> {
+  const { fetchFeedCountries } = await import("@/lib/api");
   const all: Country[] = [];
   let cursor: string | undefined;
 
@@ -29,6 +33,11 @@ async function fetchAllFeedCountries(): Promise<Country[]> {
 export async function fetchExploreRegionCountries(
   region: string,
 ): Promise<Country[]> {
+  if (isStaticCountryCatalogEnabled()) {
+    return getStaticExploreRegionCountries(region);
+  }
+
+  const { fetchSearchCountries } = await import("@/lib/api");
   const primary = await fetchSearchCountries(undefined, region);
   let countries = filterCountriesForExploreRegion(primary.data, region);
   if (countries.length > 0) return countries;
@@ -38,7 +47,7 @@ export async function fetchExploreRegionCountries(
     countries = filterCountriesForExploreRegion(americas.data, region);
     if (countries.length > 0) return countries;
 
-    const allFeed = await fetchAllFeedCountries();
+    const allFeed = await fetchAllFeedCountriesFromApi();
     countries = filterCountriesForExploreRegion(allFeed, region);
   }
 

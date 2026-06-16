@@ -16,7 +16,6 @@ import { CultureCountryPage } from "@/components/culture/culture-country-page";
 import { CultureTopBar } from "@/components/culture/culture-top-bar";
 import { prefetchCountryProfiles } from "@/lib/prefetch-country-profiles";
 import { useCultureFeedStore } from "@/store/use-culture-feed-store";
-import { useDiscoveryProgressStore } from "@/store/use-discovery-progress-store";
 import type { Country } from "@/types/country";
 
 export function CultureFeed() {
@@ -69,7 +68,6 @@ export function CultureFeed() {
       const state = useCultureFeedStore.getState();
       const country = state.countries[index];
       if (country) {
-        useDiscoveryProgressStore.getState().recordCountryVisit(country);
         void prefetchCountryProfiles(state.countries, { aroundIndex: index });
       }
 

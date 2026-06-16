@@ -1,5 +1,6 @@
 import type { Region } from "react-native-maps";
 
+import { CONTINENT_CONTEXT_LATITUDE_DELTA } from "@/constants/map-focus-tiers";
 import {
   regionForClusterFocus,
   regionForMapCountry,
@@ -14,7 +15,8 @@ import type { MapPresentationMode } from "@/types/map-presentation";
  * Map screen signal sources — use the right input for each decision:
  *
  * **Live camera** (`cameraTier`, `latitudeDelta`, `globeDistance`):
- * zoom tier, marker density, UI scaling, explore-vs-world behavior.
+ * focus tiers (see `constants/map-focus-tiers.ts`), marker density, UI scaling.
+ * Camera tier strings: `world` = Tier 0, `region` = Tier 1 Country Focus, `country` = Tier 2 Detail.
  *
  * **`focusedRegion`** + **`presentationMode`** / active country:
  * tap routing, what is selected, continent navigation targets.
@@ -206,6 +208,13 @@ export function flightRegionForCountry(
   latitudeDelta?: number,
 ): MapRegionSnapshot {
   return regionForMapCountry(country, latitudeDelta);
+}
+
+/** Continent-tier zoom centered on the selected country (not the cluster centroid). */
+export function flightRegionForContinentContextCountry(
+  country: Pick<MapCountry, "name" | "latlng" | "region">,
+): MapRegionSnapshot {
+  return regionForMapCountry(country, CONTINENT_CONTEXT_LATITUDE_DELTA);
 }
 
 export function flightRegionForWorldViewCountry(

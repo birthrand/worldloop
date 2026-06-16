@@ -179,7 +179,7 @@ function toLandmarkBounds(
   };
 }
 
-async function fetchLandmarksForCountry(
+export async function fetchLandmarksForCountry(
   countryName: string,
   imageFallbacks: string[] = [],
   context: LandmarksCountryContext,

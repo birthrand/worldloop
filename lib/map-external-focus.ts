@@ -13,12 +13,16 @@ export type ExternalMapFocusEligibility = {
   deferReason?: ExternalMapFocusDeferReason;
 };
 
-/** Pure gate for cross-screen map focus handoffs (Explore → Map, etc.). */
+/**
+ * Readiness gate for cross-screen handoffs (Explore → Map, etc.).
+ *
+ * Intent acceptance happens in the store — this only defers execution until
+ * the map can actually fly the camera. Never dedupe by country or intent id.
+ */
 export function resolveExternalMapFocusEligibility(input: {
   intent: ExternalMapFocusIntent | null;
   countriesFullyLoaded: boolean;
   countryFound: boolean;
-  alreadyAppliedCountryName: string | null;
   useGlobeCamera: boolean;
   flatMapReady: boolean;
   globeReady: boolean;
@@ -27,15 +31,10 @@ export function resolveExternalMapFocusEligibility(input: {
     return { eligible: false };
   }
 
-  if (input.alreadyAppliedCountryName === input.intent.countryName) {
-    return { eligible: false };
-  }
-
-  if (!input.countriesFullyLoaded) {
-    return { eligible: false, deferReason: "countries_loading" };
-  }
-
   if (!input.countryFound) {
+    if (!input.countriesFullyLoaded) {
+      return { eligible: false, deferReason: "countries_loading" };
+    }
     return { eligible: false, deferReason: "country_not_in_list" };
   }
 

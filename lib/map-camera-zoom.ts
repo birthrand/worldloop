@@ -1,3 +1,4 @@
+import { FOCUS_TIER_WORLD_MIN_LATITUDE_DELTA } from "@/constants/map-focus-tiers";
 import {
   GLOBE_DETAIL_CAMERA_DISTANCE,
   GLOBE_REGION_CAMERA_DISTANCE,
@@ -6,10 +7,14 @@ import {
   resolveGlobeZoomTier,
 } from "@/lib/map-region-markers";
 
+/**
+ * Live camera zoom tier.
+ * Semantic focus tiers: `world` = Tier 0, `region` = Tier 1 Country Focus, `country` = Tier 2 Detail.
+ */
 export type CameraZoomTier = "world" | "region" | "country";
 
-/** Above this latitudeDelta the flat map is framed at world scale. */
-export const FLAT_WORLD_LATITUDE_DELTA = 60;
+/** Above this latitudeDelta the flat map is framed at world scale (Tier 0). */
+export const FLAT_WORLD_LATITUDE_DELTA = FOCUS_TIER_WORLD_MIN_LATITUDE_DELTA;
 
 /** Live flat-map zoom tier from the current viewport latitudeDelta. */
 export function resolveFlatZoomTier(latitudeDelta: number): CameraZoomTier {

@@ -1,28 +1,38 @@
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { useCallback } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { useCallback, useEffect } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import type { HeroMediaMode } from "@/components/explore/explore-swipe-card";
 import { ExploreSwipeDeck } from "@/components/explore/explore-swipe-deck";
 import { ExploreSwipeHeader } from "@/components/explore/explore-swipe-header";
 import {
+  EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING,
   EXPLORE_SWIPE_DECK_VERTICAL_GAP,
   EXPLORE_SWIPE_TEXT_BODY,
   EXPLORE_SWIPE_TEXT_HEADER,
 } from "@/constants/explore-swipe-layout";
+import { continentDisplayLabel } from "@/constants/regions";
+import {
+  isSavedCountriesFeed,
+  isSavedLandmarksFeed,
+  usesLandmarkQueue,
+} from "@/lib/explore-discovery-mode";
 import { prefetchCountryProfiles } from "@/lib/prefetch-country-profiles";
 import { useCountryFeedStore } from "@/store/use-country-feed-store";
-import { useDiscoveryProgressStore } from "@/store/use-discovery-progress-store";
+import { useSavedCountriesStore } from "@/store/use-saved-countries-store";
 import { useSpatialContextStore } from "@/store/use-spatial-context-store";
 
-export function ExploreFeed() {
-  const tabBarHeight = useBottomTabBarHeight();
+export function ExploreFeed({
+  heroMediaMode = "image",
+  onHeroMediaModeChange,
+  isScreenFocused = true,
+}: {
+  heroMediaMode?: HeroMediaMode;
+  onHeroMediaModeChange?: (mode: HeroMediaMode) => void;
+  /** False when another tab or stack screen (e.g. country detail) is visible. */
+  isScreenFocused?: boolean;
+} = {}) {
   const countries = useCountryFeedStore((s) => s.countries);
+  const places = useCountryFeedStore((s) => s.places);
   const currentIndex = useCountryFeedStore((s) => s.currentIndex);
   const selectedRegion = useCountryFeedStore((s) => s.selectedRegion);
   const discoveryMode = useCountryFeedStore((s) => s.discoveryMode);
@@ -32,18 +42,30 @@ export function ExploreFeed() {
   const loadMoreFeed = useCountryFeedStore((s) => s.loadMoreFeed);
   const setRegionFilter = useCountryFeedStore((s) => s.setRegionFilter);
   const loadHereFeed = useCountryFeedStore((s) => s.loadHereFeed);
+  const loadSavedFeed = useCountryFeedStore((s) => s.loadSavedFeed);
+  const loadSavedLandmarksFeed = useCountryFeedStore(
+    (s) => s.loadSavedLandmarksFeed,
+  );
+  const loadPlacesFeed = useCountryFeedStore((s) => s.loadPlacesFeed);
+  const restoreForYouFeed = useCountryFeedStore((s) => s.restoreForYouFeed);
   const viewportCountries = useSpatialContextStore((s) => s.viewportCountries);
+  const savedCountries = useSavedCountriesStore((s) => s.savedCountries);
+  const isLandmarkMode = usesLandmarkQueue(discoveryMode);
+  const queueLength = isLandmarkMode ? places.length : countries.length;
+
+  useEffect(() => {
+    if (!isSavedCountriesFeed(discoveryMode)) return;
+    void loadSavedFeed();
+  }, [discoveryMode, loadSavedFeed, savedCountries]);
 
   const handleIndexChange = useCallback(
     (index: number) => {
       setCurrentIndex(index);
-      const country = countries[index];
-      if (country) {
-        useDiscoveryProgressStore.getState().recordCountryVisit(country);
+      if (!isLandmarkMode) {
         void prefetchCountryProfiles(countries, { aroundIndex: index });
       }
     },
-    [countries, setCurrentIndex],
+    [countries, isLandmarkMode, setCurrentIndex],
   );
 
   const handleNeedMore = useCallback(() => {
@@ -52,30 +74,109 @@ export function ExploreFeed() {
 
   return (
     <View style={styles.feed}>
-      <ExploreSwipeHeader />
+      <ExploreSwipeHeader
+        heroMediaMode={heroMediaMode}
+        onHeroMediaModeChange={onHeroMediaModeChange}
+      />
 
       <View
         style={[
           styles.deckRegion,
           {
-            paddingBottom: EXPLORE_SWIPE_DECK_VERTICAL_GAP + 4,
+            paddingBottom: EXPLORE_SWIPE_DECK_VERTICAL_GAP + 24,
           },
         ]}
       >
-        {status === "loading" && countries.length === 0 ? (
-          <View style={styles.loadingOverlay} pointerEvents="none">
-            <ActivityIndicator size="large" color="#fbbf24" />
+        {discoveryMode === "places" &&
+        places.length === 0 &&
+        status !== "loading" ? (
+          <View style={styles.emptyOverlay}>
+            <Text style={styles.errorTitle}>No landmarks found yet</Text>
+            <Text style={styles.errorMessage}>
+              {selectedRegion
+                ? `We couldn't find landmarks in ${continentDisplayLabel(selectedRegion)} yet. Try For You or pick another region.`
+                : "Try For You or browse another region to discover landmarks."}
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Browse For You feed"
+              onPress={() => {
+                void restoreForYouFeed();
+              }}
+              style={({ pressed }) => [
+                styles.retryButton,
+                pressed && styles.retryPressed,
+              ]}
+            >
+              <Text style={styles.retryText}>Browse For You</Text>
+            </Pressable>
           </View>
-        ) : null}
-
-        {status === "error" &&
-        countries.length === 0 &&
-        (selectedRegion !== null || discoveryMode === "here") ? (
+        ) : isSavedLandmarksFeed(discoveryMode) &&
+          places.length === 0 &&
+          status !== "loading" ? (
+          <View style={styles.emptyOverlay}>
+            <Text style={styles.errorTitle}>No saved landmarks yet</Text>
+            <Text style={styles.errorMessage}>
+              Switch to Landmarks in Explore and bookmark landmarks you want to
+              revisit.
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Browse For You feed"
+              onPress={() => {
+                void restoreForYouFeed();
+              }}
+              style={({ pressed }) => [
+                styles.retryButton,
+                pressed && styles.retryPressed,
+              ]}
+            >
+              <Text style={styles.retryText}>Browse For You</Text>
+            </Pressable>
+          </View>
+        ) : discoveryMode === "saved" &&
+          countries.length === 0 &&
+          status !== "loading" ? (
+          <View style={styles.emptyOverlay}>
+            <Text style={styles.errorTitle}>No saved countries yet</Text>
+            <Text style={styles.errorMessage}>
+              Explore the world and tap Save on places you love, then come back
+              here to swipe through them.
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Browse For You feed"
+              onPress={() => {
+                void restoreForYouFeed();
+              }}
+              style={({ pressed }) => [
+                styles.retryButton,
+                pressed && styles.retryPressed,
+              ]}
+            >
+              <Text style={styles.retryText}>Browse For You</Text>
+            </Pressable>
+          </View>
+        ) : status === "error" &&
+          queueLength === 0 &&
+          (selectedRegion !== null ||
+            discoveryMode === "here" ||
+            isSavedCountriesFeed(discoveryMode) ||
+            isSavedLandmarksFeed(discoveryMode) ||
+            discoveryMode === "places") ? (
           <View style={styles.errorOverlay}>
             <Text style={styles.errorTitle}>
               {discoveryMode === "here"
                 ? "Couldn't load this map area"
-                : `Couldn't load ${selectedRegion}`}
+                : isSavedCountriesFeed(discoveryMode)
+                  ? "Couldn't load saved countries"
+                  : isSavedLandmarksFeed(discoveryMode)
+                    ? "Couldn't load saved landmarks"
+                    : discoveryMode === "places"
+                      ? selectedRegion
+                        ? `Couldn't load landmarks in ${continentDisplayLabel(selectedRegion)}`
+                        : "Couldn't load landmarks"
+                      : `Couldn't load ${selectedRegion}`}
             </Text>
             <Text style={styles.errorMessage}>
               {error ?? "Check that the backend is running and try again."}
@@ -86,6 +187,18 @@ export function ExploreFeed() {
               onPress={() => {
                 if (discoveryMode === "here") {
                   void loadHereFeed(viewportCountries);
+                  return;
+                }
+                if (isSavedCountriesFeed(discoveryMode)) {
+                  void loadSavedFeed();
+                  return;
+                }
+                if (isSavedLandmarksFeed(discoveryMode)) {
+                  void loadSavedLandmarksFeed();
+                  return;
+                }
+                if (discoveryMode === "places") {
+                  void loadPlacesFeed(selectedRegion);
                   return;
                 }
                 void setRegionFilter(selectedRegion);
@@ -104,6 +217,8 @@ export function ExploreFeed() {
             currentIndex={currentIndex}
             onIndexChange={handleIndexChange}
             onNeedMore={handleNeedMore}
+            heroMediaMode={heroMediaMode}
+            isScreenFocused={isScreenFocused}
           />
         )}
       </View>
@@ -115,18 +230,19 @@ const styles = StyleSheet.create({
   feed: {
     flex: 1,
     backgroundColor: "transparent",
+    paddingHorizontal: EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING,
   },
   deckRegion: {
     flex: 1,
   },
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
+  errorOverlay: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.72)",
-    zIndex: 5,
+    paddingHorizontal: 32,
+    gap: 12,
   },
-  errorOverlay: {
+  emptyOverlay: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",

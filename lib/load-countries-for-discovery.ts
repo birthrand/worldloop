@@ -5,6 +5,10 @@ import {
   setClientCache,
   staleWhileRevalidate,
 } from "@/lib/client-cache";
+import {
+  getStaticCountryByName,
+  isStaticCountryCatalogEnabled,
+} from "@/lib/static-countries";
 import type { Country } from "@/types/country";
 import type { GeoEntity } from "@/types/geo";
 
@@ -40,12 +44,20 @@ function orderCountriesByEntities(
 }
 
 async function readCachedCountry(name: string): Promise<Country | null> {
+  if (isStaticCountryCatalogEnabled()) {
+    return getStaticCountryByName(name);
+  }
+
   const cacheKey = CLIENT_CACHE_KEYS.countryDetail(name);
   const diskCache = await getClientCache<Country>(cacheKey);
   return diskCache.data;
 }
 
 async function fetchCountryCached(name: string): Promise<Country | null> {
+  if (isStaticCountryCatalogEnabled()) {
+    return getStaticCountryByName(name);
+  }
+
   const cacheKey = CLIENT_CACHE_KEYS.countryDetail(name);
 
   try {
@@ -60,6 +72,8 @@ async function fetchCountryCached(name: string): Promise<Country | null> {
 }
 
 function revalidateCountryInBackground(name: string): void {
+  if (isStaticCountryCatalogEnabled()) return;
+
   const cacheKey = CLIENT_CACHE_KEYS.countryDetail(name);
   void staleWhileRevalidate({
     key: cacheKey,

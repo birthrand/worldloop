@@ -20,6 +20,7 @@ async function toMapCountry(country: CountryBasic): Promise<MapCountry> {
     flag: country.flag,
     latlng: country.latlng,
     image: images[0] ?? null,
+    languages: country.languages,
   };
 }
 

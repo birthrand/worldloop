@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   bboxFromLatLngPoints,
+  countryNamesMatch,
   mergeBBoxes,
 } from "@/lib/map-country-boundaries";
 import { bboxesIntersect } from "@/lib/spatial-query";
@@ -41,6 +42,31 @@ describe("bboxFromLatLngPoints", () => {
     expect(
       bboxesIntersect(bbox!, { west: 177, south: -21, east: -178, north: -12 }),
     ).toBe(true);
+  });
+});
+
+describe("countryNamesMatch", () => {
+  it("matches DRC catalog name to Natural Earth Dem. Rep. Congo", () => {
+    expect(countryNamesMatch("DRC", "Dem. Rep. Congo")).toBe(true);
+    expect(countryNamesMatch("DRC", "Democratic Republic of the Congo")).toBe(
+      true,
+    );
+  });
+
+  it("matches Congo catalog name to Republic of the Congo only", () => {
+    expect(countryNamesMatch("Congo", "Republic of the Congo")).toBe(true);
+    expect(countryNamesMatch("Congo", "Dem. Rep. Congo")).toBe(false);
+  });
+
+  it("matches Tanzania catalog name to United Republic of Tanzania", () => {
+    expect(countryNamesMatch("Tanzania", "United Republic of Tanzania")).toBe(
+      true,
+    );
+  });
+
+  it("matches Cabo Verde catalog name to Natural Earth labels", () => {
+    expect(countryNamesMatch("Cabo Verde", "Cabo Verde")).toBe(true);
+    expect(countryNamesMatch("Cabo Verde", "Cape Verde")).toBe(true);
   });
 });
 

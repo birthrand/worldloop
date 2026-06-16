@@ -15,6 +15,10 @@ export type MapCountry = {
   flag: string;
   latlng: [number, number];
   image: string | null;
+  /** Total area in km² — optional; used for adaptive country-focus zoom. */
+  area?: number;
+  /** Official language names — optional on older cached map payloads. */
+  languages?: string[];
 };
 
 /** Country shape aligned with the backend feed API. */

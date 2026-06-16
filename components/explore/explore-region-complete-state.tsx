@@ -21,6 +21,7 @@ type ExploreRegionCompleteStateProps = {
   region: Continent;
   cardWidth: number;
   cardHeight: number;
+  itemKind?: "country" | "landmark";
   onContinue: (nextRegion: Continent) => void;
 };
 
@@ -28,11 +29,13 @@ export function ExploreRegionCompleteState({
   region,
   cardWidth,
   cardHeight,
+  itemKind = "country",
   onContinue,
 }: ExploreRegionCompleteStateProps) {
   const regionLabel = continentDisplayLabel(region);
   const nextRegion = adjacentContinent(region, "next");
   const nextLabel = nextRegion ? continentDisplayLabel(nextRegion) : null;
+  const itemLabel = itemKind === "landmark" ? "landmark" : "country";
 
   const handleContinue = () => {
     if (!nextRegion || !isContinent(nextRegion)) return;
@@ -47,7 +50,7 @@ export function ExploreRegionCompleteState({
     >
       <Text style={styles.title}>{regionLabel} complete</Text>
       <Text style={styles.subtitle}>
-        You&apos;ve swiped through every country in {regionLabel}.
+        You&apos;ve swiped through every {itemLabel} in {regionLabel}.
       </Text>
       {nextRegion && nextLabel ? (
         <Pressable

@@ -39,9 +39,19 @@ export default function TabsLayout() {
       >
         <Tabs.Screen name="index" options={{ href: null }} />
         <Tabs.Screen name="explore" options={{ title: "Explore" }} />
-        <Tabs.Screen name="culture" options={{ title: "Culture" }} />
-        <Tabs.Screen name="map" options={{ title: "Map" }} />
-        <Tabs.Screen name="saved" options={{ title: "Saved" }} />
+        <Tabs.Screen
+          name="culture"
+          options={{ href: null, title: "Culture" }}
+        />
+        <Tabs.Screen
+          name="map"
+          options={{
+            href: null,
+            title: "Map",
+            tabBarStyle: { display: "none" },
+          }}
+        />
+        <Tabs.Screen name="saved" options={{ href: null, title: "Saved" }} />
         <Tabs.Screen name="profile" options={{ title: "Profile" }} />
       </Tabs>
       <SearchOverlay />

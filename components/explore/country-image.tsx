@@ -8,7 +8,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Animated, StyleSheet, View, type StyleProp } from "react-native";
 
 import { FlagBadge } from "@/components/explore/flag-badge";
-import { EXPLORE_FEED_BODY_BG } from "@/constants/explore-feed-layout";
+import { SKELETON_COLOR_HERO } from "@/components/explore/skeleton-bone";
+import { EXPLORE_SWIPE_CARD_IMAGE_FALLBACK } from "@/constants/explore-swipe-layout";
 import { normalizeImageUrl } from "@/lib/normalize-image-url";
 
 const WIKIMEDIA_HEADERS = {
@@ -54,8 +55,6 @@ export function prefetchCountryImage(uri: string | undefined): Promise<void> {
   inflightPrefetches.set(normalized, promise);
   return promise;
 }
-
-const SKELETON_COLOR = "rgba(255, 255, 255, 0.14)";
 
 function ImageLoadSkeleton() {
   const pulse = useRef(new Animated.Value(0.45)).current;
@@ -198,7 +197,11 @@ export function CountryImage({
           contentPosition={contentPosition}
           recyclingKey={shownUri}
           cachePolicy="memory-disk"
-          transition={{ duration: 200, effect: "cross-dissolve" }}
+          transition={
+            warmedUris.has(shownUri)
+              ? undefined
+              : { duration: 200, effect: "cross-dissolve" }
+          }
           onLoad={() => onLoadStateChange?.(true)}
           onError={() => {
             setFailed(true);
@@ -212,7 +215,7 @@ export function CountryImage({
 
 const styles = StyleSheet.create({
   fallback: {
-    backgroundColor: EXPLORE_FEED_BODY_BG,
+    backgroundColor: EXPLORE_SWIPE_CARD_IMAGE_FALLBACK,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -220,6 +223,6 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   skeleton: {
-    backgroundColor: SKELETON_COLOR,
+    backgroundColor: SKELETON_COLOR_HERO,
   },
 });

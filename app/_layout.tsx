@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
+import { AppToast } from "@/components/app-toast";
 import { useAppFonts } from "@/hooks/use-app-fonts";
 import { clerkPublishableKey } from "@/lib/clerk";
 import { useDiscoveryProgressStore } from "@/store/use-discovery-progress-store";
@@ -46,9 +47,17 @@ export default function RootLayout() {
             name="oauth-callback"
             options={{ headerShown: false }}
           />
-          <Stack.Screen name="country" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="country"
+            options={{
+              headerShown: false,
+              // animation: "fade",
+              // presentation: "fullScreenModal",
+            }}
+          />
           {__DEV__ ? <Stack.Screen name="dev" /> : null}
         </Stack>
+        <AppToast />
       </GestureHandlerRootView>
     </ClerkProvider>
   );

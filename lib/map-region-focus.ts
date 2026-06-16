@@ -39,7 +39,12 @@ export function shouldSyncFocusedRegionForCountry(
 export function isExplicitCountryFocusSource(
   source: Exclude<SelectionSource, null>,
 ): boolean {
-  return source === "search" || source === "explore" || source === "shuffle";
+  return (
+    source === "search" ||
+    source === "explore" ||
+    source === "countryDetail" ||
+    source === "shuffle"
+  );
 }
 
 export function shouldSyncFocusedRegionForSelectionSource(

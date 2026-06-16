@@ -250,10 +250,10 @@ export function mergeLandmarkLists(
 }
 
 function maxLandmarkDistanceKm(area?: number): number {
-  if (!area || area <= 0) return 500;
+  if (!area || area <= 0) return 800;
   const equivalentRadius = Math.sqrt(area / Math.PI);
-  const scaled = equivalentRadius * 1.85;
-  return Math.min(2800, Math.max(100, scaled));
+  const scaled = equivalentRadius * 2.75;
+  return Math.min(3200, Math.max(200, scaled));
 }
 
 function isMisassignedCountryPage(
@@ -283,6 +283,11 @@ export function isLandmarkWithinCountry(
   bounds: LandmarkCountryBounds,
 ): boolean {
   if (isMisassignedCountryPage(landmark, bounds)) return false;
+
+  // SPARQL already scopes Wikidata rows to the target country (P17 / P131).
+  if (landmark.source === "wikidata") {
+    return true;
+  }
 
   const [centerLat, centerLng] = bounds.latlng ?? [];
   if (typeof centerLat !== "number" || typeof centerLng !== "number") {

@@ -17,7 +17,7 @@ import {
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 
 import { FlagBadge } from "@/components/explore/flag-badge";
-import { FeedErrorBanner } from "@/components/home/feed-error-banner";
+import { FeedErrorBanner } from "@/components/feed-error-banner";
 import { WORLDLOOP_HEADER_HORIZONTAL_PADDING } from "@/components/worldloop-header";
 import {
   MAP_SEARCH_BLUR_INTENSITY,

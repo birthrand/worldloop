@@ -2,9 +2,9 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { FlagBadge } from "@/components/explore/flag-badge";
 import {
-  openCountryAiExplorer,
-  warmCountryAiExplorer,
-} from "@/lib/open-country-ai-explorer";
+  openCountryDetail,
+  warmCountryDetail,
+} from "@/lib/open-country-detail";
 import type { Country } from "@/types/country";
 
 type ExploreFooterProps = {
@@ -15,10 +15,10 @@ export function ExploreFooter({ country }: ExploreFooterProps) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`Open AI country explorer for ${country.name}`}
-      accessibilityHint="Opens a detailed AI-powered country profile"
-      onPressIn={() => warmCountryAiExplorer(country)}
-      onPress={() => openCountryAiExplorer(country)}
+      accessibilityLabel={`Open country detail for ${country.name}`}
+      accessibilityHint="Opens the country profile"
+      onPressIn={() => warmCountryDetail(country)}
+      onPress={() => openCountryDetail(country, { from: "explore" })}
       style={({ pressed }) => [styles.root, pressed && styles.rootPressed]}
     >
       <View style={styles.row}>
