@@ -24,16 +24,18 @@ const HEADER_TITLE_TRAILING_INSET =
   HEADER_SIDE_INSET + HEADER_HORIZONTAL_PADDING;
 
 type MapCountryFocusHeaderProps = {
-  countryName: string;
+  title: string;
   onBack: () => void;
+  backAccessibilityLabel?: string;
   /** Subtle fade while the preview sheet is open. */
   dimmed?: boolean;
 };
 
-/** Explore / country-detail handoff — back + country title over a black top scrim. */
+/** Explore / country-detail handoff — back + title over a black top scrim. */
 export function MapCountryFocusHeader({
-  countryName,
+  title,
   onBack,
+  backAccessibilityLabel = "Go back",
   dimmed = false,
 }: MapCountryFocusHeaderProps) {
   const insets = useSafeAreaInsets();
@@ -65,7 +67,7 @@ export function MapCountryFocusHeader({
         <View style={styles.row}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Go back"
+            accessibilityLabel={backAccessibilityLabel}
             onPress={onBack}
             style={({ pressed }) => [
               styles.backSlot,
@@ -81,7 +83,7 @@ export function MapCountryFocusHeader({
 
           <View style={styles.titleWrap}>
             <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">
-              {countryName}
+              {title}
             </Text>
           </View>
 

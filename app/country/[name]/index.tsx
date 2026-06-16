@@ -18,6 +18,7 @@ import { useAiExplorerCountry } from "@/hooks/use-ai-explorer-country";
 import type { CountryLandmark, CountryWikipediaSummary } from "@/lib/api";
 import { getCachedCountryProfile } from "@/lib/country-profile-cache";
 import { getCountryImages } from "@/lib/format-country";
+import { navigateBackFromCountryDetail } from "@/lib/navigate-back-from-country-detail";
 import { focusCountryOnMap } from "@/lib/open-country-on-map";
 import type { Country } from "@/types/country";
 
@@ -132,7 +133,7 @@ export default function CountryDetailScreen() {
   const images = getCountryImages(country);
 
   const handleBack = useCallback(() => {
-    router.back();
+    navigateBackFromCountryDetail();
   }, []);
 
   const handleShowMap = useCallback(() => {

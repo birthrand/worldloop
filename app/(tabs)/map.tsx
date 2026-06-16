@@ -152,6 +152,12 @@ export default function MapScreen() {
     !!map.activeCountry &&
     !isMapSearchOpen &&
     (map.showCountryFocusPill || map.isPreviewOpen);
+  const countryFocusHeaderTitle = map.isExploreMapHandoff
+    ? "Explore"
+    : (map.activeCountry?.name ?? "");
+  const countryFocusHeaderBackLabel = map.isExploreMapHandoff
+    ? "Back to Explore"
+    : "Go back";
   const onboardingBottom = Math.max(insets.bottom, 16) + 88;
 
   return (
@@ -164,7 +170,7 @@ export default function MapScreen() {
         countries={map.mapMarkersForCanvas}
         boundaryCountries={map.countries}
         clusters={map.clusters}
-        selectedName={map.activeCountry?.name ?? null}
+        selectedName={map.selectedMapName}
         focusTransitionName={map.focusTransitionCountryName}
         focusedRegion={map.focusedRegion}
         boundaryFocusRegion={map.boundaryFocusRegion}
@@ -174,6 +180,8 @@ export default function MapScreen() {
         tapRippleToken={map.tapRippleToken}
         zoomTier={map.cameraTier}
         countryMarkerMode={map.countryMarkerMode}
+        exploreMapHandoff={map.isExploreMapHandoff}
+        flatSingleCountryFlag={map.flatSingleCountryFlagActive}
         markerPresentation={map.markerReveal.presentation}
         markerRevealGeneration={map.markerReveal.revealGeneration}
         mapViewTransition={map.mapViewTransition}
@@ -213,7 +221,8 @@ export default function MapScreen() {
 
         {showCountryFocusHeader ? (
           <MapCountryFocusHeader
-            countryName={map.activeCountry!.name}
+            title={countryFocusHeaderTitle}
+            backAccessibilityLabel={countryFocusHeaderBackLabel}
             onBack={navigateBackFromMap}
             dimmed={map.isPreviewOpen}
           />
@@ -273,6 +282,7 @@ export default function MapScreen() {
             <MapCountryPreviewCard
               country={map.activeCountry}
               bottomInset={insets.bottom}
+              showViewCountryCta={map.isExploreMapHandoff}
               onDismiss={map.dismissCountryPreview}
             />
           </View>

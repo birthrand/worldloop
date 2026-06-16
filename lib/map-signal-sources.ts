@@ -1,5 +1,6 @@
 import type { Region } from "react-native-maps";
 
+import { CONTINENT_CONTEXT_LATITUDE_DELTA } from "@/constants/map-focus-tiers";
 import {
   regionForClusterFocus,
   regionForMapCountry,
@@ -207,6 +208,13 @@ export function flightRegionForCountry(
   latitudeDelta?: number,
 ): MapRegionSnapshot {
   return regionForMapCountry(country, latitudeDelta);
+}
+
+/** Continent-tier zoom centered on the selected country (not the cluster centroid). */
+export function flightRegionForContinentContextCountry(
+  country: Pick<MapCountry, "name" | "latlng" | "region">,
+): MapRegionSnapshot {
+  return regionForMapCountry(country, CONTINENT_CONTEXT_LATITUDE_DELTA);
 }
 
 export function flightRegionForWorldViewCountry(

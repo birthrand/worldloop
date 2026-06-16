@@ -52,6 +52,8 @@ type MapState = {
   mapCountriesFullyLoaded: boolean;
   /** Set when opening Map from Explore/search; consumed once the map can fly the camera. */
   pendingMapIntent: MapPresentationIntent | null;
+  /** Explore back — map screen snaps to world on blur when true. */
+  exploreSessionDiscardPending: boolean;
   activeChip: MapFilterChip;
   mapMode: MapMode;
   globeCamera: GlobeCameraHandle | null;
@@ -63,6 +65,8 @@ type MapState = {
     scopeSnapshot?: DiscoveryScope,
   ) => void;
   clearPendingMapIntent: () => void;
+  markExploreSessionDiscardPending: () => void;
+  consumeExploreSessionDiscardPending: () => boolean;
   selectRandomCountry: () => MapCountry | null;
   setActiveChip: (chip: MapFilterChip) => void;
   setMapMode: (mode: MapMode) => void;
@@ -112,6 +116,7 @@ export const useMapStore = create<MapState>()((set, get) => ({
   error: null,
   mapCountriesFullyLoaded: false,
   pendingMapIntent: null,
+  exploreSessionDiscardPending: false,
   activeChip: "all",
   mapMode: "2d",
   globeCamera: null,
@@ -249,6 +254,17 @@ export const useMapStore = create<MapState>()((set, get) => ({
   },
 
   clearPendingMapIntent: () => set({ pendingMapIntent: null }),
+
+  markExploreSessionDiscardPending: () =>
+    set({ exploreSessionDiscardPending: true }),
+
+  consumeExploreSessionDiscardPending: () => {
+    const pending = get().exploreSessionDiscardPending;
+    if (pending) {
+      set({ exploreSessionDiscardPending: false });
+    }
+    return pending;
+  },
 
   selectRandomCountry: () => {
     const visible = get().getVisibleCountries();

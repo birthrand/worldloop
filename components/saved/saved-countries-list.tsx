@@ -1,5 +1,14 @@
 import { Image } from "expo-image";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { useCallback, useState } from "react";
+import {
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+  type LayoutChangeEvent,
+} from "react-native";
 
 import { FlagBadge } from "@/components/explore/flag-badge";
 import { SavedCountryCardMenu } from "@/components/saved/saved-country-card-menu";
@@ -21,6 +30,8 @@ import type { Country } from "@/types/country";
 
 export type SavedCountriesLayout = "grid" | "list";
 
+export { useSavedGridListLayout };
+
 type SavedCountriesListProps = {
   countries: Country[];
   layout?: SavedCountriesLayout;
@@ -29,8 +40,30 @@ type SavedCountriesListProps = {
 
 const CARD_GAP = 12;
 const NUM_COLUMNS = 2;
+/** Matches `paddingHorizontal: 24` on the Saved screen content wrapper. */
+const SAVED_LIST_HORIZONTAL_INSET = 48;
 /** Grid ⋮ menu — equal inset from top and trailing card edge. */
 const GRID_MENU_INSET = 6;
+
+function getGridCardWidth(listWidth: number): number {
+  return (listWidth - CARD_GAP * (NUM_COLUMNS - 1)) / NUM_COLUMNS;
+}
+
+function useSavedGridListLayout() {
+  const { width: windowWidth } = useWindowDimensions();
+  const [listWidth, setListWidth] = useState(
+    windowWidth - SAVED_LIST_HORIZONTAL_INSET,
+  );
+
+  const onListLayout = useCallback((event: LayoutChangeEvent) => {
+    setListWidth(event.nativeEvent.layout.width);
+  }, []);
+
+  return {
+    onListLayout,
+    cardWidth: getGridCardWidth(listWidth),
+  };
+}
 
 export function SavedCountriesList({
   countries,
@@ -38,36 +71,45 @@ export function SavedCountriesList({
   scrollBottomPadding = 24,
 }: SavedCountriesListProps) {
   const isGrid = layout === "grid";
+  const { onListLayout, cardWidth } = useSavedGridListLayout();
 
   return (
-    <FlatList
-      key={`saved-countries-${layout}`}
-      data={countries}
-      keyExtractor={(item) => item.name}
-      numColumns={isGrid ? NUM_COLUMNS : 1}
-      columnWrapperStyle={isGrid ? styles.row : undefined}
-      contentContainerStyle={[
-        styles.listContent,
-        { paddingBottom: scrollBottomPadding },
-      ]}
-      showsVerticalScrollIndicator={false}
-      renderItem={({ item }) =>
-        isGrid ? (
-          <SavedCountryGridCard country={item} />
-        ) : (
-          <SavedCountryListRow country={item} />
-        )
-      }
-    />
+    <View style={styles.listWrap} onLayout={onListLayout}>
+      <FlatList
+        key={`saved-countries-${layout}`}
+        data={countries}
+        keyExtractor={(item) => item.name}
+        numColumns={isGrid ? NUM_COLUMNS : 1}
+        columnWrapperStyle={isGrid ? styles.row : undefined}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: scrollBottomPadding },
+        ]}
+        showsVerticalScrollIndicator={false}
+        renderItem={({ item }) =>
+          isGrid ? (
+            <SavedCountryGridCard country={item} width={cardWidth} />
+          ) : (
+            <SavedCountryListRow country={item} />
+          )
+        }
+      />
+    </View>
   );
 }
 
-function SavedCountryGridCard({ country }: { country: Country }) {
+function SavedCountryGridCard({
+  country,
+  width,
+}: {
+  country: Country;
+  width: number;
+}) {
   const images = getCountryImages(country);
   const heroUri = images[0];
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { width }]}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`Open ${country.name}`}
@@ -173,6 +215,9 @@ function SavedCountryListRow({ country }: { country: Country }) {
 }
 
 const styles = StyleSheet.create({
+  listWrap: {
+    flex: 1,
+  },
   listContent: {
     gap: CARD_GAP,
   },
@@ -180,7 +225,6 @@ const styles = StyleSheet.create({
     gap: CARD_GAP,
   },
   card: {
-    flex: 1,
     minHeight: 168,
     borderRadius: 16,
     overflow: "hidden",

@@ -27,6 +27,7 @@ describe("resolveCountryDetailCameraTransition", () => {
     const memory = {
       countryDetailInitialized: true,
       lastCountryDetailResolvedName: "Mozambique",
+      exploreHandoffInitialized: false,
     };
     expect(
       resolveCountryDetailCameraTransition({
@@ -40,6 +41,7 @@ describe("resolveCountryDetailCameraTransition", () => {
     const memory = {
       countryDetailInitialized: true,
       lastCountryDetailResolvedName: "Mozambique",
+      exploreHandoffInitialized: false,
     };
     expect(
       resolveCountryDetailCameraTransition({
@@ -54,6 +56,7 @@ describe("resolveCountryDetailCameraTransition", () => {
     expect(getCameraTransitionMemory()).toEqual({
       countryDetailInitialized: true,
       lastCountryDetailResolvedName: "Mozambique",
+      exploreHandoffInitialized: false,
     });
   });
 });

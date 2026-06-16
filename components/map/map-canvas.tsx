@@ -81,6 +81,10 @@ type MapCanvasProps = {
   onFlatMapReady?: () => void;
   onFlatRegionChange?: (region: Region) => void;
   onRegionChangeComplete?: (region: Region) => void;
+  /** Explore → Map: screen-space flag only (no yellow 3D pins). */
+  exploreMapHandoff?: boolean;
+  /** 2D only — render a single selected-country flag (explore preview or country detail). */
+  flatSingleCountryFlag?: boolean;
   lockUserGestures?: boolean;
   autoRotateEnabled?: boolean;
   /** Keeps map markers updating while the camera animates (e.g. Explore → Map). */
@@ -118,6 +122,8 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
       onFlatMapReady,
       onFlatRegionChange,
       onRegionChangeComplete,
+      exploreMapHandoff = false,
+      flatSingleCountryFlag = false,
       lockUserGestures = false,
       autoRotateEnabled = true,
       suspendMarkerSnapshot = false,
@@ -342,7 +348,11 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
             {...mapProps}
             countries={showFlatMarkers ? countries : []}
             showFocusLayers={showFlatOverlays}
-            spreadNearbyMarkers={mapMode === "2d"}
+            exploreMapHandoff={exploreMapHandoff}
+            flatSingleCountryFlag={flatSingleCountryFlag}
+            spreadNearbyMarkers={
+              mapMode === "2d" && !exploreMapHandoff && !flatSingleCountryFlag
+            }
           />
           <Animated.View
             pointerEvents="none"
@@ -368,6 +378,7 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
               zoomTier={zoomTier}
               previewRegion={previewRegion}
               countryMarkerMode={countryMarkerMode}
+              exploreMapHandoff={exploreMapHandoff}
               onClusterPress={onClusterPress}
               onCountryPress={onCountryPress}
               onBoundaryCountryPress={onBoundaryCountryPress}

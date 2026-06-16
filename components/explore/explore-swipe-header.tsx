@@ -21,6 +21,12 @@ import {
   EXPLORE_SWIPE_HEADER_TITLE_COLOR,
   EXPLORE_SWIPE_HEADER_TITLE_SIZE,
 } from "@/constants/explore-swipe-layout";
+import { continentDisplayLabel } from "@/constants/regions";
+import {
+  isSavedCountriesFeed,
+  isSavedLandmarksFeed,
+  usesLandmarkQueue,
+} from "@/lib/explore-discovery-mode";
 import { hasCultureVideo } from "@/lib/format-country";
 import { useCountryFeedStore } from "@/store/use-country-feed-store";
 import { useSearchUiStore } from "@/store/use-search-ui-store";
@@ -106,14 +112,16 @@ export function ExploreSwipeHeader({
   const sortField = useCountryFeedStore((s) => s.sortField);
   const sortOrder = useCountryFeedStore((s) => s.sortOrder);
   const discoveryMode = useCountryFeedStore((s) => s.discoveryMode);
-  const currentCountry =
-    discoveryMode === "places"
-      ? places[currentIndex]?.country
-      : countries[currentIndex];
+  const selectedRegion = useCountryFeedStore((s) => s.selectedRegion);
+  const currentCountry = usesLandmarkQueue(discoveryMode)
+    ? places[currentIndex]?.country
+    : countries[currentIndex];
   const hasCustomSort = getExploreHasCustomSort(sortField, sortOrder);
-  const isPlacesMode = discoveryMode === "places";
+  const isLandmarkMode = usesLandmarkQueue(discoveryMode);
   const canShowCulture =
-    !isPlacesMode && currentCountry != null && hasCultureVideo(currentCountry);
+    !isLandmarkMode &&
+    currentCountry != null &&
+    hasCultureVideo(currentCountry);
 
   const cultureAccessibilityLabel = currentCountry
     ? heroMediaMode === "video"
@@ -129,7 +137,7 @@ export function ExploreSwipeHeader({
     onHeroMediaModeChange?.(heroMediaMode === "video" ? "image" : "video");
   };
 
-  const rightButtonCount = isPlacesMode ? 2 : 3;
+  const rightButtonCount = isLandmarkMode ? 2 : 3;
   const headerRightSlotWidth =
     EXPLORE_SWIPE_HEADER_BUTTON_SIZE * rightButtonCount +
     EXPLORE_SWIPE_CARD_ACTION_GAP * (rightButtonCount - 1);
@@ -139,6 +147,7 @@ export function ExploreSwipeHeader({
   const feedMenuActive =
     isFeedMenuOpen ||
     discoveryMode === "saved" ||
+    discoveryMode === "savedLandmarks" ||
     discoveryMode === "region" ||
     discoveryMode === "places";
 
@@ -160,7 +169,7 @@ export function ExploreSwipeHeader({
         </View>
 
         <View style={[styles.rightActions, { width: headerRightSlotWidth }]}>
-          {!isPlacesMode ? (
+          {!isLandmarkMode ? (
             <HeaderIconButton
               iconSet="entypo"
               icon={heroMediaMode === "video" ? "video" : "image-inverted"}
@@ -195,8 +204,16 @@ export function ExploreSwipeHeader({
         </Text>
       </View>
 
-      {discoveryMode === "places" ? (
-        <Text style={styles.modeSubtitle}>Places</Text>
+      {isSavedCountriesFeed(discoveryMode) ? (
+        <Text style={styles.modeSubtitle}>Saved · Countries</Text>
+      ) : isSavedLandmarksFeed(discoveryMode) ? (
+        <Text style={styles.modeSubtitle}>Saved · Landmarks</Text>
+      ) : discoveryMode === "places" ? (
+        <Text style={styles.modeSubtitle}>
+          {selectedRegion
+            ? `Landmarks · ${continentDisplayLabel(selectedRegion)} · ${places.length} landmark${places.length === 1 ? "" : "s"}`
+            : `Landmarks · ${places.length} landmark${places.length === 1 ? "" : "s"}`}
+        </Text>
       ) : null}
 
       <ExploreFeedMenuSheet

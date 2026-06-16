@@ -39,7 +39,6 @@ import {
   EXPLORE_SWIPE_CARD_INFO_REGION_PADDING_BOTTOM,
   EXPLORE_SWIPE_CARD_INFO_REGION_PADDING_TOP,
   EXPLORE_SWIPE_CARD_INFO_TITLE_ACTION_GAP,
-  EXPLORE_SWIPE_CARD_PRESS_OVERLAY,
   EXPLORE_SWIPE_CARD_RADIUS,
   EXPLORE_SWIPE_CARD_SHADOW,
   EXPLORE_SWIPE_CARD_SHADOW_OFFSET_Y,
@@ -65,7 +64,7 @@ import {
   openCountryDetail,
   warmCountryDetail,
 } from "@/lib/open-country-detail";
-import { useSavedCountriesStore } from "@/store/use-saved-countries-store";
+import { useSavedLandmarksStore } from "@/store/use-saved-landmarks-store";
 import type { Country } from "@/types/country";
 import type { PlaceFeedItem } from "@/types/place-feed";
 
@@ -75,21 +74,6 @@ const PREVIEW_BLUR_RADIUS = 18;
 const WIKIMEDIA_HEADERS = {
   "User-Agent": "WorldLoop/1.0 (Expo; country discovery app)",
 };
-
-const BOOKMARK_HIT_SLOP = {
-  top:
-    (EXPLORE_SWIPE_ACTION_BUTTON_SIZE - EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE) /
-    2,
-  bottom:
-    (EXPLORE_SWIPE_ACTION_BUTTON_SIZE - EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE) /
-    2,
-  left:
-    (EXPLORE_SWIPE_ACTION_BUTTON_SIZE - EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE) /
-    2,
-  right:
-    (EXPLORE_SWIPE_ACTION_BUTTON_SIZE - EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE) /
-    2,
-} as const;
 
 const SHORT_DESCRIPTION_MAX_LENGTH = 20;
 
@@ -244,14 +228,7 @@ function PlaceHeroImage({
       onPressIn={onPressIn}
       style={{ width, height, overflow: "hidden" }}
     >
-      {({ pressed }) => (
-        <>
-          {hero}
-          {pressed && interactive && onPress ? (
-            <View style={styles.heroPressOverlay} pointerEvents="none" />
-          ) : null}
-        </>
-      )}
+      {hero}
     </Pressable>
   );
 }
@@ -273,8 +250,8 @@ export function ExploreSwipePlaceCard({
   const subtitle = `${formatLandmarkTypeDisplay(landmark.type)} · ${country.name}`;
   const description = formatPlaceCardDescription(landmark, country);
 
-  const toggleSaved = useSavedCountriesStore((s) => s.toggleSaved);
-  const isSaved = useSavedCountriesStore((s) => s.isSaved(country.name));
+  const toggleSaved = useSavedLandmarksStore((s) => s.toggleSaved);
+  const isSaved = useSavedLandmarksStore((s) => s.isSaved(landmark.id));
 
   const estimatedHeroHeight = Math.max(
     0,
@@ -311,7 +288,7 @@ export function ExploreSwipePlaceCard({
 
   const handleToggleSaved = () => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    toggleSaved(country);
+    toggleSaved(item);
   };
 
   return (
@@ -358,74 +335,60 @@ export function ExploreSwipePlaceCard({
           onPressIn={interactive ? warmDetail : undefined}
           style={styles.infoRegion}
         >
-          {({ pressed }) => (
-            <>
-              <View style={styles.titleRow}>
-                <View style={styles.titleBlock}>
-                  <Text
-                    style={styles.placeName}
-                    numberOfLines={EXPLORE_SWIPE_CARD_TITLE_MAX_LINES}
-                  >
-                    {landmark.name}
-                  </Text>
+          <View style={styles.titleRow}>
+            <View style={styles.titleBlock}>
+              <Text
+                style={styles.placeName}
+                numberOfLines={EXPLORE_SWIPE_CARD_TITLE_MAX_LINES}
+              >
+                {landmark.name}
+              </Text>
 
-                  <Text style={styles.subtitle} numberOfLines={1}>
-                    {subtitle}
-                  </Text>
-                </View>
+              <Text style={styles.subtitle} numberOfLines={1}>
+                {subtitle}
+              </Text>
+            </View>
 
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    isSaved ? `Unsave ${country.name}` : `Save ${country.name}`
-                  }
-                  accessibilityHint={
-                    isSaved
-                      ? "Removes this country from your saved list"
-                      : "Adds this country to your saved list"
-                  }
-                  disabled={!interactive}
-                  onPress={handleToggleSaved}
-                  hitSlop={BOOKMARK_HIT_SLOP}
-                  style={({ pressed: bookmarkPressed }) => [
-                    styles.bookmarkButton,
-                    bookmarkPressed &&
-                      interactive &&
-                      styles.bookmarkButtonPressed,
-                  ]}
-                >
-                  <Ionicons
-                    name={isSaved ? "bookmark" : "bookmark-outline"}
-                    size={EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE}
-                    color={
-                      isSaved
-                        ? EXPLORE_SWIPE_ACCENT_COLOR
-                        : EXPLORE_SWIPE_CARD_ACTION_ICON_COLOR
-                    }
-                  />
-                </Pressable>
-              </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={
+                isSaved ? `Unsave ${landmark.name}` : `Save ${landmark.name}`
+              }
+              accessibilityHint={
+                isSaved
+                  ? "Removes this landmark from your saved list"
+                  : "Adds this landmark to your saved list"
+              }
+              disabled={!interactive}
+              onPress={handleToggleSaved}
+              style={({ pressed: bookmarkPressed }) => [
+                styles.bookmarkButton,
+                bookmarkPressed && interactive && styles.bookmarkButtonPressed,
+              ]}
+            >
+              <Ionicons
+                name={isSaved ? "bookmark" : "bookmark-outline"}
+                size={EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE}
+                color={
+                  isSaved
+                    ? EXPLORE_SWIPE_ACCENT_COLOR
+                    : EXPLORE_SWIPE_CARD_ACTION_ICON_COLOR
+                }
+              />
+            </Pressable>
+          </View>
 
-              <View style={styles.factSection}>
-                <Text style={styles.factLabel}>About</Text>
-                <Text
-                  style={styles.factText}
-                  numberOfLines={EXPLORE_SWIPE_CARD_FACT_MAX_LINES}
-                >
-                  {description}
-                </Text>
-              </View>
+          <View style={styles.factSection}>
+            <Text style={styles.factLabel}>About</Text>
+            <Text
+              style={styles.factText}
+              numberOfLines={EXPLORE_SWIPE_CARD_FACT_MAX_LINES}
+            >
+              {description}
+            </Text>
+          </View>
 
-              <View style={styles.infoRegionSpacer} />
-
-              {pressed && interactive ? (
-                <View
-                  style={styles.infoRegionPressOverlay}
-                  pointerEvents="none"
-                />
-              ) : null}
-            </>
-          )}
+          <View style={styles.infoRegionSpacer} />
         </Pressable>
       </View>
     </View>
@@ -478,14 +441,6 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: EXPLORE_SWIPE_CARD_INFO_BORDER,
   },
-  infoRegionPressOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: EXPLORE_SWIPE_CARD_PRESS_OVERLAY,
-  },
-  heroPressOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: EXPLORE_SWIPE_CARD_PRESS_OVERLAY,
-  },
   titleRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -514,9 +469,9 @@ const styles = StyleSheet.create({
     color: EXPLORE_SWIPE_CARD_SUBTITLE_COLOR,
   },
   bookmarkButton: {
-    width: EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE,
+    width: EXPLORE_SWIPE_ACTION_BUTTON_SIZE,
     height: EXPLORE_SWIPE_ACTION_BUTTON_SIZE,
-    alignItems: "center",
+    alignItems: "flex-end",
     justifyContent: "center",
     flexShrink: 0,
   },

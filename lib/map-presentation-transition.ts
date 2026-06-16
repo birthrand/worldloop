@@ -42,14 +42,19 @@ export function commitMapPresentation({
   country,
   mode,
   source,
+  deferRegionSync = false,
 }: {
   country: MapCountry;
   mode: CountryPresentationMode;
   source: Exclude<SelectionSource, null>;
+  /** Explore → Map (2D): region chrome commits after the camera flight settles. */
+  deferRegionSync?: boolean;
 }): void {
   useMapPresentationStore.getState().setMode(mode);
   selectCountryOnMap(country, source);
-  syncFocusedRegionForSelection(country, source);
+  if (!deferRegionSync) {
+    syncFocusedRegionForSelection(country, source);
+  }
 }
 
 /** Immediate transition (no camera deferral) — e.g. preview on already-focused country. */

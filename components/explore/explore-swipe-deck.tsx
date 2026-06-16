@@ -36,6 +36,11 @@ import {
 } from "@/constants/explore-swipe-layout";
 import { isContinent } from "@/constants/regions";
 import {
+  isSavedCountriesFeed,
+  isSavedLandmarksFeed,
+  usesLandmarkQueue,
+} from "@/lib/explore-discovery-mode";
+import {
   prefetchFeedHeroImagesAroundIndex,
   warmFeedHeroesOnSwipeBegin,
 } from "@/lib/prefetch-feed-heroes";
@@ -78,6 +83,7 @@ type SwipeableTopCardProps = {
   onSwipePrevious: () => void;
   onSwipeBegin: () => void;
   heroMediaMode?: HeroMediaMode;
+  isScreenFocused?: boolean;
 };
 
 function SwipeableTopCard({
@@ -91,6 +97,7 @@ function SwipeableTopCard({
   onSwipePrevious,
   onSwipeBegin,
   heroMediaMode = "image",
+  isScreenFocused = true,
 }: SwipeableTopCardProps) {
   const translateY = useSharedValue(0);
   const translateX = useSharedValue(0);
@@ -340,6 +347,7 @@ function SwipeableTopCard({
             height={cardHeight}
             interactive={false}
             heroMediaMode={heroMediaMode}
+            isScreenFocused={isScreenFocused}
           />
         </Animated.View>
       ) : null}
@@ -355,6 +363,7 @@ function SwipeableTopCard({
             height={cardHeight}
             interactive={false}
             heroMediaMode={heroMediaMode}
+            isScreenFocused={isScreenFocused}
           />
         </Animated.View>
       ) : null}
@@ -370,6 +379,7 @@ function SwipeableTopCard({
             heroScrollEnabled
             onHeroIndexChange={setHeroIndex}
             heroMediaMode={heroMediaMode}
+            isScreenFocused={isScreenFocused}
           />
         </Animated.View>
       </GestureDetector>
@@ -665,6 +675,7 @@ type ExploreSwipeDeckProps = {
   onIndexChange: (index: number) => void;
   onNeedMore: () => void;
   heroMediaMode?: HeroMediaMode;
+  isScreenFocused?: boolean;
 };
 
 export function ExploreSwipeDeck({
@@ -673,14 +684,16 @@ export function ExploreSwipeDeck({
   onIndexChange,
   onNeedMore,
   heroMediaMode = "image",
+  isScreenFocused = true,
 }: ExploreSwipeDeckProps) {
   const discoveryMode = useCountryFeedStore((s) => s.discoveryMode);
   const places = useCountryFeedStore((s) => s.places);
   const selectedRegion = useCountryFeedStore((s) => s.selectedRegion);
   const setRegionFilter = useCountryFeedStore((s) => s.setRegionFilter);
+  const loadPlacesFeed = useCountryFeedStore((s) => s.loadPlacesFeed);
   const [deckLayout, setDeckLayout] = useState({ width: 0, height: 0 });
-  const isPlacesMode = discoveryMode === "places";
-  const queueLength = isPlacesMode ? places.length : countries.length;
+  const isLandmarkMode = usesLandmarkQueue(discoveryMode);
+  const queueLength = isLandmarkMode ? places.length : countries.length;
   const currentPlace = places[currentIndex];
   const currentCountry = countries[currentIndex];
   const nextPlace = places[currentIndex + 1];
@@ -694,16 +707,16 @@ export function ExploreSwipeDeck({
   const cardHeight = Math.max(0, Math.round(deckLayout.height));
 
   useEffect(() => {
-    if (isPlacesMode || countries.length === 0) return;
+    if (isLandmarkMode || countries.length === 0) return;
     void prefetchFeedHeroImagesAroundIndex(countries, currentIndex);
     void prefetchFeedVideosAroundIndex(countries, currentIndex);
-  }, [countries, currentIndex, isPlacesMode]);
+  }, [countries, currentIndex, isLandmarkMode]);
 
   const handleSwipeBegin = useCallback(() => {
-    if (isPlacesMode) return;
+    if (isLandmarkMode) return;
     warmFeedHeroesOnSwipeBegin(countries, currentIndex);
     warmFeedVideosOnSwipeBegin(countries, currentIndex);
-  }, [countries, currentIndex, isPlacesMode]);
+  }, [countries, currentIndex, isLandmarkMode]);
 
   const handleSwipeNext = useCallback(() => {
     onIndexChange(currentIndex + 1);
@@ -740,9 +753,9 @@ export function ExploreSwipeDeck({
 
   if (currentIndex >= queueLength) {
     const showRegionComplete =
-      discoveryMode === "region" &&
       selectedRegion !== null &&
-      isContinent(selectedRegion);
+      isContinent(selectedRegion) &&
+      (discoveryMode === "region" || discoveryMode === "places");
 
     return (
       <View style={styles.deck} onLayout={onDeckLayout}>
@@ -752,7 +765,12 @@ export function ExploreSwipeDeck({
               region={selectedRegion}
               cardWidth={cardWidth}
               cardHeight={cardHeight}
+              itemKind={discoveryMode === "places" ? "landmark" : "country"}
               onContinue={(nextRegion) => {
+                if (discoveryMode === "places") {
+                  void loadPlacesFeed(nextRegion);
+                  return;
+                }
                 void setRegionFilter(nextRegion);
               }}
             />
@@ -764,18 +782,22 @@ export function ExploreSwipeDeck({
               ]}
             >
               <Text style={styles.emptyTitle}>
-                {discoveryMode === "saved"
+                {isSavedCountriesFeed(discoveryMode)
                   ? "All saved countries viewed"
-                  : discoveryMode === "places"
-                    ? "All places viewed"
-                    : "All caught up"}
+                  : isSavedLandmarksFeed(discoveryMode)
+                    ? "All saved landmarks viewed"
+                    : discoveryMode === "places"
+                      ? "All landmarks viewed"
+                      : "All caught up"}
               </Text>
               <Text style={styles.emptySubtitle}>
-                {discoveryMode === "saved"
+                {isSavedCountriesFeed(discoveryMode)
                   ? "Save more countries or switch feeds to keep exploring"
-                  : discoveryMode === "places"
-                    ? "Switch feeds to discover more landmarks"
-                    : "Change your feed filters to discover more countries"}
+                  : isSavedLandmarksFeed(discoveryMode)
+                    ? "Save more landmarks or switch feeds to keep exploring"
+                    : discoveryMode === "places"
+                      ? "Switch feeds to discover more landmarks"
+                      : "Change your feed filters to discover more countries"}
               </Text>
             </View>
           )}
@@ -797,7 +819,7 @@ export function ExploreSwipeDeck({
           ]}
           pointerEvents="box-none"
         >
-          {isPlacesMode && currentPlace ? (
+          {isLandmarkMode && currentPlace ? (
             <SwipeablePlaceTopCard
               key={`${currentPlace.landmark.id}-${currentIndex}`}
               item={currentPlace}
@@ -822,6 +844,7 @@ export function ExploreSwipeDeck({
               onSwipePrevious={handleSwipePrevious}
               onSwipeBegin={handleSwipeBegin}
               heroMediaMode={heroMediaMode}
+              isScreenFocused={isScreenFocused}
             />
           ) : null}
         </View>

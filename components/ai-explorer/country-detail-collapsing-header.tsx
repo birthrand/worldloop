@@ -21,15 +21,24 @@ import {
   EXPLORE_SWIPE_CARD_TITLE_COLOR,
   EXPLORE_SWIPE_TEXT_HEADER,
 } from "@/constants/explore-swipe-layout";
+import { resolveVisitCountryId } from "@/lib/discovery-progress";
+import { useDiscoveryProgressStore } from "@/store/use-discovery-progress-store";
 import { useSavedCountriesStore } from "@/store/use-saved-countries-store";
+import { useToastStore } from "@/store/use-toast-store";
 import type { Country } from "@/types/country";
 
 const COUNTRY_NAME_FONT_SIZE = EXPLORE_SWIPE_TEXT_HEADER;
 const HEADER_HORIZONTAL_PADDING = 16;
 const HEADER_SIDE_BUTTON_SIZE = 40;
 const HEADER_TITLE_GAP = 8;
+const HEADER_ACTION_GAP = 4;
 const HEADER_SIDE_INSET =
   HEADER_HORIZONTAL_PADDING + HEADER_SIDE_BUTTON_SIZE + HEADER_TITLE_GAP;
+const HEADER_RIGHT_INSET =
+  HEADER_HORIZONTAL_PADDING +
+  HEADER_SIDE_BUTTON_SIZE * 2 +
+  HEADER_ACTION_GAP +
+  HEADER_TITLE_GAP;
 
 type CountryDetailCollapsingHeaderProps = {
   country: Country;
@@ -49,6 +58,13 @@ export function CountryDetailCollapsingHeader({
   const insets = useSafeAreaInsets();
   const toggleSaved = useSavedCountriesStore((s) => s.toggleSaved);
   const isSaved = useSavedCountriesStore((s) => s.isSaved(country.name));
+  const toggleVisited = useDiscoveryProgressStore(
+    (s) => s.toggleCountryVisited,
+  );
+  const visitId = resolveVisitCountryId(country);
+  const visited = useDiscoveryProgressStore((s) =>
+    s.visitedCountryIds.includes(visitId),
+  );
   const saved = isSaved;
   const collapseThreshold = getCountryDetailTitleCollapseThreshold(
     screenHeight,
@@ -122,11 +138,27 @@ export function CountryDetailCollapsingHeader({
     toggleSaved(country);
   };
 
+  const handleToggleVisited = () => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const wasVisited = visited;
+    toggleVisited(country);
+    useToastStore
+      .getState()
+      .showToast(wasVisited ? "Removed from visited" : "Marked as visited");
+  };
+
   const savedIcon = saved ? "bookmark" : "bookmark-outline";
+  const visitedIcon = visited ? "checkmark-circle" : "checkmark-circle-outline";
   const heroSavedColor = saved
     ? EXPLORE_SWIPE_ACCENT_COLOR
     : EXPLORE_SWIPE_CARD_TITLE_COLOR;
   const stickySavedColor = saved
+    ? EXPLORE_SWIPE_ACCENT_COLOR
+    : EXPLORE_SWIPE_CARD_ACTION_ICON_COLOR;
+  const heroVisitedColor = visited
+    ? EXPLORE_SWIPE_ACCENT_COLOR
+    : EXPLORE_SWIPE_CARD_TITLE_COLOR;
+  const stickyVisitedColor = visited
     ? EXPLORE_SWIPE_ACCENT_COLOR
     : EXPLORE_SWIPE_CARD_ACTION_ICON_COLOR;
 
@@ -166,46 +198,92 @@ export function CountryDetailCollapsingHeader({
           </Animated.View>
         </Pressable>
 
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={
-            saved ? `Unsave ${country.name}` : `Save ${country.name}`
-          }
-          accessibilityHint={
-            saved
-              ? "Removes this country from your saved list"
-              : "Adds this country to your saved list"
-          }
-          onPress={handleToggleSaved}
-          style={({ pressed }) => [
-            styles.actionSlot,
-            pressed && styles.actionSlotPressed,
-          ]}
-        >
-          <Animated.View
-            pointerEvents="none"
-            style={[styles.actionLayer, heroBackStyle]}
+        <View style={styles.actionGroup}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              visited
+                ? `Unmark ${country.name} as visited`
+                : `Mark ${country.name} as visited`
+            }
+            accessibilityHint={
+              visited
+                ? "Removes this country from your visited list"
+                : "Adds this country to your visited list and travel map"
+            }
+            accessibilityState={{ selected: visited }}
+            onPress={handleToggleVisited}
+            style={({ pressed }) => [
+              styles.actionSlot,
+              pressed && styles.actionSlotPressed,
+            ]}
           >
-            <View style={styles.heroActionButton}>
+            <Animated.View
+              pointerEvents="none"
+              style={[styles.actionLayer, heroBackStyle]}
+            >
+              <View style={styles.heroActionButton}>
+                <Ionicons
+                  name={visitedIcon}
+                  size={EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE}
+                  color={heroVisitedColor}
+                />
+              </View>
+            </Animated.View>
+
+            <Animated.View
+              pointerEvents="none"
+              style={[styles.actionLayer, stickyBackStyle]}
+            >
+              <Ionicons
+                name={visitedIcon}
+                size={EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE}
+                color={stickyVisitedColor}
+              />
+            </Animated.View>
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              saved ? `Unsave ${country.name}` : `Save ${country.name}`
+            }
+            accessibilityHint={
+              saved
+                ? "Removes this country from your saved list"
+                : "Adds this country to your saved list"
+            }
+            onPress={handleToggleSaved}
+            style={({ pressed }) => [
+              styles.actionSlot,
+              pressed && styles.actionSlotPressed,
+            ]}
+          >
+            <Animated.View
+              pointerEvents="none"
+              style={[styles.actionLayer, heroBackStyle]}
+            >
+              <View style={styles.heroActionButton}>
+                <Ionicons
+                  name={savedIcon}
+                  size={EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE}
+                  color={heroSavedColor}
+                />
+              </View>
+            </Animated.View>
+
+            <Animated.View
+              pointerEvents="none"
+              style={[styles.actionLayer, stickyBackStyle]}
+            >
               <Ionicons
                 name={savedIcon}
                 size={EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE}
-                color={heroSavedColor}
+                color={stickySavedColor}
               />
-            </View>
-          </Animated.View>
-
-          <Animated.View
-            pointerEvents="none"
-            style={[styles.actionLayer, stickyBackStyle]}
-          >
-            <Ionicons
-              name={savedIcon}
-              size={EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE}
-              color={stickySavedColor}
-            />
-          </Animated.View>
-        </Pressable>
+            </Animated.View>
+          </Pressable>
+        </View>
 
         <Animated.View
           pointerEvents="none"
@@ -275,7 +353,8 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
     bottom: 0,
-    paddingHorizontal: HEADER_SIDE_INSET,
+    paddingLeft: HEADER_SIDE_INSET,
+    paddingRight: HEADER_RIGHT_INSET,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -290,6 +369,13 @@ const styles = StyleSheet.create({
     color: EXPLORE_SWIPE_CARD_TITLE_COLOR,
     includeFontPadding: false,
     textAlignVertical: "center",
+  },
+  actionGroup: {
+    zIndex: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: HEADER_ACTION_GAP,
+    flexShrink: 0,
   },
   actionSlot: {
     zIndex: 2,

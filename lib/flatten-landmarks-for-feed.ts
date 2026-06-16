@@ -3,6 +3,11 @@ import {
   hydrateCountryProfileFromDisk,
   seedStaticCountryProfileIfAvailable,
 } from "@/lib/country-profile-cache";
+import {
+  buildPlacesView,
+  sortPlaceFeedItems,
+  type PlacesBaseFeed,
+} from "@/lib/places-feed-presentation";
 import { prefetchCountryProfile } from "@/lib/prefetch-country-profiles";
 import {
   getStaticCountryProfileByName,
@@ -11,14 +16,7 @@ import {
 import type { Country } from "@/types/country";
 import type { PlaceFeedItem } from "@/types/place-feed";
 
-function shuffleItems<T>(items: T[]): T[] {
-  const list = [...items];
-  for (let i = list.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [list[i], list[j]] = [list[j], list[i]];
-  }
-  return list;
-}
+export type { PlacesBaseFeed } from "@/lib/places-feed-presentation";
 
 function hasUsableLandmarkName(name: string | undefined): boolean {
   return Boolean(name?.trim());
@@ -53,11 +51,13 @@ async function resolveLandmarksForCountry(
     .map((landmark) => ({ landmark, country }));
 }
 
-/** Flatten landmarks from a country pool into a swipeable Places queue. */
-export async function flattenLandmarksForFeed(
+/** Deterministic flatten — image buckets sorted, no shuffle. */
+export async function buildPlacesBase(
   countries: Country[],
-): Promise<PlaceFeedItem[]> {
-  if (countries.length === 0) return [];
+): Promise<PlacesBaseFeed> {
+  if (countries.length === 0) {
+    return { withImage: [], withoutImage: [] };
+  }
 
   const batches = await Promise.all(
     countries.map((country) =>
@@ -76,5 +76,18 @@ export async function flattenLandmarksForFeed(
     }
   }
 
-  return [...shuffleItems(withImage), ...shuffleItems(withoutImage)];
+  return {
+    withImage: sortPlaceFeedItems(withImage),
+    withoutImage: sortPlaceFeedItems(withoutImage),
+  };
+}
+
+export { buildPlacesView } from "@/lib/places-feed-presentation";
+
+/** Flatten landmarks from a country pool into a swipeable Places queue. */
+export async function flattenLandmarksForFeed(
+  countries: Country[],
+): Promise<PlaceFeedItem[]> {
+  const base = await buildPlacesBase(countries);
+  return buildPlacesView(base);
 }

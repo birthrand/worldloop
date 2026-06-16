@@ -1,6 +1,9 @@
 /**
  * Builds `data/country-profiles.json` — static Wikipedia + landmarks enrichment.
  *
+ * Before writing, Commons `Special:FilePath` landmark URLs are resolved to direct
+ * `upload.wikimedia.org` thumb URLs so app previews skip redirect hops.
+ *
  * Reads country names from `data/countries.json`. Secrets stay in `backend/.env`.
  *
  * Usage:
@@ -26,6 +29,10 @@ import {
   type StaticCountryProfileCatalog,
 } from "../types/country-profile-catalog.js";
 import { assertValidStaticCountryProfileCatalog } from "./lib/profile-validation.js";
+import {
+  isCommonsFilePathUrl,
+  resolveCommonsFilePathUrls,
+} from "./lib/resolve-commons-image-url.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -195,6 +202,55 @@ function isProfileComplete(entry: CountryProfileEntry): boolean {
   return Boolean(
     entry.wikipedia?.extract?.trim() || entry.landmarks.length > 0,
   );
+}
+
+async function resolveProfileLandmarkImageUrls(
+  profiles: CountryProfileEntry[],
+): Promise<CountryProfileEntry[]> {
+  const pendingUrls = profiles.flatMap((profile) =>
+    profile.landmarks
+      .map((landmark) => landmark.imageUrl)
+      .filter((url): url is string => isCommonsFilePathUrl(url)),
+  );
+
+  if (pendingUrls.length === 0) {
+    return profiles;
+  }
+
+  console.log(
+    `[urls] resolving ${pendingUrls.length} Commons Special:FilePath URLs…`,
+  );
+
+  const mappings = await resolveCommonsFilePathUrls(pendingUrls);
+
+  let resolved = 0;
+  let failed = 0;
+
+  const nextProfiles = profiles.map((profile) => ({
+    ...profile,
+    landmarks: profile.landmarks.map((landmark) => {
+      const imageUrl = landmark.imageUrl;
+      if (!imageUrl || !isCommonsFilePathUrl(imageUrl)) return landmark;
+
+      const directUrl = mappings.get(imageUrl) ?? imageUrl;
+      if (
+        directUrl !== imageUrl &&
+        directUrl.includes("upload.wikimedia.org")
+      ) {
+        resolved += 1;
+        return { ...landmark, imageUrl: directUrl };
+      }
+
+      failed += 1;
+      return landmark;
+    }),
+  }));
+
+  console.log(
+    `[urls] resolved ${resolved} landmark image URLs (${failed} kept as-is)`,
+  );
+
+  return nextProfiles;
 }
 
 async function loadServices(): Promise<ProfileServices> {
@@ -710,11 +766,14 @@ async function main(): Promise<void> {
     ) {
       const label = options.missingOverview ? "overview" : "landmarks";
       console.log(`[${label}] nothing to update — writing existing catalog`);
+      const resolvedProfiles = await resolveProfileLandmarkImageUrls(
+        existingProfiles.map(sanitizeProfileEntry),
+      );
       const catalog: StaticCountryProfileCatalog = {
         version: PROFILE_CATALOG_VERSION,
         generatedAt: new Date().toISOString(),
-        count: existingProfiles.length,
-        profiles: existingProfiles.map(sanitizeProfileEntry),
+        count: resolvedProfiles.length,
+        profiles: resolvedProfiles,
       };
       assertValidStaticCountryProfileCatalog(catalog, countriesCatalog);
       await writeFile(OUTPUT_PATH, `${JSON.stringify(catalog, null, 2)}\n`);
@@ -750,11 +809,15 @@ async function main(): Promise<void> {
             existingProfiles,
           );
 
+    const resolvedProfiles = await resolveProfileLandmarkImageUrls(
+      profiles.map(sanitizeProfileEntry),
+    );
+
     const catalog: StaticCountryProfileCatalog = {
       version: PROFILE_CATALOG_VERSION,
       generatedAt: new Date().toISOString(),
-      count: profiles.length,
-      profiles: profiles.map(sanitizeProfileEntry),
+      count: resolvedProfiles.length,
+      profiles: resolvedProfiles,
     };
 
     assertValidStaticCountryProfileCatalog(catalog, countriesCatalog);

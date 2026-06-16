@@ -51,7 +51,7 @@ export default function TabsLayout() {
             tabBarStyle: { display: "none" },
           }}
         />
-        <Tabs.Screen name="saved" options={{ title: "Saved" }} />
+        <Tabs.Screen name="saved" options={{ href: null, title: "Saved" }} />
         <Tabs.Screen name="profile" options={{ title: "Profile" }} />
       </Tabs>
       <SearchOverlay />

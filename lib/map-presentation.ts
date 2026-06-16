@@ -64,3 +64,59 @@ export function canSelectCountryOnMap(
   }
   return activeCountry.name === candidateName;
 }
+
+/** Boundary taps may switch countries only during an Explore → Map handoff. */
+export function canSelectCountryOnMapBoundary(
+  activeCountry: MapCountry | null,
+  candidateName: string,
+  selectionSource: SelectionSource,
+  exploreMapSessionActive = false,
+): boolean {
+  if (!activeCountry) {
+    return true;
+  }
+  if (isExploreMapHandoff(selectionSource, null, exploreMapSessionActive)) {
+    return true;
+  }
+  return activeCountry.name === candidateName;
+}
+
+/** True while the map was opened from Explore (including before identity commits). */
+export function isExploreMapHandoff(
+  selectionSource: SelectionSource,
+  pendingSource?: SelectionSource | null,
+  exploreMapSessionActive = false,
+): boolean {
+  if (selectionSource === "countryDetail") {
+    return false;
+  }
+
+  return (
+    exploreMapSessionActive ||
+    selectionSource === "explore" ||
+    pendingSource === "explore"
+  );
+}
+
+/** 2D flat map — only the selected country flag (explore preview or country-detail map). */
+export function isFlatSingleCountryFlagMode(
+  is3d: boolean,
+  selectionSource: SelectionSource,
+  exploreMapHandoffActive: boolean,
+  activeCountry: MapCountry | null,
+): boolean {
+  if (is3d || !activeCountry) {
+    return false;
+  }
+
+  return exploreMapHandoffActive || selectionSource === "countryDetail";
+}
+
+export function resolveExploreMapHandoffMarkerName(
+  activeCountryName: string | null,
+  focusTransitionCountryName: string | null,
+  pendingCountryName?: string | null,
+): string | null {
+  const pending = pendingCountryName?.trim();
+  return activeCountryName ?? focusTransitionCountryName ?? pending ?? null;
+}

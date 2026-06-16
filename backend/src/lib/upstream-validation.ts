@@ -324,6 +324,36 @@ export function pickBestVideoHit(
   );
 }
 
+/** Stable upstream clip id for catalog dedup (Pexels/Pixabay CDN URLs). */
+export function extractVideoAssetId(url: string): string {
+  const trimmed = url.trim();
+  const pexelsMatch = trimmed.match(/video-files\/(\d+)\//);
+  if (pexelsMatch) return `pexels:${pexelsMatch[1]}`;
+
+  const pixabayMatch = trimmed.match(/\/(\d+)(?:_\d+)?\.mp4(?:\?|$)/);
+  if (pixabayMatch) return `pixabay:${pixabayMatch[1]}`;
+
+  return trimmed;
+}
+
+export function pickFirstUnusedVideoHit(
+  hits: PexelsVideoHit[],
+  preference: VideoOrientationPreference,
+  usedAssetIds: Set<string>,
+): PexelsVideoHit | null {
+  const candidates = filterHitsByOrientation(hits, preference).sort(
+    (a, b) => (b.width ?? 0) - (a.width ?? 0),
+  );
+
+  for (const hit of candidates) {
+    if (!usedAssetIds.has(extractVideoAssetId(hit.url))) {
+      return hit;
+    }
+  }
+
+  return null;
+}
+
 export function pickBestPexelsVideoHit(
   hits: PexelsVideoHit[],
 ): PexelsVideoHit | null {

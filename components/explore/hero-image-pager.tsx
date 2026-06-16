@@ -4,7 +4,6 @@ import {
   NativeSyntheticEvent,
   Pressable,
   StyleSheet,
-  View,
 } from "react-native";
 import {
   FlatList,
@@ -16,7 +15,6 @@ import {
   CountryImage,
   isCountryImageReady,
 } from "@/components/explore/country-image";
-import { EXPLORE_SWIPE_CARD_PRESS_OVERLAY } from "@/constants/explore-swipe-layout";
 
 type HeroImagePagerProps = {
   images: string[];
@@ -149,24 +147,15 @@ export function HeroImagePager({
           disabled={!onImagePress}
           style={{ width: heroWidth, height: heroHeight, overflow: "hidden" }}
         >
-          {({ pressed }) => (
-            <>
-              <CountryImage
-                uri={item || undefined}
-                flag={flag}
-                iso2={iso2}
-                style={StyleSheet.absoluteFill}
-                contentFit="cover"
-                showSkeleton
-                onLoadStateChange={(loaded) =>
-                  handleSlideLoadChange(index, loaded)
-                }
-              />
-              {pressed && onImagePress ? (
-                <View style={styles.pressOverlay} pointerEvents="none" />
-              ) : null}
-            </>
-          )}
+          <CountryImage
+            uri={item || undefined}
+            flag={flag}
+            iso2={iso2}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            showSkeleton
+            onLoadStateChange={(loaded) => handleSlideLoadChange(index, loaded)}
+          />
         </Pressable>
       )}
     />
@@ -178,10 +167,3 @@ export function HeroImagePager({
 
   return <GestureDetector gesture={heroScrollGesture}>{list}</GestureDetector>;
 }
-
-const styles = StyleSheet.create({
-  pressOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: EXPLORE_SWIPE_CARD_PRESS_OVERLAY,
-  },
-});

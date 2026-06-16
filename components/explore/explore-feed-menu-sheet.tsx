@@ -1,4 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -15,13 +17,20 @@ import {
   FOR_YOU_TAB,
   HERE_TAB,
   isContinent,
-  PLACES_TAB,
   SAVED_TAB,
   type ExploreHeaderTab,
 } from "@/constants/regions";
+import {
+  isSavedCountriesFeed,
+  isSavedLandmarksFeed,
+} from "@/lib/explore-discovery-mode";
 import { useCountryFeedStore } from "@/store/use-country-feed-store";
 import { useSavedCountriesStore } from "@/store/use-saved-countries-store";
+import { useSavedLandmarksStore } from "@/store/use-saved-landmarks-store";
 import { useSpatialContextStore } from "@/store/use-spatial-context-store";
+import type { DiscoveryScopeMode } from "@/types/geo";
+
+type BrowseFeedMenuTab = "countries" | "landmarks";
 
 type ExploreFeedMenuSheetProps = {
   visible: boolean;
@@ -30,6 +39,7 @@ type ExploreFeedMenuSheetProps = {
 
 type FeedMenuRowProps = {
   label: string;
+  count?: number;
   selected: boolean;
   accessibilityLabel: string;
   onPress: () => void;
@@ -37,6 +47,7 @@ type FeedMenuRowProps = {
 
 function FeedMenuRow({
   label,
+  count,
   selected,
   accessibilityLabel,
   onPress,
@@ -55,14 +66,91 @@ function FeedMenuRow({
       >
         {label}
       </Text>
-      {selected ? (
-        <Ionicons
-          name="checkmark"
-          size={18}
-          color={WORLDLOOP_HEADER_ACCENT_COLOR}
-        />
-      ) : null}
+      <View style={styles.menuTrailing}>
+        {count !== undefined ? (
+          <Text style={styles.menuCount}>{count}</Text>
+        ) : null}
+        {selected ? (
+          <Ionicons
+            name="checkmark"
+            size={18}
+            color={WORLDLOOP_HEADER_ACCENT_COLOR}
+          />
+        ) : null}
+      </View>
     </Pressable>
+  );
+}
+
+function resolveBrowseMenuTab(mode: DiscoveryScopeMode): BrowseFeedMenuTab {
+  return mode === "places" || mode === "savedLandmarks"
+    ? "landmarks"
+    : "countries";
+}
+
+type BrowseFeedMenuTabsProps = {
+  activeTab: BrowseFeedMenuTab;
+  onTabChange: (tab: BrowseFeedMenuTab) => void;
+};
+
+function BrowseFeedMenuTabs({
+  activeTab,
+  onTabChange,
+}: BrowseFeedMenuTabsProps) {
+  const handlePress = (tab: BrowseFeedMenuTab) => {
+    if (tab === activeTab) return;
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onTabChange(tab);
+  };
+
+  return (
+    <View style={styles.menuTabsRow}>
+      <Pressable
+        accessibilityRole="tab"
+        accessibilityState={{ selected: activeTab === "countries" }}
+        accessibilityLabel="Countries feed filters"
+        onPress={() => handlePress("countries")}
+        style={({ pressed }) => [
+          styles.menuTab,
+          activeTab === "countries" && styles.menuTabSelected,
+          pressed && styles.pressed,
+        ]}
+      >
+        <Text
+          style={[
+            styles.menuTabLabel,
+            activeTab === "countries"
+              ? styles.menuTabLabelSelected
+              : styles.menuTabLabelIdle,
+          ]}
+        >
+          Countries
+        </Text>
+      </Pressable>
+
+      <Pressable
+        accessibilityRole="tab"
+        accessibilityState={{ selected: activeTab === "landmarks" }}
+        accessibilityLabel="Landmarks feed filters"
+        onPress={() => handlePress("landmarks")}
+        style={({ pressed }) => [
+          styles.menuTab,
+          activeTab === "landmarks" && styles.menuTabSelected,
+          pressed && styles.pressed,
+        ]}
+      >
+        <Text
+          style={[
+            styles.menuTabLabel,
+            activeTab === "landmarks"
+              ? styles.menuTabLabelSelected
+              : styles.menuTabLabelIdle,
+          ]}
+        >
+          Landmarks
+        </Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -78,75 +166,99 @@ export function ExploreFeedMenuSheet({
   const restoreForYouFeed = useCountryFeedStore((s) => s.restoreForYouFeed);
   const setRegionFilter = useCountryFeedStore((s) => s.setRegionFilter);
   const loadSavedFeed = useCountryFeedStore((s) => s.loadSavedFeed);
+  const loadSavedLandmarksFeed = useCountryFeedStore(
+    (s) => s.loadSavedLandmarksFeed,
+  );
   const loadPlacesFeed = useCountryFeedStore((s) => s.loadPlacesFeed);
-  const savedCount = useSavedCountriesStore((s) => s.savedCountries.length);
+  const savedCountriesCount = useSavedCountriesStore(
+    (s) => s.savedCountries.length,
+  );
+  const savedLandmarksCount = useSavedLandmarksStore(
+    (s) => s.savedLandmarks.length,
+  );
   const focusedRegion = useSpatialContextStore(
     (s) => s.discoveryScope.focusedRegion,
   );
+  const [menuTab, setMenuTab] = useState<BrowseFeedMenuTab>(() =>
+    resolveBrowseMenuTab(discoveryMode),
+  );
+  useEffect(() => {
+    if (!visible) return;
+    setMenuTab(resolveBrowseMenuTab(discoveryMode));
+  }, [visible, discoveryMode]);
 
-  const headerTabs: ExploreHeaderTab[] =
+  const exploreTabs: ExploreHeaderTab[] =
     discoveryMode === "here"
-      ? [
-          FOR_YOU_TAB,
-          SAVED_TAB,
-          PLACES_TAB,
-          HERE_TAB,
-          ...EXPLORE_HEADER_TABS.slice(1),
-        ]
-      : [FOR_YOU_TAB, SAVED_TAB, PLACES_TAB, ...EXPLORE_HEADER_TABS.slice(1)];
-
-  const selectedTab: ExploreHeaderTab =
-    discoveryMode === "saved"
-      ? SAVED_TAB
-      : discoveryMode === "places"
-        ? PLACES_TAB
-        : discoveryMode === "here"
-          ? HERE_TAB
-          : selectedRegion === null
-            ? FOR_YOU_TAB
-            : (selectedRegion as ExploreHeaderTab);
+      ? [HERE_TAB, ...EXPLORE_HEADER_TABS.slice(1)]
+      : [...EXPLORE_HEADER_TABS.slice(1)];
 
   const hereScopeLabel = focusedRegion
     ? continentDisplayLabel(focusedRegion)
     : "Map area";
 
-  const onTabPress = (name: ExploreHeaderTab) => {
-    if (name === FOR_YOU_TAB) {
-      if (discoveryMode === "forYou" && selectedRegion === null) {
+  const onForYouPress = () => {
+    if (menuTab === "landmarks") {
+      if (discoveryMode === "places" && selectedRegion === null) {
         onClose();
         return;
       }
-      void restoreForYouFeed();
+      void loadPlacesFeed(null);
       onClose();
       return;
     }
 
-    if (name === SAVED_TAB) {
-      if (discoveryMode === "saved") {
+    if (discoveryMode === "forYou" && selectedRegion === null) {
+      onClose();
+      return;
+    }
+    void restoreForYouFeed();
+    onClose();
+  };
+
+  const onSavedPress = () => {
+    if (menuTab === "landmarks") {
+      const feedPlacesCount = useCountryFeedStore.getState().places.length;
+      const needsSavedLandmarksReload =
+        isSavedLandmarksFeed(discoveryMode) &&
+        savedLandmarksCount > 0 &&
+        feedPlacesCount === 0;
+
+      if (isSavedLandmarksFeed(discoveryMode) && !needsSavedLandmarksReload) {
         onClose();
         return;
       }
-      void loadSavedFeed();
+      void loadSavedLandmarksFeed();
       onClose();
       return;
     }
 
-    if (name === PLACES_TAB) {
-      if (discoveryMode === "places") {
-        onClose();
-        return;
-      }
-      void loadPlacesFeed();
+    if (isSavedCountriesFeed(discoveryMode)) {
       onClose();
       return;
     }
+    void loadSavedFeed();
+    onClose();
+  };
 
+  const onExploreTabPress = (name: ExploreHeaderTab) => {
     if (name === HERE_TAB) {
       onClose();
       return;
     }
 
     if (!isContinent(name)) return;
+
+    if (menuTab === "landmarks") {
+      if (selectedRegion === name && discoveryMode === "places") {
+        void loadPlacesFeed(null);
+        onClose();
+        return;
+      }
+
+      void loadPlacesFeed(name);
+      onClose();
+      return;
+    }
 
     if (selectedRegion === name && discoveryMode === "region") {
       void setRegionFilter(null);
@@ -158,9 +270,41 @@ export function ExploreFeedMenuSheet({
     onClose();
   };
 
-  const continentStartIndex = headerTabs.findIndex((tab) =>
-    tab === HERE_TAB ? discoveryMode === "here" : isContinent(tab),
-  );
+  const selectedExploreTab: ExploreHeaderTab | null =
+    discoveryMode === "here"
+      ? HERE_TAB
+      : selectedRegion === null
+        ? null
+        : (selectedRegion as ExploreHeaderTab);
+
+  const forYouSelected =
+    menuTab === "landmarks"
+      ? discoveryMode === "places" && selectedRegion === null
+      : discoveryMode === "forYou" && selectedRegion === null;
+
+  const forYouAccessibilityLabel =
+    menuTab === "landmarks"
+      ? discoveryMode === "places"
+        ? `Landmarks mode, ${placesCount} landmarks`
+        : "Show landmarks from your For You country pool"
+      : "Show your personalized country feed";
+
+  const savedSelected =
+    menuTab === "landmarks"
+      ? isSavedLandmarksFeed(discoveryMode)
+      : isSavedCountriesFeed(discoveryMode);
+
+  const savedCount =
+    menuTab === "landmarks" ? savedLandmarksCount : savedCountriesCount;
+
+  const savedAccessibilityLabel =
+    menuTab === "landmarks"
+      ? savedSelected
+        ? `Saved landmarks, ${savedLandmarksCount} items`
+        : `Show ${savedLandmarksCount} saved landmarks as a swipe deck`
+      : savedSelected
+        ? `Saved countries, ${savedCountriesCount} items`
+        : `Show ${savedCountriesCount} saved countries as a swipe deck`;
 
   return (
     <SwipeDismissSheet
@@ -176,63 +320,55 @@ export function ExploreFeedMenuSheet({
 
       <View style={styles.sheetHeader}>
         <Text style={styles.sheetTitle}>Browse feed</Text>
+        <BrowseFeedMenuTabs activeTab={menuTab} onTabChange={setMenuTab} />
       </View>
 
       <View style={styles.menuPanel}>
-        {headerTabs.map((name, index) => {
-          const selected = name === selectedTab;
-          const showPersonalHeader = index === 0 && name === FOR_YOU_TAB;
-          const showContinentsHeader =
-            index === continentStartIndex && continentStartIndex >= 0;
+        <Text style={styles.sectionLabel}>Personal</Text>
+        <FeedMenuRow
+          label={FOR_YOU_TAB}
+          selected={forYouSelected}
+          accessibilityLabel={forYouAccessibilityLabel}
+          onPress={onForYouPress}
+        />
+        <FeedMenuRow
+          label={SAVED_TAB}
+          count={savedCount}
+          selected={savedSelected}
+          accessibilityLabel={savedAccessibilityLabel}
+          onPress={onSavedPress}
+        />
+
+        <Text style={[styles.sectionLabel, styles.exploreSectionLabel]}>
+          Explore
+        </Text>
+        {exploreTabs.map((name, index) => {
+          const selected = name === selectedExploreTab;
 
           const accessibilityLabel =
-            name === FOR_YOU_TAB
-              ? "Show your personalized country feed"
-              : name === SAVED_TAB
-                ? selected
-                  ? `Saved countries, ${savedCount} items`
-                  : `Show ${savedCount} saved countries as a swipe deck`
-                : name === PLACES_TAB
-                  ? selected
-                    ? `Places mode, ${placesCount} landmarks`
-                    : "Show landmarks from your For You country pool"
-                  : name === HERE_TAB
-                    ? `Here mode: ${hereScopeLabel}, ${countryCount} countries`
-                    : selected
-                      ? `Clear ${name} filter and show For You feed`
-                      : `Show countries in ${name}`;
+            name === HERE_TAB
+              ? menuTab === "landmarks"
+                ? `Here mode: ${hereScopeLabel}, ${placesCount} landmarks`
+                : `Here mode: ${hereScopeLabel}, ${countryCount} countries`
+              : menuTab === "landmarks"
+                ? selected && discoveryMode === "places"
+                  ? `Clear ${name} filter and show For You landmarks`
+                  : `Show landmarks in ${name}`
+                : selected
+                  ? `Clear ${name} filter and show For You feed`
+                  : `Show countries in ${name}`;
 
           const label =
-            name === FOR_YOU_TAB
-              ? name
-              : name === SAVED_TAB
-                ? savedCount > 0
-                  ? `${name} (${savedCount})`
-                  : name
-                : name === PLACES_TAB
-                  ? placesCount > 0 && discoveryMode === "places"
-                    ? `${name} (${placesCount})`
-                    : name
-                  : name === HERE_TAB
-                    ? name
-                    : continentTabLabel(name, true);
+            name === HERE_TAB ? name : continentTabLabel(name, true);
 
           return (
             <View key={name}>
-              {showPersonalHeader ? (
-                <Text style={styles.sectionLabel}>Personal</Text>
-              ) : null}
-              {showContinentsHeader ? (
-                <Text style={styles.sectionLabel}>World</Text>
-              ) : null}
-              {index > 0 && !showContinentsHeader && !showPersonalHeader ? (
-                <View style={styles.menuDivider} />
-              ) : null}
+              {index > 0 ? <View style={styles.menuDivider} /> : null}
               <FeedMenuRow
                 label={label}
                 selected={selected}
                 accessibilityLabel={accessibilityLabel}
-                onPress={() => onTabPress(name)}
+                onPress={() => onExploreTabPress(name)}
               />
             </View>
           );
@@ -270,6 +406,7 @@ const styles = StyleSheet.create({
   },
   sheetHeader: {
     marginBottom: 2,
+    gap: 12,
   },
   sheetTitle: {
     fontSize: 16,
@@ -279,7 +416,39 @@ const styles = StyleSheet.create({
   },
   menuPanel: {
     gap: 0,
-    marginTop: 4,
+    marginTop: 8,
+  },
+  menuTabsRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 20,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(255, 255, 255, 0.08)",
+  },
+  menuTab: {
+    paddingTop: 2,
+    paddingBottom: 10,
+    borderBottomWidth: 2,
+    borderBottomColor: "transparent",
+    marginBottom: -StyleSheet.hairlineWidth,
+  },
+  menuTabSelected: {
+    borderBottomColor: "#FFFFFF",
+  },
+  menuTabLabel: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  menuTabLabelSelected: {
+    color: "#FFFFFF",
+    fontFamily: "Poppins-SemiBold",
+  },
+  menuTabLabelIdle: {
+    color: "rgba(255, 255, 255, 0.42)",
+    fontFamily: "Poppins-Regular",
+  },
+  exploreSectionLabel: {
+    marginTop: 16,
   },
   sectionLabel: {
     marginTop: 8,
@@ -310,6 +479,21 @@ const styles = StyleSheet.create({
   menuLabelSelected: {
     fontFamily: "Poppins-SemiBold",
     color: "#ffffff",
+  },
+  menuTrailing: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 10,
+    minWidth: 40,
+  },
+  menuCount: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: "Poppins-Regular",
+    color: "rgba(255, 255, 255, 0.42)",
+    textAlign: "right",
+    minWidth: 18,
   },
   menuDivider: {
     height: 1,

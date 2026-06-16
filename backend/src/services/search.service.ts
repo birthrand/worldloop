@@ -1,4 +1,5 @@
 import { countryMatchesExploreRegion } from "../lib/app-region.js";
+import { rankCountrySearchMatch } from "../lib/country-name-aliases.js";
 import { HttpError } from "../lib/http.js";
 import { normalizeImageDisplayWidth } from "../lib/upstream-validation.js";
 import type { Country, CountryBasic } from "../types/country.js";
@@ -29,17 +30,6 @@ async function enrichCountry(
   return enrichCountryWithAi(withVideos);
 }
 
-const SUBSTRING_MIN_LEN = 3;
-
-function rankSearchMatch(name: string, query: string): number | null {
-  const normalizedName = name.toLowerCase();
-  const q = query.trim().toLowerCase();
-  if (!q) return 0;
-  if (normalizedName.startsWith(q)) return 0;
-  if (q.length >= SUBSTRING_MIN_LEN && normalizedName.includes(q)) return 1;
-  return null;
-}
-
 function filterCountries(
   countries: CountryBasic[],
   query: string,
@@ -56,7 +46,7 @@ function filterCountries(
     matches = matches
       .map((country) => ({
         country,
-        rank: rankSearchMatch(country.name, queryLower),
+        rank: rankCountrySearchMatch(country.name, queryLower),
       }))
       .filter(
         (entry): entry is { country: CountryBasic; rank: number } =>

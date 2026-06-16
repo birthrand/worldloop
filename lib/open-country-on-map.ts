@@ -41,9 +41,12 @@ function prepareMapForCountry(
 
   prefetchCountryFlag(country);
 
-  mapUi.setCountryMarkerMode(source === "countryDetail" ? "hidden" : "flag");
+  mapUi.setCountryMarkerMode("flag");
 
-  if (source === "explore" || source === "countryDetail") {
+  if (source === "explore") {
+    mapUi.setDisplayMode(scope.focusedRegion ? "explore" : "globalPulse");
+    // Region chrome is applied on the map screen after the camera flight.
+  } else if (source === "countryDetail") {
     if (scope.focusedRegion) {
       mapUi.setFocusedRegion(scope.focusedRegion);
       mapUi.setDisplayMode("explore");
@@ -83,6 +86,13 @@ export function focusCountryOnMap(
 
   const scopeSnapshot = useSpatialContextStore.getState().discoveryScope;
   prepareMapForCountry(country, source, scopeSnapshot);
+
+  if (source === "explore") {
+    identity.setExploreMapSessionActive(true);
+  } else {
+    identity.setExploreMapSessionActive(false);
+  }
+
   const map = useMapStore.getState();
   map.focusCountryFromExternal(country.name, country, source, scopeSnapshot);
 }

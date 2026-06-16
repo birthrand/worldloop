@@ -691,8 +691,7 @@ function GlobeScene({
                 return null;
               }
 
-              const pinIsSelected =
-                !screenSpaceFlagOverlayActive && isSelected;
+              const pinIsSelected = !screenSpaceFlagOverlayActive && isSelected;
               const pinIsFocusTransitioning =
                 !screenSpaceFlagOverlayActive && isFocusTransitioning;
               const [lat, lng] = getMapDisplayLatLng(country);
@@ -773,6 +772,8 @@ type GlobeViewProps = {
   autoRotateEnabled?: boolean;
   /** Seeds globe distance from the map controller when entering 3D. */
   initialCameraDistance?: number;
+  /** Explore handoff — one screen-space flag, no 3D pin field. */
+  exploreMapHandoff?: boolean;
 };
 
 export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
@@ -798,6 +799,7 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
       lockUserGestures = false,
       autoRotateEnabled = true,
       initialCameraDistance,
+      exploreMapHandoff = false,
     },
     ref,
   ) {
@@ -814,11 +816,14 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
     const nearbyFlagPinMode =
       !!focusedRegion && (!!selectedName || !!focusTransitionName);
     const showGlobePins =
+      !exploreMapHandoff &&
       !!focusedRegion &&
       countries.length > 0 &&
       isGlobeYellowPinsVisible(countryMarkerMode);
     const screenSpaceFlagOverlayActive =
-      nearbyFlagPinMode && countryMarkerMode === "flag";
+      countryMarkerMode === "flag" &&
+      (!!selectedName || !!focusTransitionName) &&
+      (exploreMapHandoff || nearbyFlagPinMode);
 
     const flagOverlayCountries = useMemo(() => {
       if (!screenSpaceFlagOverlayActive) return [];
@@ -829,7 +834,12 @@ export const GlobeView = forwardRef<GlobeViewHandle, GlobeViewProps>(
       if (names.size === 0) return [];
 
       return countries.filter((country) => names.has(country.name));
-    }, [countries, focusTransitionName, selectedName, screenSpaceFlagOverlayActive]);
+    }, [
+      countries,
+      focusTransitionName,
+      selectedName,
+      screenSpaceFlagOverlayActive,
+    ]);
 
     const selectedCountry = useMemo(
       () =>

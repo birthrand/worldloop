@@ -6,11 +6,11 @@ import type { Country, CountryVideo } from "@/types/country";
 
 const MISSING_CAPITAL_MARKERS = new Set(["—", "-", "N/A", "NA", "n/a"]);
 
-/** Capital for feed/card subtitles; missing capitals use a fixed territory label. */
+/** Capital for feed/card subtitles; missing capitals show N/A. */
 export function formatCountryCapitalDisplay(capital?: string): string {
   const value = capital?.trim();
   if (!value || MISSING_CAPITAL_MARKERS.has(value)) {
-    return "NO SOVEREIGN GOVERNMENT";
+    return "N/A";
   }
   return value;
 }

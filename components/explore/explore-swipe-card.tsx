@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Platform,
@@ -47,13 +48,13 @@ import {
   EXPLORE_SWIPE_CARD_INFO_REGION_PADDING_BOTTOM,
   EXPLORE_SWIPE_CARD_INFO_REGION_PADDING_TOP,
   EXPLORE_SWIPE_CARD_INFO_TITLE_ACTION_GAP,
-  EXPLORE_SWIPE_CARD_PRESS_OVERLAY,
   EXPLORE_SWIPE_CARD_RADIUS,
   EXPLORE_SWIPE_CARD_SHADOW,
   EXPLORE_SWIPE_CARD_SHADOW_OFFSET_Y,
   EXPLORE_SWIPE_CARD_SHADOW_OPACITY,
   EXPLORE_SWIPE_CARD_SHADOW_RADIUS,
   EXPLORE_SWIPE_CARD_SUBTITLE_COLOR,
+  EXPLORE_SWIPE_CARD_TITLE_ACTIONS_OVERLAP,
   EXPLORE_SWIPE_CARD_TITLE_COLOR,
   EXPLORE_SWIPE_CARD_TITLE_MAX_LINES,
   EXPLORE_SWIPE_TEXT_BODY,
@@ -72,26 +73,11 @@ import {
   openCountryDetail,
   warmCountryDetail,
 } from "@/lib/open-country-detail";
+import { focusCountryOnMap } from "@/lib/open-country-on-map";
 import { useSavedCountriesStore } from "@/store/use-saved-countries-store";
 import type { Country } from "@/types/country";
 
 export type HeroMediaMode = "image" | "video";
-
-/** Keeps the glyph on the content edge while preserving a 40×40 touch target. */
-const BOOKMARK_HIT_SLOP = {
-  top:
-    (EXPLORE_SWIPE_ACTION_BUTTON_SIZE - EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE) /
-    2,
-  bottom:
-    (EXPLORE_SWIPE_ACTION_BUTTON_SIZE - EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE) /
-    2,
-  left:
-    (EXPLORE_SWIPE_ACTION_BUTTON_SIZE - EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE) /
-    2,
-  right:
-    (EXPLORE_SWIPE_ACTION_BUTTON_SIZE - EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE) /
-    2,
-} as const;
 
 function isCountryHeroReady(images: string[]): boolean {
   const heroUri = images[0];
@@ -112,6 +98,8 @@ type ExploreSwipeCardProps = {
   heroScrollEnabled?: boolean;
   /** Controlled hero media mode — image carousel vs culture video. */
   heroMediaMode?: HeroMediaMode;
+  /** False when Explore is covered by another screen or tab. */
+  isScreenFocused?: boolean;
 };
 
 export function ExploreSwipeCard({
@@ -123,10 +111,12 @@ export function ExploreSwipeCard({
   onHeroIndexChange,
   heroScrollEnabled = true,
   heroMediaMode = "image",
+  isScreenFocused = true,
 }: ExploreSwipeCardProps) {
   const images = useMemo(() => getCountryImages(country), [country]);
   const cultureVideo = useMemo(() => getCultureVideo(country), [country]);
   const heroMode = heroMediaMode;
+  const isVideoActive = interactive && isScreenFocused;
   const capitalLabel = formatCountryCapitalDisplay(country.capital);
   const regionLabel = continentDisplayLabel(country.region?.trim() || "—");
 
@@ -203,6 +193,12 @@ export function ExploreSwipeCard({
     openCountryDetail(country, { from: "explore", heroMediaMode: "video" });
   }, [country]);
 
+  const handleViewOnMap = useCallback(() => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    focusCountryOnMap(country, "explore");
+    router.push("/(tabs)/map");
+  }, [country]);
+
   const handleToggleSaved = () => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     toggleSaved(country);
@@ -249,24 +245,14 @@ export function ExploreSwipeCard({
                       onPress={interactive ? openDetailFromVideo : undefined}
                       style={StyleSheet.absoluteFill}
                     >
-                      {({ pressed }) => (
-                        <>
-                          <CultureVideoSlide
-                            video={cultureVideo}
-                            isActive={interactive}
-                            width={heroSize.width}
-                            height={heroSize.height}
-                            flag={country.flag}
-                            iso2={country.cca2}
-                          />
-                          {pressed && interactive ? (
-                            <View
-                              style={styles.heroPressOverlay}
-                              pointerEvents="none"
-                            />
-                          ) : null}
-                        </>
-                      )}
+                      <CultureVideoSlide
+                        video={cultureVideo}
+                        isActive={isVideoActive}
+                        width={heroSize.width}
+                        height={heroSize.height}
+                        flag={country.flag}
+                        iso2={country.cca2}
+                      />
                     </Pressable>
                   ) : (
                     <CultureVideoSlide
@@ -338,74 +324,84 @@ export function ExploreSwipeCard({
           onPress={interactive ? openDetailFromImage : undefined}
           style={styles.infoRegion}
         >
-          {({ pressed }) => (
-            <>
-              <View style={styles.titleRow}>
-                <View style={styles.titleBlock}>
-                  <Text
-                    style={styles.countryName}
-                    numberOfLines={EXPLORE_SWIPE_CARD_TITLE_MAX_LINES}
-                  >
-                    {country.name}
-                  </Text>
+          <View style={styles.titleRow}>
+            <View style={styles.titleBlock}>
+              <Text
+                style={styles.countryName}
+                numberOfLines={EXPLORE_SWIPE_CARD_TITLE_MAX_LINES}
+              >
+                {country.name}
+              </Text>
 
-                  <Text style={styles.subtitle} numberOfLines={1}>
-                    {regionLabel} · {capitalLabel}
-                  </Text>
-                </View>
+              <Text style={styles.subtitle} numberOfLines={1}>
+                {regionLabel} · {capitalLabel}
+              </Text>
+            </View>
 
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    isSaved ? `Unsave ${country.name}` : `Save ${country.name}`
-                  }
-                  accessibilityHint={
-                    isSaved
-                      ? "Removes this country from your saved list"
-                      : "Adds this country to your saved list"
-                  }
-                  disabled={!interactive}
-                  onPress={handleToggleSaved}
-                  hitSlop={BOOKMARK_HIT_SLOP}
-                  style={({ pressed: bookmarkPressed }) => [
-                    styles.bookmarkButton,
-                    bookmarkPressed &&
-                      interactive &&
-                      styles.bookmarkButtonPressed,
-                  ]}
-                >
-                  <Ionicons
-                    name={isSaved ? "bookmark" : "bookmark-outline"}
-                    size={EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE}
-                    color={
-                      isSaved
-                        ? EXPLORE_SWIPE_ACCENT_COLOR
-                        : EXPLORE_SWIPE_CARD_ACTION_ICON_COLOR
-                    }
-                  />
-                </Pressable>
-              </View>
-
-              <View style={styles.factSection}>
-                <Text style={styles.factLabel}>Did you know</Text>
-                <Text
-                  style={styles.factText}
-                  numberOfLines={EXPLORE_SWIPE_CARD_FACT_MAX_LINES}
-                >
-                  {fact}
-                </Text>
-              </View>
-
-              <View style={styles.infoRegionSpacer} />
-
-              {pressed && interactive ? (
-                <View
-                  style={styles.infoRegionPressOverlay}
-                  pointerEvents="none"
+            <View style={styles.titleActions}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`View ${country.name} on map`}
+                accessibilityHint="Opens the world map focused on this country"
+                disabled={!interactive}
+                onPress={handleViewOnMap}
+                style={({ pressed: mapPressed }) => [
+                  styles.titleActionButton,
+                  styles.titleActionButtonLeading,
+                  mapPressed && interactive && styles.titleActionButtonPressed,
+                ]}
+              >
+                <Ionicons
+                  name="globe-outline"
+                  size={EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE}
+                  color={EXPLORE_SWIPE_CARD_ACTION_ICON_COLOR}
                 />
-              ) : null}
-            </>
-          )}
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={
+                  isSaved ? `Unsave ${country.name}` : `Save ${country.name}`
+                }
+                accessibilityHint={
+                  isSaved
+                    ? "Removes this country from your saved list"
+                    : "Adds this country to your saved list"
+                }
+                disabled={!interactive}
+                onPress={handleToggleSaved}
+                style={({ pressed: bookmarkPressed }) => [
+                  styles.titleActionButton,
+                  styles.titleActionButtonTrailing,
+                  bookmarkPressed &&
+                    interactive &&
+                    styles.titleActionButtonPressed,
+                ]}
+              >
+                <Ionicons
+                  name={isSaved ? "bookmark" : "bookmark-outline"}
+                  size={EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE}
+                  color={
+                    isSaved
+                      ? EXPLORE_SWIPE_ACCENT_COLOR
+                      : EXPLORE_SWIPE_CARD_ACTION_ICON_COLOR
+                  }
+                />
+              </Pressable>
+            </View>
+          </View>
+
+          <View style={styles.factSection}>
+            <Text style={styles.factLabel}>Did you know</Text>
+            <Text
+              style={styles.factText}
+              numberOfLines={EXPLORE_SWIPE_CARD_FACT_MAX_LINES}
+            >
+              {fact}
+            </Text>
+          </View>
+
+          <View style={styles.infoRegionSpacer} />
         </Pressable>
       </View>
     </View>
@@ -463,10 +459,6 @@ const styles = StyleSheet.create({
     width: "100%",
     zIndex: 1,
   },
-  heroPressOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: EXPLORE_SWIPE_CARD_PRESS_OVERLAY,
-  },
   videoLoadingShell: {
     overflow: "hidden",
     backgroundColor: EXPLORE_SWIPE_CARD_IMAGE_FALLBACK,
@@ -481,10 +473,6 @@ const styles = StyleSheet.create({
     backgroundColor: EXPLORE_SWIPE_CARD_INFO_BG,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: EXPLORE_SWIPE_CARD_INFO_BORDER,
-  },
-  infoRegionPressOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: EXPLORE_SWIPE_CARD_PRESS_OVERLAY,
   },
   titleRow: {
     flexDirection: "row",
@@ -513,14 +501,25 @@ const styles = StyleSheet.create({
     lineHeight: EXPLORE_SWIPE_TEXT_BODY_LINE_HEIGHT,
     color: EXPLORE_SWIPE_CARD_SUBTITLE_COLOR,
   },
-  bookmarkButton: {
-    width: EXPLORE_SWIPE_CARD_ACTION_ICON_SIZE,
-    height: EXPLORE_SWIPE_ACTION_BUTTON_SIZE,
+  titleActions: {
+    flexDirection: "row",
     alignItems: "center",
+    flexShrink: 0,
+  },
+  titleActionButton: {
+    width: EXPLORE_SWIPE_ACTION_BUTTON_SIZE,
+    height: EXPLORE_SWIPE_ACTION_BUTTON_SIZE,
     justifyContent: "center",
     flexShrink: 0,
   },
-  bookmarkButtonPressed: {
+  titleActionButtonLeading: {
+    alignItems: "flex-end",
+    marginRight: -EXPLORE_SWIPE_CARD_TITLE_ACTIONS_OVERLAP,
+  },
+  titleActionButtonTrailing: {
+    alignItems: "flex-end",
+  },
+  titleActionButtonPressed: {
     opacity: 0.78,
   },
   factSection: {

@@ -26,6 +26,7 @@ export type DiscoveryScopeMode =
   | "here"
   | "region"
   | "saved"
+  | "savedLandmarks"
   | "places";
 
 export type DiscoveryScope = {

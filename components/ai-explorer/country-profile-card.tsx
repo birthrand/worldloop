@@ -87,8 +87,10 @@ const OVERVIEW_PARAGRAPH_GAP = 12;
 const OVERVIEW_PARAGRAPH_SENTENCES = 2;
 const OVERVIEW_SKELETON_LINE_WIDTHS = ["100%", "94%", "78%"] as const;
 const COUNTRY_NAME_FONT_SIZE = EXPLORE_SWIPE_TEXT_HEADER;
-const COUNTRY_NAME_MIN_FONT_SIZE = 15;
 const COUNTRY_NAME_LINE_HEIGHT = EXPLORE_SWIPE_TEXT_HEADER_LINE_HEIGHT;
+const COUNTRY_DETAIL_FLAG_HEIGHT = 18;
+const COUNTRY_DETAIL_FLAG_TOP_OFFSET =
+  (COUNTRY_NAME_LINE_HEIGHT - COUNTRY_DETAIL_FLAG_HEIGHT) / 2;
 const MEDIA_CHIP_ICON_SIZE = 22;
 const MEDIA_CHIP_GLYPH_SIZE = 13;
 const HERO_MEDIA_FADE_MS = 220;
@@ -424,11 +426,32 @@ export function CountryProfileCard({
   });
   const [overviewExpanded, setOverviewExpanded] = useState(false);
   const [overviewOverflows, setOverviewOverflows] = useState(false);
+  const [countryNameExpanded, setCountryNameExpanded] = useState(false);
+  const [countryNameMultiline, setCountryNameMultiline] = useState(false);
 
   useEffect(() => {
     setOverviewExpanded(false);
     setOverviewOverflows(false);
   }, [wikipedia?.extract]);
+
+  useEffect(() => {
+    setCountryNameExpanded(false);
+    setCountryNameMultiline(false);
+  }, [country.name]);
+
+  const canToggleCountryName = countryNameMultiline;
+
+  const handleCountryNameMeasure = (
+    event: NativeSyntheticEvent<TextLayoutEventData>,
+  ) => {
+    setCountryNameMultiline(event.nativeEvent.lines.length > 1);
+  };
+
+  const handleToggleCountryName = () => {
+    if (!canToggleCountryName) return;
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setCountryNameExpanded((expanded) => !expanded);
+  };
 
   const regionLabel = continentDisplayLabel(country.region);
   const languagesLabel = formatOfficialLanguages(country.languages);
@@ -538,31 +561,64 @@ export function CountryProfileCard({
         ]}
       >
         <View style={styles.header}>
-          <View style={styles.titleMeasureWrap}>
-            <AnimatedReanimated.Text
-              style={[styles.countryName, contentTitleStyle]}
-              numberOfLines={2}
-              ellipsizeMode="tail"
-              adjustsFontSizeToFit
-              minimumFontScale={
-                COUNTRY_NAME_MIN_FONT_SIZE / COUNTRY_NAME_FONT_SIZE
-              }
-            >
-              {country.name}
-            </AnimatedReanimated.Text>
-          </View>
-          <View style={styles.mediaChips}>
-            <View style={styles.mediaChip}>
+          <AnimatedReanimated.View
+            style={[styles.titleMeasureWrap, contentTitleStyle]}
+          >
+            <View style={styles.countryNameFlagSlot}>
               <FlagBadge
                 flag={country.flag}
                 iso2={country.cca2}
-                width={22}
-                height={22}
-                circular
+                width={28}
+                height={COUNTRY_DETAIL_FLAG_HEIGHT}
               />
-              <Text style={styles.mediaChipLabel}>FLAG</Text>
             </View>
-
+            <View style={styles.countryNameWrap}>
+              <View
+                style={styles.countryNameMeasureHost}
+                pointerEvents="none"
+                importantForAccessibility="no-hide-descendants"
+              >
+                <Text
+                  style={styles.countryNameText}
+                  onTextLayout={handleCountryNameMeasure}
+                >
+                  {country.name}
+                </Text>
+              </View>
+              <Pressable
+                accessibilityRole={canToggleCountryName ? "button" : "text"}
+                accessibilityLabel={
+                  canToggleCountryName
+                    ? countryNameExpanded
+                      ? `Collapse country name, ${country.name}`
+                      : `Expand country name, ${country.name}`
+                    : country.name
+                }
+                accessibilityHint={
+                  canToggleCountryName
+                    ? countryNameExpanded
+                      ? "Shows the country name on one line"
+                      : "Shows the full country name on two lines"
+                    : undefined
+                }
+                disabled={!canToggleCountryName}
+                onPress={handleToggleCountryName}
+                style={({ pressed }) => [
+                  styles.countryNamePressable,
+                  canToggleCountryName && pressed && styles.countryNamePressed,
+                ]}
+              >
+                <AnimatedReanimated.Text
+                  style={styles.countryNameText}
+                  numberOfLines={countryNameExpanded ? 2 : 1}
+                  ellipsizeMode="tail"
+                >
+                  {country.name}
+                </AnimatedReanimated.Text>
+              </Pressable>
+            </View>
+          </AnimatedReanimated.View>
+          <View style={styles.mediaChips}>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={cultureAccessibilityLabel}
@@ -772,6 +828,9 @@ const styles = StyleSheet.create({
   titleMeasureWrap: {
     flex: 1,
     minWidth: 0,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
   },
   content: {
     marginHorizontal: EXPLORE_SWIPE_DECK_HORIZONTAL_PADDING,
@@ -788,8 +847,23 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 12,
   },
-  countryName: {
+  countryNameFlagSlot: {
+    marginTop: COUNTRY_DETAIL_FLAG_TOP_OFFSET - 1,
+    flexShrink: 0,
+  },
+  countryNameWrap: {
     flex: 1,
+    minWidth: 0,
+    position: "relative",
+    alignSelf: "stretch",
+  },
+  countryNamePressable: {
+    minWidth: 0,
+  },
+  countryNamePressed: {
+    opacity: 0.88,
+  },
+  countryNameText: {
     flexShrink: 1,
     minWidth: 0,
     fontFamily: "Poppins-SemiBold",
@@ -797,6 +871,14 @@ const styles = StyleSheet.create({
     lineHeight: COUNTRY_NAME_LINE_HEIGHT,
     letterSpacing: -0.2,
     color: EXPLORE_SWIPE_CARD_TITLE_COLOR,
+  },
+  countryNameMeasureHost: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    opacity: 0,
+    zIndex: -1,
   },
   mediaChips: {
     flexDirection: "row",

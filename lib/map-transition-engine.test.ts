@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   createInitialTransitionMemory,
   getTransitionMemory,
+  recordExploreHandoffInitialized,
   recordTransitionResolved,
   resetTransitionMemoryForTests,
   resolveMapTransition,
@@ -87,6 +88,7 @@ describe("resolveMapTransition", () => {
     expect(getTransitionMemory()).toEqual({
       countryDetailInitialized: true,
       lastCountryDetailResolvedName: "Mozambique",
+      exploreHandoffInitialized: false,
     });
   });
 
@@ -94,6 +96,38 @@ describe("resolveMapTransition", () => {
     expect(createInitialTransitionMemory()).toEqual({
       countryDetailInitialized: false,
       lastCountryDetailResolvedName: null,
+      exploreHandoffInitialized: false,
     });
+  });
+
+  it("animates on first Explore → Map entry", () => {
+    const plan = resolveMapTransition(
+      { country: mozambique, mode: "preview", source: "explore" },
+      { cluster: null, useGlobeCamera: false },
+    );
+
+    expect(plan.shouldAnimate).toBe(true);
+    expect(plan.flightDuration).toBe(750);
+    expect(plan.metadata.exploreFlyIn).toBe(true);
+    expect(plan.metadata.reason).toBe("first Explore → Map entry");
+  });
+
+  it("pans from the current viewport when switching countries in an explore map session", () => {
+    recordExploreHandoffInitialized();
+    const plan = resolveMapTransition(
+      {
+        country: { name: "France", region: "Europe" } as MapCountry,
+        mode: "preview",
+        source: "explore",
+      },
+      { cluster: null, useGlobeCamera: false },
+    );
+
+    expect(plan.shouldAnimate).toBe(true);
+    expect(plan.flightDuration).toBe(680);
+    expect(plan.metadata.exploreFlyIn).toBe(false);
+    expect(plan.metadata.reason).toBe("in-session explore map country switch");
+    expect(plan.flightPhases).toHaveLength(1);
+    expect(plan.flightPhases[0]?.duration).toBe(680);
   });
 });

@@ -8,6 +8,11 @@ import {
   filterCountriesForExploreRegion,
   normalizeCountriesRegions,
 } from "@/lib/app-region";
+import {
+  COUNTRY_NAME_ALIASES,
+  rankCountrySearchMatch,
+  resolveCountryCanonicalName,
+} from "@/lib/country-name-aliases";
 import { parseCultureFeedSeed, seededShuffle } from "@/lib/culture-shuffle";
 import { hasCultureVideo } from "@/lib/format-country";
 import { countryToMapCountry } from "@/lib/map-country";
@@ -50,6 +55,12 @@ function ensureCatalogLoaded(): void {
       country,
     ]),
   );
+
+  for (const country of normalizedCountries) {
+    for (const alias of COUNTRY_NAME_ALIASES[country.name] ?? []) {
+      countriesByName.set(alias.trim().toLowerCase(), country);
+    }
+  }
 }
 
 export function isStaticCountryCatalogEnabled(): boolean {
@@ -76,7 +87,7 @@ export function getStaticCountries(): Country[] {
 
 export function getStaticCountryByName(name: string): Country | null {
   ensureCatalogLoaded();
-  const key = name.trim().toLowerCase();
+  const key = resolveCountryCanonicalName(name).trim().toLowerCase();
   if (!key) return null;
   return countriesByName?.get(key) ?? null;
 }
@@ -170,15 +181,6 @@ export function getStaticFeedPage(cursor?: string, limit = 20): StaticFeedPage {
   return { countries: page, nextCursor };
 }
 
-function rankNameMatch(name: string, query: string): number | null {
-  const normalizedName = name.toLowerCase();
-  const q = query.trim().toLowerCase();
-  if (!q) return 0;
-  if (normalizedName.startsWith(q)) return 0;
-  if (q.length >= 3 && normalizedName.includes(q)) return 1;
-  return null;
-}
-
 /** In-memory search — name prefix/substring + capital match. */
 export function searchStaticCountries(
   query?: string,
@@ -201,7 +203,7 @@ export function searchStaticCountries(
 
   return matches
     .map((country) => {
-      const nameRank = rankNameMatch(country.name, q);
+      const nameRank = rankCountrySearchMatch(country.name, q);
       if (nameRank !== null) {
         return { country, rank: nameRank };
       }

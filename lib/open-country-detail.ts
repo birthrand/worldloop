@@ -8,6 +8,7 @@ import {
 } from "@/lib/prefetch-country-profiles";
 import { warmCountryHeroImage } from "@/lib/prefetch-feed-heroes";
 import { useCountryFeedStore } from "@/store/use-country-feed-store";
+import { useIdentityStore } from "@/store/use-identity-store";
 import { useRecentlyViewedStore } from "@/store/use-recently-viewed-store";
 import { useSearchUiStore } from "@/store/use-search-ui-store";
 import type { Country } from "@/types/country";
@@ -18,6 +19,8 @@ type OpenCountryDetailOptions = {
   from: CountryDetailOrigin;
   heroIndex?: number;
   heroMediaMode?: HeroMediaMode;
+  /** Back from detail restores the explore → map preview handoff. */
+  returnToMap?: boolean;
 };
 
 /** Start warming hero + profile as soon as the user touches a country entry point. */
@@ -42,6 +45,9 @@ export function openCountryDetail(
 ): void {
   seedCachedCountryProfile(country);
   useRecentlyViewedStore.getState().recordView(country);
+
+  const identity = useIdentityStore.getState();
+  identity.setCountryDetailReturnToMap(options.returnToMap === true);
 
   if (options.from === "explore") {
     prefetchExploreNeighbors();

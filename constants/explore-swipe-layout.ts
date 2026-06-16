@@ -124,6 +124,8 @@ export const EXPLORE_SWIPE_CARD_TITLE_MAX_LINES = 2;
 export const EXPLORE_SWIPE_CARD_INFO_HEADER_GAP = 2;
 /** Gap between country name and bookmark in the title row. */
 export const EXPLORE_SWIPE_CARD_INFO_TITLE_ACTION_GAP = 8;
+/** Map hugs bookmark — overlaps touch padding without shifting bookmark. */
+export const EXPLORE_SWIPE_CARD_TITLE_ACTIONS_OVERLAP = -4;
 /** Section break between header block (title + stats) and fun fact. */
 export const EXPLORE_SWIPE_CARD_INFO_REGION_GAP = 4;
 /** @deprecated Use EXPLORE_SWIPE_CARD_INFO_HEADER_GAP — kept for saved-list parity. */

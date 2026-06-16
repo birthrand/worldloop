@@ -15,6 +15,7 @@
     "catalog:refresh-ai": "tsx scripts/refresh-catalog-ai.ts",
     "catalog:sync-ai-redis": "tsx scripts/sync-catalog-ai-from-redis.ts",
     "catalog:sync-videos-redis": "tsx scripts/sync-catalog-videos-from-redis.ts",
+    "catalog:repair-video-duplicates": "tsx scripts/repair-catalog-video-duplicates.ts",
     "catalog:validate": "tsx scripts/validate-countries-catalog.ts",
     "profiles:build": "tsx scripts/build-country-profiles.ts",
     "profiles:validate": "tsx scripts/validate-country-profiles.ts"

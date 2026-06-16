@@ -5,6 +5,11 @@ import {
   isSplitAmericasRegion,
 } from "@/lib/app-region";
 import { getClientCache, staleWhileRevalidate } from "@/lib/client-cache";
+import {
+  normalizeSearchResults,
+  rankCountrySearchMatch,
+  resolveCountryCanonicalName,
+} from "@/lib/country-name-aliases";
 import { fetchExploreRegionCountries } from "@/lib/explore-region-countries";
 import { mapCountryToCountry } from "@/lib/map-country";
 import {
@@ -34,10 +39,18 @@ function mergeCatalog(sources: Country[][]): Country[] {
 
   for (const list of sources) {
     for (const country of list) {
-      const key = country.name.toLowerCase();
+      const canonicalName = resolveCountryCanonicalName(country.name);
+      const normalized =
+        canonicalName !== country.name
+          ? { ...country, name: canonicalName }
+          : country;
+      const key = canonicalName.toLowerCase();
       const existing = byName.get(key);
-      if (!existing || countryRichness(country) > countryRichness(existing)) {
-        byName.set(key, country);
+      if (
+        !existing ||
+        countryRichness(normalized) > countryRichness(existing)
+      ) {
+        byName.set(key, normalized);
       }
     }
   }
@@ -139,7 +152,7 @@ export function getSyncLocalSearchResults(
 ): Country[] {
   const catalog = getMergedLocalCatalog();
   if (catalog.length === 0) return [];
-  return filterLocalCatalog(catalog, query, region);
+  return normalizeSearchResults(filterLocalCatalog(catalog, query, region));
 }
 
 async function hydrateBaseDiskCatalog(): Promise<void> {
@@ -222,37 +235,28 @@ async function getLocalSearchResults(
   return results.length > 0 ? results : null;
 }
 
-const SUBSTRING_MIN_LEN = 3;
-
-function rankSearchMatch(name: string, query: string): number | null {
-  const normalizedName = name.toLowerCase();
-  const q = query.trim().toLowerCase();
-  if (!q) return 0;
-  if (normalizedName.startsWith(q)) return 0;
-  if (q.length >= SUBSTRING_MIN_LEN && normalizedName.includes(q)) return 1;
-  return null;
-}
-
 function filterByQuery<T extends { name: string }>(
   countries: T[],
   query: string,
 ): T[] {
-  const q = query.trim().toLowerCase();
+  const q = query.trim();
   if (!q) return countries;
 
-  return countries
-    .map((country) => ({
-      country,
-      rank: rankSearchMatch(country.name, q),
-    }))
-    .filter(
-      (entry): entry is { country: T; rank: number } => entry.rank !== null,
-    )
-    .sort((a, b) => {
-      if (a.rank !== b.rank) return a.rank - b.rank;
-      return a.country.name.localeCompare(b.country.name);
-    })
-    .map((entry) => entry.country);
+  return normalizeSearchResults(
+    countries
+      .map((country) => ({
+        country,
+        rank: rankCountrySearchMatch(country.name, q),
+      }))
+      .filter(
+        (entry): entry is { country: T; rank: number } => entry.rank !== null,
+      )
+      .sort((a, b) => {
+        if (a.rank !== b.rank) return a.rank - b.rank;
+        return a.country.name.localeCompare(b.country.name);
+      })
+      .map((entry) => entry.country),
+  );
 }
 
 function sortByName(countries: Country[]): Country[] {
@@ -276,7 +280,9 @@ export async function fetchSearchCountriesResolved(
 
   if (isStaticCountryCatalogEnabled()) {
     const { searchStaticCountries } = await import("@/lib/static-countries");
-    return searchStaticCountries(q || undefined, r || undefined);
+    return normalizeSearchResults(
+      searchStaticCountries(q || undefined, r || undefined),
+    );
   }
 
   if (!q && r) {
@@ -285,7 +291,7 @@ export async function fetchSearchCountriesResolved(
 
   if (q && !r) {
     const { data } = await fetchSearchCountries(q);
-    return data;
+    return normalizeSearchResults(data);
   }
 
   if (isSplitAmericasRegion(r)) {
@@ -294,7 +300,7 @@ export async function fetchSearchCountriesResolved(
   }
 
   const { data } = await fetchSearchCountries(q, r);
-  if (data.length > 0) return data;
+  if (data.length > 0) return normalizeSearchResults(data);
 
   const regionCountries = await fetchExploreRegionCountries(r);
   return filterByQuery(regionCountries, q);
@@ -315,16 +321,15 @@ async function readHydratedSearchCache(
   const cacheKey = CLIENT_CACHE_KEYS.search(query, region);
   const diskCache = await getClientCache<Country[]>(cacheKey);
   if (diskCache.data && diskCache.data.length > 0) {
-    return diskCache.data;
+    return normalizeSearchResults(diskCache.data);
   }
 
   if (!query && region) {
     const feedRegionKey = CLIENT_CACHE_KEYS.feedRegion(region);
     const feedRegionDisk = await getClientCache<Country[]>(feedRegionKey);
     if (feedRegionDisk.data) {
-      const filtered = filterCountriesForExploreRegion(
-        feedRegionDisk.data,
-        region,
+      const filtered = normalizeSearchResults(
+        filterCountriesForExploreRegion(feedRegionDisk.data, region),
       );
       if (filtered.length > 0) return filtered;
     }
@@ -355,19 +360,25 @@ export async function searchCountriesWithCache(
   }
 
   try {
-    return await staleWhileRevalidate({
+    const results = await staleWhileRevalidate({
       key: cacheKey,
       ttlSeconds: CLIENT_CACHE_TTL.search,
       force: options?.force,
-      fetcher: () =>
-        fetchSearchCountriesResolved(q || undefined, r || undefined),
+      fetcher: async () =>
+        normalizeSearchResults(
+          await fetchSearchCountriesResolved(q || undefined, r || undefined),
+        ),
       onCached: (data) => {
-        if (!hydrated) options?.onCached?.(data);
+        const normalized = normalizeSearchResults(data);
+        if (!hydrated) options?.onCached?.(normalized);
       },
-      onFetched: options?.onFetched,
+      onFetched: (data) => {
+        options?.onFetched?.(normalizeSearchResults(data));
+      },
     });
+    return normalizeSearchResults(results);
   } catch (err) {
-    if (hydrated) return hydrated;
+    if (hydrated) return normalizeSearchResults(hydrated);
 
     const fallback = await readHydratedSearchCache(q, r);
     if (fallback) return fallback;

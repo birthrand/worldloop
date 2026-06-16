@@ -3,6 +3,8 @@ import type { MapCluster } from "@/lib/map-clusters";
 import {
   buildDiscoveryPhases,
   COUNTRY_DETAIL_FLIGHT_MS,
+  EXPLORE_MAP_FLIGHT_MS,
+  EXPLORE_MAP_RETARGET_MS,
 } from "@/lib/map-discovery-flight";
 import type { SelectionSource } from "@/store/use-identity-store";
 import type { MapCountry } from "@/types/country";
@@ -20,6 +22,8 @@ export type MapTransitionMemory = {
   countryDetailInitialized: boolean;
   /** Last country resolved from country detail "View on map". */
   lastCountryDetailResolvedName: string | null;
+  /** True after the first Explore → Map handoff resolved the camera. */
+  exploreHandoffInitialized: boolean;
 };
 
 export type MapTransitionIntent = {
@@ -46,6 +50,8 @@ export type MapTransitionPlan = {
     source: Exclude<SelectionSource, null>;
     isRepeatVisit: boolean;
     reason: string;
+    /** First Explore → Map entry — world reset + fly-in (not in-session pan). */
+    exploreFlyIn: boolean;
   };
 };
 
@@ -53,6 +59,7 @@ export function createInitialTransitionMemory(): MapTransitionMemory {
   return {
     countryDetailInitialized: false,
     lastCountryDetailResolvedName: null,
+    exploreHandoffInitialized: false,
   };
 }
 
@@ -66,8 +73,25 @@ export function getTransitionMemory(): MapTransitionMemory {
 /** Record that a countryDetail handoff resolved the camera (animated or instant). */
 export function recordTransitionResolved(countryName: string): void {
   transitionMemory = {
+    ...transitionMemory,
     countryDetailInitialized: true,
     lastCountryDetailResolvedName: countryName,
+  };
+}
+
+/** Record that the first Explore → Map handoff resolved the camera. */
+export function recordExploreHandoffInitialized(): void {
+  transitionMemory = {
+    ...transitionMemory,
+    exploreHandoffInitialized: true,
+  };
+}
+
+/** Reset explore handoff memory when leaving the Explore → Map session. */
+export function resetExploreHandoffTransitionMemory(): void {
+  transitionMemory = {
+    ...transitionMemory,
+    exploreHandoffInitialized: false,
   };
 }
 
@@ -80,6 +104,10 @@ function decideAnimation(
   source: Exclude<SelectionSource, null>,
   countryName: string,
 ): boolean {
+  if (source === "explore") {
+    return true;
+  }
+
   if (source !== "countryDetail") {
     return true;
   }
@@ -95,6 +123,14 @@ function decideAnimation(
   }
 
   return false;
+}
+
+function resolveExploreHandoffReason(): string {
+  if (getTransitionMemory().exploreHandoffInitialized) {
+    return "in-session explore map country switch";
+  }
+
+  return "first Explore → Map entry";
 }
 
 function resolveCountryDetailReason(countryName: string): string {
@@ -115,11 +151,20 @@ function computeFlightDuration(
   source: Exclude<SelectionSource, null>,
   useGlobeCamera: boolean,
   shouldAnimate: boolean,
+  exploreInSession: boolean,
 ): number {
   if (!shouldAnimate) {
     return 0;
   }
   if (source === "explore" || source === "fab") {
+    if (source === "explore") {
+      if (exploreInSession) {
+        return useGlobeCamera ? 1100 : EXPLORE_MAP_RETARGET_MS;
+      }
+      if (!useGlobeCamera) {
+        return EXPLORE_MAP_FLIGHT_MS;
+      }
+    }
     return useGlobeCamera ? 1400 : 900;
   }
   if (source === "countryDetail") {
@@ -139,12 +184,17 @@ export function resolveMapTransition(
   const { country, mode, source } = intent;
   const { cluster, useGlobeCamera } = context;
 
+  const exploreInSession =
+    source === "explore" && getTransitionMemory().exploreHandoffInitialized;
+  const exploreFlyIn = source === "explore" && !exploreInSession;
+
   const shouldAnimate = decideAnimation(source, country.name);
   const isRepeatVisit = source === "countryDetail" && !shouldAnimate;
   const flightDuration = computeFlightDuration(
     source,
     useGlobeCamera,
     shouldAnimate,
+    exploreInSession,
   );
 
   const flightPhases = buildDiscoveryPhases({
@@ -153,6 +203,7 @@ export function resolveMapTransition(
     source,
     includeWorld: source === "search",
     mode,
+    exploreInSession,
   });
   const targetRegion = flightPhases[flightPhases.length - 1]?.region ?? null;
 
@@ -164,7 +215,9 @@ export function resolveMapTransition(
   const reason =
     source === "countryDetail"
       ? resolveCountryDetailReason(country.name)
-      : `${source} navigation`;
+      : source === "explore"
+        ? resolveExploreHandoffReason()
+        : `${source} navigation`;
 
   return {
     shouldAnimate,
@@ -176,6 +229,7 @@ export function resolveMapTransition(
       source,
       isRepeatVisit,
       reason,
+      exploreFlyIn,
     },
   };
 }

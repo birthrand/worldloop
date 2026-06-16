@@ -19,6 +19,7 @@ import {
   boundaryStyleRenderKey,
   resolveBoundaryStrokeColor,
   resolveBoundaryStrokeWidth,
+  resolveExploreHandoffNeighborStrokeWidth,
 } from "@/constants/map-boundary-style";
 import { MAP_CONTINENT_FOCUS_POLYGON_Z } from "@/constants/map-continent-focus";
 import {
@@ -126,6 +127,10 @@ type WorldMapViewProps = {
   showFocusLayers?: boolean;
   /** Push deemphasized nearby flags away from the selected pin (2D only). */
   spreadNearbyMarkers?: boolean;
+  /** Explore → Map: render only the selected country flag on the flat map. */
+  exploreMapHandoff?: boolean;
+  /** 2D only — single selected-country flag (explore preview or country detail). */
+  flatSingleCountryFlag?: boolean;
 };
 
 export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
@@ -154,10 +159,28 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
       markerRefreshToken = 0,
       showFocusLayers = true,
       spreadNearbyMarkers = false,
+      exploreMapHandoff = false,
+      flatSingleCountryFlag = false,
     },
     ref,
   ) {
-    const keepSingleMarkerLive = countries.length === 1;
+    const focusCountryName = selectedName ?? focusTransitionName ?? null;
+    const singleCountryFlagOnly = exploreMapHandoff || flatSingleCountryFlag;
+    const markerCountries = useMemo(() => {
+      if (!singleCountryFlagOnly || !focusCountryName) {
+        return countries;
+      }
+
+      const selected =
+        countries.find((country) => country.name === focusCountryName) ??
+        boundaryCountries.find(
+          (country) => country.name === focusCountryName,
+        ) ??
+        null;
+      return selected ? [selected] : [];
+    }, [boundaryCountries, countries, focusCountryName, singleCountryFlagOnly]);
+
+    const keepSingleMarkerLive = markerCountries.length === 1;
     const mapRef = useRef<MapView>(null);
     const regionRef = useRef<Region>(WORLD_INITIAL_REGION);
     const lastRegionChangeEmitRef = useRef(0);
@@ -224,43 +247,65 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
       previewRegion,
     );
 
-    const countryBoundaries = useMemo(
-      () =>
-        filterBoundaryPolygonsByMapContext(allCountryBoundaries, {
-          selectedCountryName: highlightCountryName,
+    const countryBoundaries = useMemo(() => {
+      if (exploreMapHandoff && boundaryFocusRegion) {
+        return filterBoundaryPolygonsByMapContext(allCountryBoundaries, {
+          selectedCountryName: null,
           focusedRegion: boundaryFocusRegion,
           countries: boundaryCountries,
-          showWorldBoundaries,
-        }),
-      [
-        allCountryBoundaries,
-        boundaryCountries,
-        boundaryFocusRegion,
-        highlightCountryName,
-        showWorldBoundaries,
-      ],
-    );
+          showWorldBoundaries: false,
+        });
+      }
 
-    const outlineStrokeWidth = showCountryHighlight
-      ? resolveCountryFocusBoundaryStrokeWidth(boundaryStyle)
-      : resolveBoundaryStrokeWidth(boundaryStyle, zoomTier);
-    const outlineStrokeColor = showCountryHighlight
-      ? resolveCountryFocusBoundaryStrokeColor(boundaryStyle)
-      : resolveBoundaryStrokeColor(boundaryStyle, zoomTier);
+      return filterBoundaryPolygonsByMapContext(allCountryBoundaries, {
+        selectedCountryName: highlightCountryName,
+        focusedRegion: boundaryFocusRegion,
+        countries: boundaryCountries,
+        showWorldBoundaries,
+      });
+    }, [
+      allCountryBoundaries,
+      boundaryCountries,
+      boundaryFocusRegion,
+      exploreMapHandoff,
+      highlightCountryName,
+      showWorldBoundaries,
+    ]);
+
+    const showExploreHandoffBoundaries =
+      exploreMapHandoff && !!boundaryFocusRegion;
+
+    const exploreHandoffNeighborStrokeWidth =
+      resolveExploreHandoffNeighborStrokeWidth(boundaryStyle);
+
+    const outlineStrokeWidth = showExploreHandoffBoundaries
+      ? exploreHandoffNeighborStrokeWidth
+      : showCountryHighlight
+        ? resolveCountryFocusBoundaryStrokeWidth(boundaryStyle)
+        : resolveBoundaryStrokeWidth(boundaryStyle, zoomTier);
+    const outlineStrokeColor = showExploreHandoffBoundaries
+      ? resolveBoundaryStrokeColor(boundaryStyle, zoomTier)
+      : showCountryHighlight
+        ? resolveCountryFocusBoundaryStrokeColor(boundaryStyle)
+        : resolveBoundaryStrokeColor(boundaryStyle, zoomTier);
     /** Country outlines are stroke-only; continent overlay uses fill settings. */
     const outlineFillColor = "rgba(0,0,0,0)";
-    const boundaryRenderKey = showCountryHighlight
-      ? countryFocusStyleRenderKey(boundaryStyle)
-      : boundaryStyleRenderKey(boundaryStyle, zoomTier);
+    const boundaryRenderKey = showExploreHandoffBoundaries
+      ? boundaryStyleRenderKey(boundaryStyle, zoomTier)
+      : showCountryHighlight
+        ? countryFocusStyleRenderKey(boundaryStyle)
+        : boundaryStyleRenderKey(boundaryStyle, zoomTier);
     const boundariesTappable = areRegionBoundariesTappable(
       boundaryFocusRegion,
       zoomTier,
     );
-    const boundaryZIndex = showCountryHighlight
-      ? MAP_COUNTRY_FOCUS_STROKE_Z
-      : focusedRegion
-        ? MAP_CONTINENT_FOCUS_POLYGON_Z + 2
-        : 1;
+    const boundaryZIndex = showExploreHandoffBoundaries
+      ? MAP_COUNTRY_FOCUS_STROKE_Z + 1
+      : showCountryHighlight
+        ? MAP_COUNTRY_FOCUS_STROKE_Z
+        : focusedRegion
+          ? MAP_CONTINENT_FOCUS_POLYGON_Z + 2
+          : 1;
 
     const handleBoundaryPress = useCallback(
       (polygon: CountryBoundaryPolygon) => {
@@ -272,10 +317,9 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
       [boundaryCountries, onBoundaryCountryPress],
     );
 
-    const focusCountryName = selectedName ?? focusTransitionName ?? null;
     const focalCountry =
       focusCountryName != null
-        ? (countries.find((c) => c.name === focusCountryName) ??
+        ? (markerCountries.find((c) => c.name === focusCountryName) ??
           boundaryCountries.find((c) => c.name === focusCountryName) ??
           null)
         : null;
@@ -349,27 +393,43 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
         />
         {showFocusLayers &&
         showBoundaryStrokes &&
-        !showCountryHighlight &&
-        !continentOverlayActive
-          ? countryBoundaries.map((polygon) => (
-              <Polygon
-                key={`country-boundary-${polygon.id}-${boundaryRenderKey}-${boundaryStyleRevision}`}
-                coordinates={polygon.coordinates}
-                holes={polygon.holes}
-                tappable={boundariesTappable}
-                onPress={
-                  boundariesTappable
-                    ? () => handleBoundaryPress(polygon)
-                    : undefined
-                }
-                strokeColor={outlineStrokeColor}
-                strokeWidth={outlineStrokeWidth}
-                fillColor={outlineFillColor}
-                zIndex={boundaryZIndex}
-              />
-            ))
+        (!showCountryHighlight || showExploreHandoffBoundaries) &&
+        (!continentOverlayActive || showExploreHandoffBoundaries)
+          ? countryBoundaries.map((polygon) => {
+              const isSelectedHandoffBoundary =
+                showExploreHandoffBoundaries &&
+                focusCountryName != null &&
+                polygon.countryName != null &&
+                countryNamesMatch(polygon.countryName, focusCountryName);
+
+              if (isSelectedHandoffBoundary) {
+                return null;
+              }
+
+              return (
+                <Polygon
+                  key={`country-boundary-${polygon.id}-${boundaryRenderKey}-${boundaryStyleRevision}`}
+                  coordinates={polygon.coordinates}
+                  holes={polygon.holes}
+                  tappable={boundariesTappable}
+                  onPress={
+                    boundariesTappable
+                      ? () => handleBoundaryPress(polygon)
+                      : undefined
+                  }
+                  strokeColor={outlineStrokeColor}
+                  strokeWidth={
+                    showExploreHandoffBoundaries
+                      ? exploreHandoffNeighborStrokeWidth
+                      : outlineStrokeWidth
+                  }
+                  fillColor={outlineFillColor}
+                  zIndex={boundaryZIndex}
+                />
+              );
+            })
           : null}
-        {countries.map((country) => {
+        {markerCountries.map((country) => {
           const isSelected = focusCountryName === country.name;
           const isFocusTransitioning =
             !!focusTransitionName &&
@@ -377,6 +437,7 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
             selectedName !== country.name;
           const isHighlighted = isSelected || isFocusTransitioning;
           const deemphasized =
+            !singleCountryFlagOnly &&
             !!focusedRegion &&
             !!focusCountryName &&
             focusCountryName !== country.name;
@@ -390,7 +451,11 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
 
           return (
             <MapCountryMarker
-              key={country.name}
+              key={
+                singleCountryFlagOnly
+                  ? `${country.name}-single-country-flag`
+                  : country.name
+              }
               country={country}
               coordinate={coordinate}
               selected={isSelected}

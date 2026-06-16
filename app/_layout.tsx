@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
+import { AppToast } from "@/components/app-toast";
 import { useAppFonts } from "@/hooks/use-app-fonts";
 import { clerkPublishableKey } from "@/lib/clerk";
 import { useDiscoveryProgressStore } from "@/store/use-discovery-progress-store";
@@ -56,6 +57,7 @@ export default function RootLayout() {
           />
           {__DEV__ ? <Stack.Screen name="dev" /> : null}
         </Stack>
+        <AppToast />
       </GestureHandlerRootView>
     </ClerkProvider>
   );

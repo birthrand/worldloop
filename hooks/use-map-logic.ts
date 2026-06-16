@@ -15,7 +15,10 @@ import { type GlobeCameraViewState } from "@/components/map/globe-view";
 import { type MapCanvasHandle } from "@/components/map/map-canvas";
 import { SPATIAL_SCOPE_COMMIT_DEBOUNCE_MS } from "@/constants/geo";
 import { syncFillEnabledToContinentOverlay } from "@/constants/map-boundary-style";
-import { MAP_3D_ENABLED } from "@/constants/map-features";
+import {
+  MAP_3D_ENABLED,
+  SPATIAL_VIEWPORT_DISCOVERY_ENABLED,
+} from "@/constants/map-features";
 import { CONTINENT_CONTEXT_LATITUDE_DELTA } from "@/constants/map-focus-tiers";
 import {
   regionForClusterFocus,
@@ -32,17 +35,14 @@ import {
 } from "@/hooks/use-map-marker-reveal";
 import { buildVisitedNameSet } from "@/lib/discovery-progress";
 import type { CommitScopeFromMapInput } from "@/lib/discovery-scope";
+import { applyExploreMapSessionDiscard } from "@/lib/explore-map-session";
 import { nextCameraExecutionIntentId } from "@/lib/map-camera-execution";
 import {
   deriveCameraZoomState,
   resolveGlobeDistanceFromLatitudeDelta,
 } from "@/lib/map-camera-zoom";
 import { buildMapClusters, type MapCluster } from "@/lib/map-clusters";
-import {
-  getMapDisplayLatLng,
-  isValidLatLng,
-  mapCountryToCountry,
-} from "@/lib/map-country";
+import { getMapDisplayLatLng, isValidLatLng } from "@/lib/map-country";
 import { getCountryBoundaryPolygons } from "@/lib/map-country-boundaries";
 import { resolveCountryFocusLatitudeDelta } from "@/lib/map-country-focus-zoom";
 import { logMapModeHandoff, summarizeRegion } from "@/lib/map-debug";
@@ -60,8 +60,12 @@ import {
 import { shouldIgnoreIdenticalRapidRepeat } from "@/lib/map-navigation-ux-guard";
 import {
   canSelectCountryOnMap,
+  canSelectCountryOnMapBoundary,
   isCountryPreviewOpen,
   isCountrySelectionLocked,
+  isExploreMapHandoff,
+  isFlatSingleCountryFlagMode,
+  resolveExploreMapHandoffMarkerName,
   showCountryFocusPill,
   showRegionChrome,
 } from "@/lib/map-presentation";
@@ -109,7 +113,9 @@ import {
   shouldShowMapOnboarding,
 } from "@/lib/map-signal-sources";
 import {
+  recordExploreHandoffInitialized,
   recordTransitionResolved,
+  resetExploreHandoffTransitionMemory,
   resolveMapTransition,
 } from "@/lib/map-transition-engine";
 import {
@@ -141,12 +147,6 @@ const countriesGeoJson = require("@/assets/geo/ne_50m_admin_0_countries/ne_50m_a
 /** Boundary tap → preview sheet; optional 2D/3D country-frame nudge when zoomed out. */
 const BOUNDARY_PREVIEW_CAMERA_MS = 480;
 const BOUNDARY_PREVIEW_CAMERA_NUDGE_FACTOR = 1.08;
-
-function recordMapCountryVisit(country: MapCountry): void {
-  useDiscoveryProgressStore
-    .getState()
-    .recordCountryVisit(mapCountryToCountry(country));
-}
 
 /** Selected country must stay in the marker list (Explore → Map can freeze before region sync). */
 function withRequiredMapMarker(
@@ -189,6 +189,7 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
     atMs: number;
   } | null>(null);
   const pendingExploreRegionSyncRef = useRef<MapCountry | null>(null);
+  const pendingExploreHandoffRecordRef = useRef(false);
   const exploreHandoffSuppressMarkersRef = useRef(false);
   const [exploreHandoffSuppressMarkers, setExploreHandoffSuppressMarkers] =
     useState(false);
@@ -302,6 +303,9 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
   const error = useMapStore((s) => s.error);
   const activeCountry = useIdentityStore((s) => s.activeCountry);
   const selectionSource = useIdentityStore((s) => s.selectionSource);
+  const exploreMapSessionActive = useIdentityStore(
+    (s) => s.exploreMapSessionActive,
+  );
   const clearActiveCountry = useIdentityStore((s) => s.clearActiveCountry);
   const activeChip = useMapStore((s) => s.activeChip);
   const countries = useMapStore((s) => s.countries);
@@ -389,6 +393,8 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
   /** Commits discovery scope after map camera settles (trailing debounce). */
   const scheduleSpatialScopeCommit = useCallback(
     (overrides?: Partial<CommitScopeFromMapInput>) => {
+      if (!SPATIAL_VIEWPORT_DISCOVERY_ENABLED) return;
+
       if (spatialScopeDebounceRef.current) {
         clearTimeout(spatialScopeDebounceRef.current);
       }
@@ -464,10 +470,40 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
   const activeCountryName = activeCountry?.name ?? null;
   const focalMarkerName =
     activeCountryName ?? focusTransitionCountryName ?? null;
+  const exploreMapHandoffActive = isExploreMapHandoff(
+    selectionSource,
+    pendingMapIntent?.source ?? null,
+    exploreMapSessionActive,
+  );
+  const exploreHandoffMarkerName = resolveExploreMapHandoffMarkerName(
+    activeCountryName,
+    focusTransitionCountryName,
+    pendingMapIntent?.source === "explore"
+      ? pendingMapIntent.countryName
+      : null,
+  );
+  const flatSingleCountryFlagActive = isFlatSingleCountryFlagMode(
+    is3d,
+    selectionSource,
+    exploreMapHandoffActive,
+    activeCountry,
+  );
+  const flatSingleCountryMarkerName = flatSingleCountryFlagActive
+    ? exploreMapHandoffActive
+      ? exploreHandoffMarkerName
+      : (activeCountryName ?? focusTransitionCountryName)
+    : null;
 
   const pinCountries = useMemo(() => {
-    if (selectionSource === "countryDetail") {
+    if (selectionSource === "countryDetail" && is3d) {
       return [];
+    }
+
+    if (flatSingleCountryFlagActive) {
+      if (!flatSingleCountryMarkerName) return [];
+      const pin =
+        countries.find((c) => c.name === flatSingleCountryMarkerName) ?? null;
+      return pin ? [pin] : [];
     }
 
     if (exploreHandoffSuppressMarkers) {
@@ -504,6 +540,8 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
     activeCountryName,
     countries,
     exploreHandoffSuppressMarkers,
+    flatSingleCountryFlagActive,
+    flatSingleCountryMarkerName,
     focalMarkerName,
     focusedRegion,
     is3d,
@@ -561,7 +599,10 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
     focusedRegion,
     focalCountryName: focalMarkerName,
     isDetailZoom,
-    enabled: !!focusedRegion,
+    enabled:
+      !!focusedRegion &&
+      !exploreMapHandoffActive &&
+      !flatSingleCountryFlagActive,
     // Freeze marker mounts during flat flights — marker churn overlapping
     // animateToRegion crashes react-native-maps on iOS. Also hold through the
     // gap after flyTo settles when focusedRegion is still deferred (cross-region).
@@ -576,8 +617,15 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
   }, [focusedRegion]);
 
   const mapMarkerCountries = useMemo(() => {
-    if (selectionSource === "countryDetail") {
+    if (selectionSource === "countryDetail" && is3d) {
       return [];
+    }
+
+    if (flatSingleCountryFlagActive) {
+      if (!flatSingleCountryMarkerName) return [];
+      const pin =
+        countries.find((c) => c.name === flatSingleCountryMarkerName) ?? null;
+      return pin ? [pin] : [];
     }
 
     const withSelected = withRequiredMapMarker(
@@ -595,6 +643,8 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
   }, [
     activeCountryName,
     countries,
+    flatSingleCountryFlagActive,
+    flatSingleCountryMarkerName,
     focusTransitionCountryName,
     lingeringDeselectedName,
     markerReveal.countriesToRender,
@@ -617,7 +667,9 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
     }
   }, [countries, focusedRegion, lingeringDeselectedName]);
 
-  const selectedMapName = activeCountryName ?? focusTransitionCountryName;
+  const selectedMapName = exploreMapHandoffActive
+    ? exploreHandoffMarkerName
+    : (activeCountryName ?? focusTransitionCountryName);
 
   const isPreviewOpen = isCountryPreviewOpen(presentationMode, activeCountry);
 
@@ -686,6 +738,11 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
             syncMapRegionFocusForCountry(pending, { explicitFocus: true });
           }
         }
+
+        if (pendingExploreHandoffRecordRef.current) {
+          pendingExploreHandoffRecordRef.current = false;
+          recordExploreHandoffInitialized();
+        }
       }
     },
     [
@@ -701,6 +758,16 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
     if (!summary.finite) return;
     mapRef.current?.animateToRegion(region, duration);
   }, []);
+
+  /** Instant world reset — explore fly-ins always start from the map entry viewport. */
+  const snapFlatMapToWorldStart = useCallback(() => {
+    lastMapRegionRef.current = WORLD_INITIAL_REGION;
+    setLastMapRegion(WORLD_INITIAL_REGION);
+    flatLatitudeDeltaRef.current = WORLD_INITIAL_REGION.latitudeDelta;
+    if (flatMapReadyRef.current) {
+      flatAnimator(WORLD_INITIAL_REGION, 0);
+    }
+  }, [flatAnimator]);
 
   const flight = useMapFlight({
     animateToRegion: flatAnimator,
@@ -1573,7 +1640,12 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
         { country: pick, mode, source },
         { cluster, useGlobeCamera },
       );
-      const { shouldAnimate: shouldAnimateCamera } = plan;
+      const { shouldAnimate: shouldAnimateCamera, metadata } = plan;
+      const exploreFlyIn = metadata.exploreFlyIn;
+
+      if (source === "explore" && exploreFlyIn) {
+        pendingExploreHandoffRecordRef.current = true;
+      }
 
       if (shouldAnimateCamera) {
         isMapAnimatingRef.current = true;
@@ -1607,13 +1679,16 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
         setDisplayMode("explore");
       }
 
+      const deferExploreRegionMarkers =
+        source === "explore" && !useGlobeCamera && exploreFlyIn;
+
       // Intent commits synchronously — focus pill / preview update right away.
       commitMapPresentation({
         country: pick,
         mode,
         source,
+        deferRegionSync: deferExploreRegionMarkers,
       });
-      recordMapCountryVisit(pick);
       if (shouldAnimateCamera) {
         setFocusTransitionCountryName(pick.name);
       }
@@ -1623,9 +1698,7 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
       });
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-      const deferExploreRegionMarkers = source === "explore" && !useGlobeCamera;
-
-      if (deferExploreRegionMarkers) {
+      if (deferExploreRegionMarkers && shouldAnimateCamera) {
         exploreHandoffSuppressMarkersRef.current = true;
         setExploreHandoffSuppressMarkers(true);
         pendingExploreRegionSyncRef.current = pick;
@@ -1703,6 +1776,16 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
               countryName: pick.name,
             };
           }
+          if (source === "explore" && !useGlobeCamera && exploreFlyIn) {
+            snapFlatMapToWorldStart();
+            requestAnimationFrame(() => {
+              if (navigationIntentIdRef.current !== intentId) {
+                return;
+              }
+              flight.flyTo(flightPhases);
+            });
+            return;
+          }
           flight.flyTo(flightPhases);
         });
       });
@@ -1724,6 +1807,7 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
       setDisplayMode,
       setFocusedRegion,
       syncRegionFocusForCountry,
+      snapFlatMapToWorldStart,
     ],
   );
 
@@ -1769,7 +1853,6 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
         mode: "preview",
         source: presentationSource,
       });
-      recordMapCountryVisit(pick);
       syncRegionFocusForCountry(pick);
       clearFocusTransition();
       endExperienceTransition();
@@ -1804,6 +1887,14 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
 
   const handleBoundaryCountryPress = useCallback(
     (country: MapCountry) => {
+      if (exploreMapHandoffActive) {
+        if (activeCountry?.name === country.name) {
+          return;
+        }
+        focusCountryOnMap(country, "explore");
+        return;
+      }
+
       if (!canSelectCountryOnMap(activeCountry, country.name)) {
         return;
       }
@@ -1812,7 +1903,13 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
       }
       openCountryPreviewFromBoundary(country);
     },
-    [activeCountry, isPreviewOpen, openCountryPreviewFromBoundary],
+    [
+      activeCountry,
+      focusCountryOnMap,
+      isPreviewOpen,
+      openCountryPreviewFromBoundary,
+      exploreMapHandoffActive,
+    ],
   );
 
   const advanceToCountryPreview = useCallback(
@@ -2189,14 +2286,52 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
     setFeaturedShortcut,
   ]);
 
+  /** After Explore → Map back — reset session state for the next handoff. */
+  const resetMapForFreshExploreEntry = useCallback(() => {
+    navigationIntentIdRef.current += 1;
+    cancelIntent();
+    cancelCameraFlight();
+    clearFocusTransition();
+    clearExplicitRegionLock();
+    pendingExploreRegionSyncRef.current = null;
+    pendingExploreHandoffRecordRef.current = false;
+    pendingCameraTransitionRecordRef.current = null;
+    exploreHandoffSuppressMarkersRef.current = false;
+    suppressWorldResetRef.current = false;
+
+    applyExploreMapSessionDiscard();
+    resetExploreHandoffTransitionMemory();
+
+    setLingeringDeselectedName(null);
+    setPreviewDismissToContinent(false);
+    setContinentOverlayRegion(null);
+    setExploreHandoffSuppressMarkers(false);
+    isMapAnimatingRef.current = false;
+    setIsMapAnimating(false);
+
+    // Ref-only world reset — do not animateToRegion while the screen is
+    // blurring/unmounting; overlapping marker churn + camera moves crash iOS maps.
+    lastMapRegionRef.current = WORLD_INITIAL_REGION;
+    flatLatitudeDeltaRef.current = WORLD_INITIAL_REGION.latitudeDelta;
+    setLastMapRegion(WORLD_INITIAL_REGION);
+  }, [
+    cancelCameraFlight,
+    cancelIntent,
+    clearExplicitRegionLock,
+    clearFocusTransition,
+  ]);
+
   useFocusEffect(
     useCallback(() => {
       mapScreenFocusedRef.current = true;
       applyPendingExternalMapFocus();
       return () => {
         mapScreenFocusedRef.current = false;
+        if (useMapStore.getState().consumeExploreSessionDiscardPending()) {
+          resetMapForFreshExploreEntry();
+        }
       };
-    }, [applyPendingExternalMapFocus]),
+    }, [applyPendingExternalMapFocus, resetMapForFreshExploreEntry]),
   );
 
   useEffect(() => {
@@ -2587,8 +2722,23 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
       const continentContext = focusedRegion ?? previewRegion;
 
       if (tappedCountry) {
-        if (!canSelectCountryOnMap(activeCountry, tappedCountry.name)) {
+        if (
+          !canSelectCountryOnMapBoundary(
+            activeCountry,
+            tappedCountry.name,
+            selectionSource,
+            exploreMapSessionActive,
+          )
+        ) {
           showTapRipple(coordinate);
+          return;
+        }
+
+        if (exploreMapHandoffActive) {
+          showTapRipple(coordinate);
+          if (activeCountry?.name !== tappedCountry.name) {
+            handleBoundaryCountryPress(tappedCountry);
+          }
           return;
         }
 
@@ -2686,6 +2836,8 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
       clusters,
       countries,
       dismissCountryPreview,
+      exploreMapHandoffActive,
+      exploreMapSessionActive,
       focusCountryOnMap,
       focusedRegion,
       globeCameraDistance,
@@ -2694,6 +2846,7 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
       presentationMode,
       previewRegion,
       requestContinentFocus,
+      selectionSource,
       showTapRipple,
     ],
   );
@@ -2730,6 +2883,8 @@ export function useMapLogic(mapRef: RefObject<MapCanvasHandle | null>) {
     mapMarkerCountries,
     mapMarkersForCanvas,
     selectedMapName,
+    isExploreMapHandoff: exploreMapHandoffActive,
+    flatSingleCountryFlagActive,
     isPreviewOpen,
     is3d,
     mapMode,

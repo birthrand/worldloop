@@ -7,8 +7,8 @@ export const HERE_TAB = "Here" as const;
 /** Bookmarked countries from the Saved tab — swipe deck of saved items. */
 export const SAVED_TAB = "Saved" as const;
 
-/** Landmark discovery — flattened places from the For You country pool. */
-export const PLACES_TAB = "Places" as const;
+/** Landmark discovery — flattened landmarks from the For You country pool. */
+export const PLACES_TAB = "Landmarks" as const;
 
 /** REST Countries `region` values (continents) used for browse filters. */
 export const CONTINENTS = [

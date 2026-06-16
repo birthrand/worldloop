@@ -12,9 +12,18 @@ import {
   setClientCache,
   staleWhileRevalidate,
 } from "@/lib/client-cache";
+import { usesLandmarkQueue } from "@/lib/explore-discovery-mode";
 import { fetchExploreRegionCountries } from "@/lib/explore-region-countries";
-import { flattenLandmarksForFeed } from "@/lib/flatten-landmarks-for-feed";
 import { loadCountriesForDiscovery } from "@/lib/load-countries-for-discovery";
+import {
+  clearPlacesFeedCaches,
+  exitActivePlacesView,
+  placesFeedCacheKey,
+  resolvePlacesFeedForKey,
+  switchPlacesCacheKey,
+  tryBuildPlacesViewFromBase,
+  warmPlacesBaseCache,
+} from "@/lib/places-feed-cache";
 import { prefetchCountryProfiles } from "@/lib/prefetch-country-profiles";
 import {
   prefetchFeedHeroImages,
@@ -29,6 +38,7 @@ import {
   resetStaticFeedShuffle,
 } from "@/lib/static-countries";
 import { useSavedCountriesStore } from "@/store/use-saved-countries-store";
+import { useSavedLandmarksStore } from "@/store/use-saved-landmarks-store";
 import { useSpatialContextStore } from "@/store/use-spatial-context-store";
 import type { Country } from "@/types/country";
 import type { DiscoveryScopeMode, GeoEntity } from "@/types/geo";
@@ -38,6 +48,7 @@ let regionFilterGeneration = 0;
 let regionPrefetchGeneration = 0;
 let hereFeedGeneration = 0;
 let savedFeedGeneration = 0;
+let savedLandmarksFeedGeneration = 0;
 let placesFeedGeneration = 0;
 const regionFetchPromises = new Map<string, Promise<Country[]>>();
 
@@ -90,7 +101,8 @@ type CountryFeedState = {
     options?: { focusCountryName?: string },
   ) => Promise<void>;
   loadSavedFeed: () => Promise<void>;
-  loadPlacesFeed: () => Promise<void>;
+  loadSavedLandmarksFeed: () => Promise<void>;
+  loadPlacesFeed: (region?: string | null) => Promise<void>;
   setDiscoveryMode: (mode: DiscoveryScopeMode) => void;
   restoreForYouFeed: () => Promise<void>;
   getCurrentCountry: () => Country | undefined;
@@ -200,6 +212,15 @@ function cancelRegionPrefetch(): void {
   regionPrefetchGeneration += 1;
 }
 
+function resolveSavedLandmarksForFeed(): PlaceFeedItem[] {
+  const { savedLandmarks, savedAtById } = useSavedLandmarksStore.getState();
+  return [...savedLandmarks].sort((a, b) => {
+    const aTime = savedAtById[a.landmark.id] ?? 0;
+    const bTime = savedAtById[b.landmark.id] ?? 0;
+    return bTime - aTime;
+  });
+}
+
 function resolvePlacesCountryPool(): Country[] {
   const { forYouSnapshot, countries, discoveryMode } =
     useCountryFeedStore.getState();
@@ -231,6 +252,57 @@ function snapshotForYouIfNeeded(): void {
   useCountryFeedStore.setState({
     forYouSnapshot: { countries, nextCursor },
   });
+}
+
+/** Sync pool for instant region tab switches — full cache, static catalog, or filtered subset. */
+function resolveImmediateRegionCountries(region: string): Country[] {
+  const state = useCountryFeedStore.getState();
+
+  const cached = state.regionCache[region];
+  if (cached !== undefined) {
+    const filtered = filterCountriesForExploreRegion(cached, region);
+    if (filtered.length > 0) return filtered;
+  }
+
+  if (isStaticCountryCatalogEnabled()) {
+    return getStaticExploreRegionCountries(region);
+  }
+
+  const seen = new Set<string>();
+  const merged: Country[] = [];
+
+  const addPool = (pool: Country[]) => {
+    for (const country of pool) {
+      const key = country.name.trim().toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(country);
+    }
+  };
+
+  if (state.forYouSnapshot?.countries.length) {
+    addPool(state.forYouSnapshot.countries);
+  }
+  if (state.countries.length > 0) {
+    addPool(state.countries);
+  }
+
+  if (merged.length === 0) return [];
+
+  return filterCountriesForExploreRegion(merged, region);
+}
+
+function hasCompleteRegionList(region: string): boolean {
+  const state = useCountryFeedStore.getState();
+  const cached = state.regionCache[region];
+  if (cached !== undefined) {
+    return filterCountriesForExploreRegion(cached, region).length > 0;
+  }
+
+  return (
+    isStaticCountryCatalogEnabled() &&
+    getStaticExploreRegionCountries(region).length > 0
+  );
 }
 
 async function ensureRegionCountries(region: string): Promise<Country[]> {
@@ -299,13 +371,14 @@ function prefetchRegionsSequentially(excludeRegion?: string | null): void {
       if (generation !== regionPrefetchGeneration) return;
       if (continent === excludeRegion) continue;
 
-      const { regionCache } = useCountryFeedStore.getState();
-      if (regionCache[continent]) continue;
-
       try {
-        const data = await ensureRegionCountries(continent);
+        const { regionCache } = useCountryFeedStore.getState();
+        const data =
+          regionCache[continent] ?? (await ensureRegionCountries(continent));
         if (generation !== regionPrefetchGeneration) return;
+
         void prefetchFeedHeroImages(data.slice(0, 2));
+        void warmPlacesBaseCache(placesFeedCacheKey(continent, []), data);
       } catch {
         // Background prefetch — ignore failures.
       }
@@ -530,7 +603,9 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
     const requestId = ++regionFilterGeneration;
     hereFeedGeneration += 1;
     savedFeedGeneration += 1;
+    savedLandmarksFeedGeneration += 1;
     placesFeedGeneration += 1;
+    exitActivePlacesView();
 
     if (region === null) {
       await get().restoreForYouFeed();
@@ -541,68 +616,78 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
 
     snapshotForYouIfNeeded();
 
-    const cached = get().regionCache[region];
-    if (cached) {
-      await prefetchFeedHeroImagesAroundIndex(cached, get().currentIndex);
-      if (requestId !== regionFilterGeneration) return;
-      const state = get();
-      const { countries, currentIndex } = mergeFetchedWithFocusedCountry(
-        cached,
-        state.countries,
-        state.currentIndex,
-        state.sortField,
-        state.sortOrder,
-      );
+    const state = get();
+    const immediate = resolveImmediateRegionCountries(region);
+    const complete = hasCompleteRegionList(region);
+    const { countries, currentIndex } =
+      immediate.length > 0
+        ? mergeFetchedWithFocusedCountry(
+            immediate,
+            state.countries,
+            state.currentIndex,
+            state.sortField,
+            state.sortOrder,
+          )
+        : { countries: [] as Country[], currentIndex: 0 };
 
-      set({
-        countries,
-        nextCursor: null,
-        currentIndex,
-        discoveryMode: "region",
-        selectedRegion: region,
-        status: "idle",
-        error: null,
-      });
+    set({
+      countries,
+      nextCursor: null,
+      currentIndex,
+      discoveryMode: "region",
+      selectedRegion: region,
+      status: complete || immediate.length > 0 ? "idle" : "loading",
+      error: null,
+    });
+
+    if (countries.length > 0) {
+      void prefetchFeedHeroImagesAroundIndex(countries, currentIndex);
       void prefetchCountryProfiles(countries, { aroundIndex: currentIndex });
+    }
+
+    if (complete) {
+      if (
+        isStaticCountryCatalogEnabled() &&
+        get().regionCache[region] === undefined &&
+        immediate.length > 0
+      ) {
+        set((next) => ({
+          regionCache: { ...next.regionCache, [region]: immediate },
+        }));
+      }
       prefetchRegionsSequentially(region);
       return;
     }
-
-    set({
-      discoveryMode: "region",
-      selectedRegion: region,
-      countries: [],
-      currentIndex: 0,
-      status: "loading",
-      error: null,
-    });
 
     try {
       const data = await ensureRegionCountries(region);
       if (requestId !== regionFilterGeneration) return;
 
-      await prefetchFeedHeroImagesAroundIndex(data, get().currentIndex);
-      if (requestId !== regionFilterGeneration) return;
-      const state = get();
-      const { countries, currentIndex } = mergeFetchedWithFocusedCountry(
+      const nextState = get();
+      const merged = mergeFetchedWithFocusedCountry(
         data,
-        state.countries,
-        state.currentIndex,
-        state.sortField,
-        state.sortOrder,
+        nextState.countries,
+        nextState.currentIndex,
+        nextState.sortField,
+        nextState.sortOrder,
       );
 
       set({
-        countries,
+        countries: merged.countries,
         nextCursor: null,
-        currentIndex,
+        currentIndex: merged.currentIndex,
         discoveryMode: "region",
         selectedRegion: region,
         status: "idle",
         error: null,
       });
-      void prefetchFeedHeroImagesAroundIndex(countries, 0);
-      void prefetchCountryProfiles(countries, { aroundIndex: 0 });
+      void prefetchFeedHeroImagesAroundIndex(
+        merged.countries,
+        merged.currentIndex,
+      );
+      void prefetchCountryProfiles(merged.countries, {
+        aroundIndex: merged.currentIndex,
+      });
       prefetchRegionsSequentially(region);
     } catch (err) {
       if (requestId !== regionFilterGeneration) return;
@@ -741,8 +826,9 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
 
   setCurrentIndex: (index: number) => {
     const { countries, places, discoveryMode } = get();
-    const queueLength =
-      discoveryMode === "places" ? places.length : countries.length;
+    const queueLength = usesLandmarkQueue(discoveryMode)
+      ? places.length
+      : countries.length;
 
     if (queueLength === 0) {
       set({ currentIndex: 0 });
@@ -757,7 +843,9 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
   loadHereFeed: async (entities, options) => {
     const requestId = ++hereFeedGeneration;
     savedFeedGeneration += 1;
+    savedLandmarksFeedGeneration += 1;
     placesFeedGeneration += 1;
+    exitActivePlacesView();
     const { queue } = useSpatialContextStore.getState();
     const orderedEntities =
       queue.length > 0
@@ -890,7 +978,9 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
     const requestId = ++savedFeedGeneration;
     regionFilterGeneration += 1;
     hereFeedGeneration += 1;
+    savedLandmarksFeedGeneration += 1;
     placesFeedGeneration += 1;
+    exitActivePlacesView();
 
     snapshotForYouIfNeeded();
 
@@ -907,6 +997,7 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
     if (countries.length === 0) {
       set({
         countries: [],
+        places: [],
         currentIndex: 0,
         nextCursor: null,
         discoveryMode: "saved",
@@ -921,6 +1012,7 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
       discoveryMode: "saved",
       selectedRegion: null,
       nextCursor: null,
+      places: [],
       countries: merged.length > 0 ? merged : countries,
       currentIndex: merged.length > 0 ? currentIndex : 0,
       status: "loading",
@@ -934,6 +1026,7 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
 
       set({
         countries: feed,
+        places: [],
         currentIndex: get().currentIndex,
         discoveryMode: "saved",
         selectedRegion: null,
@@ -954,59 +1047,121 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
     }
   },
 
-  loadPlacesFeed: async () => {
+  loadSavedLandmarksFeed: async () => {
+    const requestId = ++savedLandmarksFeedGeneration;
+    regionFilterGeneration += 1;
+    hereFeedGeneration += 1;
+    savedFeedGeneration += 1;
+    placesFeedGeneration += 1;
+    exitActivePlacesView();
+
+    snapshotForYouIfNeeded();
+
+    const places = resolveSavedLandmarksForFeed();
+
+    if (places.length === 0) {
+      set({
+        countries: [],
+        places: [],
+        currentIndex: 0,
+        nextCursor: null,
+        discoveryMode: "savedLandmarks",
+        selectedRegion: null,
+        status: "idle",
+        error: null,
+      });
+      return;
+    }
+
+    set({
+      discoveryMode: "savedLandmarks",
+      selectedRegion: null,
+      nextCursor: null,
+      countries: [],
+      places,
+      currentIndex: 0,
+      status: "idle",
+      error: null,
+    });
+
+    if (requestId !== savedLandmarksFeedGeneration) return;
+
+    void prefetchCountryProfiles(
+      places.map((item) => item.country),
+      { aroundIndex: 0 },
+    );
+  },
+
+  loadPlacesFeed: async (region = null) => {
     const requestId = ++placesFeedGeneration;
     regionFilterGeneration += 1;
     hereFeedGeneration += 1;
     savedFeedGeneration += 1;
+    savedLandmarksFeedGeneration += 1;
+
+    if (
+      region !== null &&
+      get().selectedRegion === region &&
+      get().discoveryMode === "places" &&
+      get().status !== "error"
+    ) {
+      return;
+    }
 
     snapshotForYouIfNeeded();
 
     set({
       discoveryMode: "places",
-      selectedRegion: null,
-      places: [],
+      selectedRegion: region,
       currentIndex: 0,
       nextCursor: null,
-      status: "loading",
       error: null,
     });
 
     try {
-      const countryPool = resolvePlacesCountryPool();
-      const places = await flattenLandmarksForFeed(countryPool);
+      if (region !== null) {
+        const regionKey = placesFeedCacheKey(region, []);
+        switchPlacesCacheKey(regionKey);
+        const instantPlaces = tryBuildPlacesViewFromBase(regionKey);
+        if (instantPlaces !== null) {
+          if (requestId !== placesFeedGeneration) return;
+          set({ places: instantPlaces, status: "idle" });
+          return;
+        }
+      }
+
+      const countryPool =
+        region !== null
+          ? await ensureRegionCountries(region)
+          : resolvePlacesCountryPool();
       if (requestId !== placesFeedGeneration) return;
 
-      if (places.length === 0) {
-        set({
-          places: [],
-          currentIndex: 0,
-          discoveryMode: "places",
-          selectedRegion: null,
-          nextCursor: null,
-          status: "idle",
-          error: null,
-        });
+      const cacheKey = placesFeedCacheKey(region, countryPool);
+      switchPlacesCacheKey(cacheKey);
+
+      const warmedPlaces = tryBuildPlacesViewFromBase(cacheKey);
+      if (warmedPlaces !== null) {
+        set({ places: warmedPlaces, status: "idle" });
         return;
       }
 
-      set({
-        places,
-        currentIndex: 0,
-        discoveryMode: "places",
-        selectedRegion: null,
-        nextCursor: null,
-        status: "idle",
-        error: null,
-      });
+      const places = await resolvePlacesFeedForKey(cacheKey, countryPool);
+      if (requestId !== placesFeedGeneration) return;
+
+      set({ places, status: "idle" });
     } catch (err) {
       if (requestId !== placesFeedGeneration) return;
 
       set({
         places: [],
+        selectedRegion: region,
         status: "error",
         error:
-          err instanceof Error ? err.message : "Failed to load places feed",
+          err instanceof Error
+            ? err.message
+            : region
+              ? `Failed to load landmarks in ${region}`
+              : "Failed to load landmarks feed",
       });
     }
   },
@@ -1019,7 +1174,9 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
     regionFilterGeneration += 1;
     hereFeedGeneration += 1;
     savedFeedGeneration += 1;
+    savedLandmarksFeedGeneration += 1;
     placesFeedGeneration += 1;
+    exitActivePlacesView();
     const restoreRegionGen = regionFilterGeneration;
     const restoreHereGen = hereFeedGeneration;
 
@@ -1029,14 +1186,9 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
 
     const snapshot = get().forYouSnapshot;
     if (snapshot && snapshot.countries.length > 0) {
-      await prefetchFeedHeroImagesAroundIndex(
-        snapshot.countries,
-        get().currentIndex,
-      );
-      if (isFeedGenerationStale(restoreRegionGen, restoreHereGen)) return;
-
       set({
         countries: snapshot.countries,
+        places: [],
         nextCursor: snapshot.nextCursor,
         currentIndex: 0,
         discoveryMode: "forYou",
@@ -1044,9 +1196,12 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
         status: "idle",
         error: null,
       });
+      void prefetchFeedHeroImagesAroundIndex(snapshot.countries, 0);
       prefetchRegionsSequentially(null);
       return;
     }
+
+    set({ status: "loading", error: null });
 
     if (isFeedGenerationStale(restoreRegionGen, restoreHereGen)) return;
 
@@ -1129,9 +1284,11 @@ export const useCountryFeedStore = create<CountryFeedState>((set, get) => ({
     regionFilterGeneration += 1;
     hereFeedGeneration += 1;
     savedFeedGeneration += 1;
+    savedLandmarksFeedGeneration += 1;
     placesFeedGeneration += 1;
     cancelRegionPrefetch();
     regionFetchPromises.clear();
+    clearPlacesFeedCaches();
     set({
       countries: [],
       places: [],

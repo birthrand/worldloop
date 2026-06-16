@@ -16,6 +16,7 @@ import Animated, {
 import { Divider } from "@/components/ai-explorer/divider";
 import { StatItem } from "@/components/ai-explorer/stat-item";
 import { FlagBadge } from "@/components/explore/flag-badge";
+import { OnboardingCta } from "@/components/onboarding/onboarding-cta";
 import { COUNTRY_DETAIL_MODULE_BG } from "@/constants/country-detail-layout";
 import {
   EXPLORE_SWIPE_ACCENT_COLOR,
@@ -34,7 +35,16 @@ import {
   formatOfficialLanguages,
   formatPopulation,
 } from "@/lib/format-country";
-import { cca2FromFlagUrl, mapCountryToCountry } from "@/lib/map-country";
+import {
+  cca2FromFlagUrl,
+  languagesForMapCountry,
+  mapCountryToCountry,
+} from "@/lib/map-country";
+import {
+  openCountryDetail,
+  warmCountryDetail,
+} from "@/lib/open-country-detail";
+import { useCountryFeedStore } from "@/store/use-country-feed-store";
 import { useSavedCountriesStore } from "@/store/use-saved-countries-store";
 import type { MapCountry } from "@/types/country";
 
@@ -42,6 +52,8 @@ type MapCountryPreviewCardProps = {
   country: MapCountry;
   onDismiss: () => void;
   bottomInset?: number;
+  /** Explore → Map preview only — opens country detail with map return handoff. */
+  showViewCountryCta?: boolean;
 };
 
 const COUNTRY_NAME_FONT_SIZE = EXPLORE_SWIPE_TEXT_HEADER;
@@ -65,6 +77,8 @@ const PREVIEW_DISMISS_VELOCITY = 900;
 const PREVIEW_DISMISS_EXIT_PX = 420;
 /** Space between country title row and stats panel. */
 const PREVIEW_HEADER_STATS_GAP = 18;
+/** Space between stats panel and optional CTA. */
+const PREVIEW_STATS_CTA_GAP = 14;
 /** Extra space below stats — above safe area inset from parent. */
 const PREVIEW_CARD_CONTENT_BOTTOM_PADDING = 48;
 
@@ -72,6 +86,7 @@ export function MapCountryPreviewCard({
   country,
   onDismiss,
   bottomInset = 0,
+  showViewCountryCta = false,
 }: MapCountryPreviewCardProps) {
   const translateY = useSharedValue(0);
   const isDismissing = useSharedValue(false);
@@ -79,11 +94,30 @@ export function MapCountryPreviewCard({
   const regionLabel = continentDisplayLabel(country.region);
   const toggleSaved = useSavedCountriesStore((s) => s.toggleSaved);
   const isSaved = useSavedCountriesStore((s) => s.isSaved(country.name));
+  const feedCountries = useCountryFeedStore((s) => s.countries);
   const countryForSave = useMemo(() => mapCountryToCountry(country), [country]);
+  const countryForDetail = useMemo(() => {
+    const feedCountry =
+      feedCountries.find((entry) => entry.name === country.name) ?? null;
+    return mapCountryToCountry(country, feedCountry);
+  }, [country, feedCountries]);
+  const languagesLabel = useMemo(
+    () =>
+      formatOfficialLanguages(languagesForMapCountry(country, feedCountries)),
+    [country, feedCountries],
+  );
 
   const handleToggleSaved = () => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     toggleSaved(countryForSave);
+  };
+
+  const handleViewCountry = () => {
+    warmCountryDetail(countryForDetail);
+    openCountryDetail(countryForDetail, {
+      from: "explore",
+      returnToMap: true,
+    });
   };
 
   useEffect(() => {
@@ -220,10 +254,16 @@ export function MapCountryPreviewCard({
               tile
               align="start"
               label="Language"
-              value={formatOfficialLanguages(undefined)}
+              value={languagesLabel}
             />
           </View>
         </View>
+
+        {showViewCountryCta ? (
+          <View style={styles.viewCountryCtaWrap}>
+            <OnboardingCta label="View Country" onPress={handleViewCountry} />
+          </View>
+        ) : null}
       </Animated.View>
     </GestureDetector>
   );
@@ -301,5 +341,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "stretch",
     gap: 10,
+  },
+  viewCountryCtaWrap: {
+    marginTop: PREVIEW_STATS_CTA_GAP,
   },
 });

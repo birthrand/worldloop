@@ -8,6 +8,8 @@ export type MapCountry = {
   latlng: [number, number];
   /** First image URL only — null when none cached yet. */
   image: string | null;
+  /** Official language names from REST Countries. */
+  languages?: string[];
 };
 
 export type MapCountriesResponse = {
