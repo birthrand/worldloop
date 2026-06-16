@@ -316,6 +316,9 @@ export type CountryLandmark = {
   longitude: number | null;
   imageUrl: string | null;
   source: LandmarkSource;
+  yearBuilt?: number | null;
+  city?: string | null;
+  isUnescoWorldHeritage?: boolean;
 };
 
 export type CountryProfileResponse = {
@@ -325,6 +328,95 @@ export type CountryProfileResponse = {
     landmarks: CountryLandmark[];
   };
 };
+
+export type LandmarkWikipediaSummary = {
+  title: string;
+  extract: string;
+  pageUrl: string;
+};
+
+export type LandmarkWikipediaResponse = {
+  data: LandmarkWikipediaSummary | null;
+};
+
+export type LandmarkAiContent = {
+  fact: string;
+  city: string | null;
+};
+
+export type LandmarkAiResponse = {
+  data: LandmarkAiContent;
+};
+
+export async function fetchLandmarkWikipedia(
+  countryName: string,
+  landmarkName: string,
+): Promise<LandmarkWikipediaSummary | null> {
+  const encodedCountry = encodeURIComponent(countryName.trim());
+  const url = new URL(
+    `${API_BASE_URL}/country/${encodedCountry}/landmark-wikipedia`,
+  );
+  url.searchParams.set("landmark", landmarkName.trim());
+
+  const response = await fetch(url.toString());
+
+  if (!response.ok) {
+    throw new Error(`Landmark Wikipedia request failed (${response.status})`);
+  }
+
+  const payload = (await response.json()) as LandmarkWikipediaResponse;
+  return payload.data;
+}
+
+export async function fetchLandmarkAi(
+  countryName: string,
+  landmark: Pick<
+    CountryLandmark,
+    "name" | "type" | "description" | "city" | "latitude" | "longitude"
+  >,
+): Promise<LandmarkAiContent> {
+  const encodedCountry = encodeURIComponent(countryName.trim());
+  const url = new URL(`${API_BASE_URL}/country/${encodedCountry}/landmark-ai`);
+  url.searchParams.set("landmark", landmark.name.trim());
+
+  const type = landmark.type?.trim();
+  if (type) {
+    url.searchParams.set("type", type);
+  }
+
+  const description = landmark.description?.trim();
+  if (description) {
+    url.searchParams.set("description", description.slice(0, 400));
+  }
+
+  const city = landmark.city?.trim();
+  if (city) {
+    url.searchParams.set("city", city);
+  }
+
+  if (
+    typeof landmark.latitude === "number" &&
+    Number.isFinite(landmark.latitude)
+  ) {
+    url.searchParams.set("lat", String(landmark.latitude));
+  }
+
+  if (
+    typeof landmark.longitude === "number" &&
+    Number.isFinite(landmark.longitude)
+  ) {
+    url.searchParams.set("lng", String(landmark.longitude));
+  }
+
+  const response = await fetch(url.toString());
+
+  if (!response.ok) {
+    throw new Error(`Landmark AI request failed (${response.status})`);
+  }
+
+  const payload = (await response.json()) as LandmarkAiResponse;
+  return payload.data;
+}
 
 export async function fetchCountryProfile(
   name: string,

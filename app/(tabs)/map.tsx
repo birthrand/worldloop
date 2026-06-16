@@ -21,6 +21,7 @@ import {
 } from "@/components/map/map-country-focus-pill";
 import { MapCountryPreviewCard } from "@/components/map/map-country-preview-card";
 import { MapDiscoveryChrome } from "@/components/map/map-discovery-chrome";
+import { MapLandmarkPreviewCard } from "@/components/map/map-landmark-preview-card";
 import { MapOnboardingSheet } from "@/components/map/map-onboarding-sheet";
 import { MapRandomCountryHint } from "@/components/map/map-random-country-hint";
 import { MapRegionChrome } from "@/components/map/map-region-chrome";
@@ -30,6 +31,7 @@ import {
   MapTopChrome,
 } from "@/components/map/map-top-chrome";
 import { MapTopChromeScrim } from "@/components/map/map-top-chrome-scrim";
+import { TravelMapLegend } from "@/components/travel-map/travel-map-legend";
 import { WORLDLOOP_HEADER_TOP_PADDING } from "@/components/worldloop-header";
 import {
   MAP_COUNTRY_PREVIEW_SCRIM_GRADIENT_COLORS,
@@ -42,6 +44,7 @@ import { resolveGlobeAutoRotateEnabled } from "@/lib/globe-rotation";
 import type { MapCluster } from "@/lib/map-clusters";
 import { navigateBackFromMap } from "@/lib/navigate-back-from-map";
 import { openExploreHere, openExploreRegion } from "@/lib/open-explore-here";
+import { useIdentityStore } from "@/store/use-identity-store";
 import { useSearchUiStore } from "@/store/use-search-ui-store";
 import { useSpatialContextStore } from "@/store/use-spatial-context-store";
 
@@ -53,6 +56,9 @@ export default function MapScreen() {
   const mapRef = useRef<MapCanvasHandle>(null);
 
   const map = useMapLogic(mapRef);
+  const countryDetailReturnName = useIdentityStore(
+    (s) => s.countryDetailReturnName,
+  );
   const isMapSearchOpen = useSearchUiStore(
     (s) => s.isOpen && s.context === "map",
   );
@@ -64,7 +70,8 @@ export default function MapScreen() {
   const [discoveryChromeFromRegion, setDiscoveryChromeFromRegion] =
     useState(false);
   const wasPreviewOpenRef = useRef(false);
-  const previewOverlayActive = map.isPreviewOpen || previewExitHold;
+  const previewOverlayActive =
+    map.isPreviewOpen || previewExitHold || !!map.travelLandmarkPreviewPin;
   const globeAutoRotateEnabled = resolveGlobeAutoRotateEnabled({
     hasCountryFocus:
       !!map.activeCountry?.name || !!map.focusTransitionCountryName,
@@ -133,6 +140,7 @@ export default function MapScreen() {
   const discoveryChromeCount = discoveryChromeFromRegionActive
     ? regionCountryCount
     : viewportCountryCount;
+  const hideTravelMapLegend = !!countryDetailReturnName && !!map.activeLandmark;
   const discoveryChromeBottom = map.showRegionChrome
     ? regionChromeBottom + countryChromeHeight + 12
     : map.showCountryFocusPill
@@ -140,6 +148,7 @@ export default function MapScreen() {
       : mapFabBottom + 12;
   const showDiscoveryChromeEligible =
     !previewOverlayActive &&
+    !hideTravelMapLegend &&
     discoveryChromeCount > 0 &&
     (discoveryChromeFromRegionActive ||
       (discoveryTier !== "world" &&
@@ -148,16 +157,26 @@ export default function MapScreen() {
     showDiscoveryChromeEligible &&
     (!map.showRegionChrome || discoveryChromeFromRegion) &&
     !map.showCountryFocusPill;
+  const showTravelMapHeader =
+    map.isTravelMapSession && !isMapSearchOpen && !countryDetailReturnName;
   const showCountryFocusHeader =
+    !showTravelMapHeader &&
     !!map.activeCountry &&
     !isMapSearchOpen &&
-    (map.showCountryFocusPill || map.isPreviewOpen);
+    (map.showCountryFocusPill ||
+      map.isPreviewOpen ||
+      (map.isTravelMapSession && countryDetailReturnName) ||
+      hideTravelMapLegend);
   const countryFocusHeaderTitle = map.isExploreMapHandoff
     ? "Explore"
-    : (map.activeCountry?.name ?? "");
+    : countryDetailReturnName && map.activeLandmark
+      ? map.activeLandmark.name
+      : (map.activeCountry?.name ?? "");
   const countryFocusHeaderBackLabel = map.isExploreMapHandoff
     ? "Back to Explore"
-    : "Go back";
+    : countryDetailReturnName
+      ? "Back to country details"
+      : "Go back";
   const onboardingBottom = Math.max(insets.bottom, 16) + 88;
 
   return (
@@ -182,6 +201,13 @@ export default function MapScreen() {
         countryMarkerMode={map.countryMarkerMode}
         exploreMapHandoff={map.isExploreMapHandoff}
         flatSingleCountryFlag={map.flatSingleCountryFlagActive}
+        travelMapSession={
+          map.isTravelMapSession && !map.isCountryDetailLandmarkMapLock
+        }
+        travelCategoryByName={map.travelCategoryByCountryName}
+        landmarkPin={map.activeLandmark}
+        landmarkPins={map.travelLandmarkPins}
+        onLandmarkPinPress={map.handleTravelLandmarkPinPress}
         markerPresentation={map.markerReveal.presentation}
         markerRevealGeneration={map.markerReveal.revealGeneration}
         mapViewTransition={map.mapViewTransition}
@@ -219,10 +245,18 @@ export default function MapScreen() {
           </Animated.View>
         ) : null}
 
-        {showCountryFocusHeader ? (
+        {showTravelMapHeader ? (
+          <MapCountryFocusHeader
+            backOnly
+            onBack={navigateBackFromMap}
+            backAccessibilityLabel="Back to profile"
+            dimmed={map.isPreviewOpen}
+          />
+        ) : showCountryFocusHeader ? (
           <MapCountryFocusHeader
             title={countryFocusHeaderTitle}
             backAccessibilityLabel={countryFocusHeaderBackLabel}
+            backOnly={!!map.activeLandmark}
             onBack={navigateBackFromMap}
             dimmed={map.isPreviewOpen}
           />
@@ -247,6 +281,20 @@ export default function MapScreen() {
               />
             ) : null}
           </>
+        ) : null}
+
+        {map.isTravelMapSession &&
+        !previewOverlayActive &&
+        !hideTravelMapLegend ? (
+          <View
+            pointerEvents="box-none"
+            style={[
+              styles.travelLegendWrap,
+              { bottom: Math.max(insets.bottom, 16) },
+            ]}
+          >
+            <TravelMapLegend />
+          </View>
         ) : null}
 
         {map.status === "loading" ? (
@@ -277,13 +325,57 @@ export default function MapScreen() {
           </View>
         ) : null}
 
+        {map.travelLandmarkPreviewPin ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Dismiss landmark preview"
+            onPress={map.dismissTravelLandmarkPreview}
+            style={styles.previewScrimWrap}
+          >
+            <Animated.View
+              entering={FadeIn.duration(220)}
+              exiting={FadeOut.duration(180)}
+              pointerEvents="none"
+              style={StyleSheet.absoluteFill}
+            >
+              <LinearGradient
+                colors={[...MAP_COUNTRY_PREVIEW_SCRIM_GRADIENT_COLORS]}
+                locations={[...MAP_COUNTRY_PREVIEW_SCRIM_GRADIENT_LOCATIONS]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+            </Animated.View>
+          </Pressable>
+        ) : null}
+
         {map.isPreviewOpen && map.activeCountry ? (
           <View style={styles.previewWrap} pointerEvents="box-none">
             <MapCountryPreviewCard
               country={map.activeCountry}
               bottomInset={insets.bottom}
-              showViewCountryCta={map.isExploreMapHandoff}
+              showViewCountryCta={
+                map.isExploreMapHandoff || map.isTravelMapSession
+              }
+              viewCountryFrom={map.isTravelMapSession ? "profile" : "explore"}
+              returnToMapAfterViewCountry={
+                map.isExploreMapHandoff || map.isTravelMapSession
+              }
+              travelLegendCategories={
+                map.isTravelMapSession
+                  ? map.getTravelCountryCategories(map.activeCountry.name)
+                  : []
+              }
               onDismiss={map.dismissCountryPreview}
+            />
+          </View>
+        ) : map.travelLandmarkPreviewPin ? (
+          <View style={styles.previewWrap} pointerEvents="box-none">
+            <MapLandmarkPreviewCard
+              pin={map.travelLandmarkPreviewPin}
+              bottomInset={insets.bottom}
+              onDismiss={map.dismissTravelLandmarkPreview}
+              compact={hideTravelMapLegend}
             />
           </View>
         ) : map.showOnboarding ? (
@@ -315,7 +407,7 @@ export default function MapScreen() {
           />
         ) : null}
 
-        {map.randomCountryHint && !isMapSearchOpen ? (
+        {map.randomCountryHint && !isMapSearchOpen && !hideTravelMapLegend ? (
           <MapRandomCountryHint
             country={map.randomCountryHint}
             bottom={randomHintBottom}
@@ -325,7 +417,9 @@ export default function MapScreen() {
 
         {!previewOverlayActive &&
         !isMapSearchOpen &&
-        !map.showCountryFocusPill ? (
+        !map.showCountryFocusPill &&
+        !map.isTravelMapSession &&
+        !hideTravelMapLegend ? (
           <MapControls
             mapMode={map.mapMode}
             mapViewTransition={map.mapViewTransition}
@@ -406,6 +500,11 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     overflow: "hidden",
+  },
+  travelLegendWrap: {
+    position: "absolute",
+    left: 16,
+    zIndex: 2,
   },
   pressed: {
     opacity: 0.85,

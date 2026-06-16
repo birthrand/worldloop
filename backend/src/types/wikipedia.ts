@@ -5,3 +5,10 @@ export type CountryWikipediaSummary = {
   pageUrl: string;
   thumbnailUrl: string | null;
 };
+
+/** First-paragraph Wikipedia copy for landmark detail modal only. */
+export type LandmarkWikipediaSummary = {
+  title: string;
+  extract: string;
+  pageUrl: string;
+};

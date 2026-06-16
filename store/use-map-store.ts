@@ -19,7 +19,10 @@ import {
 import { useSpatialContextStore } from "@/store/use-spatial-context-store";
 import type { Country, MapCountry } from "@/types/country";
 import type { DiscoveryScope } from "@/types/geo";
-import type { MapPresentationIntent } from "@/types/map-presentation";
+import type {
+  MapLandmarkFocus,
+  MapPresentationIntent,
+} from "@/types/map-presentation";
 
 export type MapFilterChip =
   | "all"
@@ -54,6 +57,8 @@ type MapState = {
   pendingMapIntent: MapPresentationIntent | null;
   /** Explore back — map screen snaps to world on blur when true. */
   exploreSessionDiscardPending: boolean;
+  /** Profile travel map back — reset session on blur when true. */
+  travelSessionDiscardPending: boolean;
   activeChip: MapFilterChip;
   mapMode: MapMode;
   globeCamera: GlobeCameraHandle | null;
@@ -63,10 +68,13 @@ type MapState = {
     fallback?: Country,
     source?: Exclude<SelectionSource, null>,
     scopeSnapshot?: DiscoveryScope,
+    landmarkFocus?: MapLandmarkFocus,
   ) => void;
   clearPendingMapIntent: () => void;
   markExploreSessionDiscardPending: () => void;
   consumeExploreSessionDiscardPending: () => boolean;
+  markTravelSessionDiscardPending: () => void;
+  consumeTravelSessionDiscardPending: () => boolean;
   selectRandomCountry: () => MapCountry | null;
   setActiveChip: (chip: MapFilterChip) => void;
   setMapMode: (mode: MapMode) => void;
@@ -117,6 +125,7 @@ export const useMapStore = create<MapState>()((set, get) => ({
   mapCountriesFullyLoaded: false,
   pendingMapIntent: null,
   exploreSessionDiscardPending: false,
+  travelSessionDiscardPending: false,
   activeChip: "all",
   mapMode: "2d",
   globeCamera: null,
@@ -223,6 +232,7 @@ export const useMapStore = create<MapState>()((set, get) => ({
     fallback,
     source = "search",
     scopeSnapshot,
+    landmarkFocus,
   ) => {
     const trimmed = name.trim();
     if (!trimmed) return;
@@ -249,6 +259,7 @@ export const useMapStore = create<MapState>()((set, get) => ({
         source,
         discoveryScope,
         scopeMode: discoveryScope.mode,
+        landmarkFocus,
       }),
     });
   },
@@ -262,6 +273,17 @@ export const useMapStore = create<MapState>()((set, get) => ({
     const pending = get().exploreSessionDiscardPending;
     if (pending) {
       set({ exploreSessionDiscardPending: false });
+    }
+    return pending;
+  },
+
+  markTravelSessionDiscardPending: () =>
+    set({ travelSessionDiscardPending: true }),
+
+  consumeTravelSessionDiscardPending: () => {
+    const pending = get().travelSessionDiscardPending;
+    if (pending) {
+      set({ travelSessionDiscardPending: false });
     }
     return pending;
   },

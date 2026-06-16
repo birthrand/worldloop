@@ -2,7 +2,7 @@ import { useUser } from "@clerk/expo";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import {
   PROFILE_CARD_BG,
@@ -17,16 +17,18 @@ import {
   PROFILE_TEXT_SUBTITLE,
 } from "@/constants/profile-theme";
 
+type CompletionItemId = "name" | "email" | "bio" | "location";
+
 type CompletionItem = {
-  id: string;
+  id: CompletionItemId;
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
   done: boolean;
 };
 
-function showComingSoon(label: string) {
-  Alert.alert(label, "This feature is coming in a later lesson.");
-}
+type ProfileCompletionCardProps = {
+  onAddItem?: (id: CompletionItemId) => void;
+};
 
 function buildCompletionItems(
   user: ReturnType<typeof useUser>["user"],
@@ -55,7 +57,7 @@ function buildCompletionItems(
     },
     {
       id: "location",
-      label: "Location",
+      label: "Home location",
       icon: "location-outline",
       done: Boolean(
         typeof user?.unsafeMetadata?.location === "string" &&
@@ -70,7 +72,21 @@ function getCompletionPercent(items: CompletionItem[]) {
   return Math.round((done / items.length) * 100);
 }
 
-export function ProfileCompletionCard() {
+function ProfileProgressBar({ percent }: { percent: number }) {
+  const clamped = Math.min(100, Math.max(0, percent));
+
+  return (
+    <View style={styles.progressTrack}>
+      <View style={[styles.progressFill, { width: `${clamped}%` }]} />
+    </View>
+  );
+}
+
+export type ProfileCompletionItemId = CompletionItemId;
+
+export function ProfileCompletionCard({
+  onAddItem,
+}: ProfileCompletionCardProps) {
   const { user } = useUser();
   const [expanded, setExpanded] = useState(false);
   const items = buildCompletionItems(user);
@@ -144,16 +160,8 @@ export function ProfileCompletionCard() {
 
       {expanded ? (
         <>
-          <View style={styles.segmentRow}>
-            {items.map((item) => (
-              <View
-                key={item.id}
-                style={[
-                  styles.segment,
-                  item.done ? styles.segmentDone : styles.segmentPending,
-                ]}
-              />
-            ))}
+          <View style={styles.progressRow}>
+            <ProfileProgressBar percent={percent} />
           </View>
 
           <View style={styles.checklist}>
@@ -165,7 +173,10 @@ export function ProfileCompletionCard() {
                   item.done ? `${item.label} completed` : `Add ${item.label}`
                 }
                 disabled={item.done}
-                onPress={() => showComingSoon(item.label)}
+                onPress={() => {
+                  void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  onAddItem?.(item.id);
+                }}
                 style={({ pressed }) => [
                   styles.checkRow,
                   index < items.length - 1 && styles.checkRowBorder,
@@ -217,16 +228,8 @@ export function ProfileCompletionCard() {
           </View>
         </>
       ) : (
-        <View style={styles.collapsedSegmentRow}>
-          {items.map((item) => (
-            <View
-              key={item.id}
-              style={[
-                styles.segment,
-                item.done ? styles.segmentDone : styles.segmentPending,
-              ]}
-            />
-          ))}
+        <View style={[styles.progressRow, styles.progressRowCollapsed]}>
+          <ProfileProgressBar percent={percent} />
         </View>
       )}
     </View>
@@ -290,28 +293,23 @@ const styles = StyleSheet.create({
   topCopy: {
     flex: 1,
   },
-  segmentRow: {
-    flexDirection: "row",
+  progressRow: {
     paddingHorizontal: 16,
     paddingBottom: 14,
-    gap: 6,
   },
-  collapsedSegmentRow: {
-    flexDirection: "row",
-    paddingHorizontal: 16,
+  progressRowCollapsed: {
     paddingBottom: 16,
-    gap: 6,
   },
-  segment: {
-    flex: 1,
+  progressTrack: {
     height: 4,
     borderRadius: 999,
-  },
-  segmentDone: {
-    backgroundColor: "#ffffff",
-  },
-  segmentPending: {
     backgroundColor: "rgba(255, 255, 255, 0.1)",
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: 999,
+    backgroundColor: "#ffffff",
   },
   checklist: {
     borderTopWidth: StyleSheet.hairlineWidth,

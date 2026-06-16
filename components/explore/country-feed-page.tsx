@@ -20,7 +20,7 @@ import {
   EXPLORE_FEED_BOTTOM_INSET,
   EXPLORE_FEED_SURFACE_RADIUS,
 } from "@/constants/explore-feed-layout";
-import { getAiFact, getCountryImages } from "@/lib/format-country";
+import { getAiFactByIndex, getCountryImages } from "@/lib/format-country";
 import {
   openCountryDetail,
   warmCountryDetail,
@@ -171,7 +171,7 @@ export function CountryFeedPage({
             >
               <ExploreCountryCard
                 country={country}
-                fact={getAiFact(country)}
+                fact={getAiFactByIndex(country, heroIndex)}
                 onPress={openDetail}
                 onPressIn={warmDetail}
               />

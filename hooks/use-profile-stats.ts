@@ -6,7 +6,6 @@ import { useSavedCountriesStore } from "@/store/use-saved-countries-store";
 import { useSavedLandmarksStore } from "@/store/use-saved-landmarks-store";
 import type { Country } from "@/types/country";
 
-const DEFAULT_CITIES = 56;
 const DEFAULT_PLACES = 128;
 const DEFAULT_PHOTOS = 128;
 
@@ -23,17 +22,23 @@ export type VisitedCountryPreview = {
   visitedAt: number;
 };
 
-export function formatVisitedCountriesSubtitle(count: number): string {
+export function formatDiscoveredCountriesSubtitle(count: number): string {
   if (count === 0) {
-    return "Mark countries as you visit them";
+    return "Open country or landmark details to discover";
   }
   if (count === 1) {
-    return "1 country visited";
+    return "1 country discovered";
   }
-  return `${count} countries visited`;
+  return `${count} countries discovered`;
 }
 
 export function useProfileStats() {
+  const countriesDiscovered = useDiscoveryProgressStore(
+    (s) => s.countriesDiscovered,
+  );
+  const landmarksExplored = useDiscoveryProgressStore(
+    (s) => s.landmarksExplored,
+  );
   const countriesExplored = useDiscoveryProgressStore(
     (s) => s.countriesExplored,
   );
@@ -74,17 +79,11 @@ export function useProfileStats() {
     return byId;
   }, [feedCountries, savedCountries, visitedCountryById]);
 
-  const citiesCount =
-    countriesExplored > 0
-      ? Math.round(countriesExplored * 2.3)
-      : DEFAULT_CITIES;
+  const landmarksExploredCount = landmarksExplored;
 
-  const placesCount =
-    savedLandmarks.length > 0
-      ? savedLandmarks.length
-      : savedCountries.length > 0
-        ? savedCountries.length
-        : DEFAULT_PLACES;
+  const totalSavedCount = savedCountries.length + savedLandmarks.length;
+
+  const placesCount = totalSavedCount > 0 ? totalSavedCount : DEFAULT_PLACES;
 
   const photosCount =
     savedCountries.length > 0 ? savedCountries.length : DEFAULT_PHOTOS;
@@ -98,8 +97,8 @@ export function useProfileStats() {
       }
     }
     if (regions.size > 0) return regions.size;
-    return countriesExplored > 0 ? 1 : 7;
-  }, [allKnownCountries, countriesExplored, visitedCountryIds]);
+    return countriesDiscovered > 0 ? 1 : 7;
+  }, [allKnownCountries, countriesDiscovered, visitedCountryIds]);
 
   const topVisitedCountries = useMemo((): VisitedCountryPreview[] => {
     return visitedCountryIds
@@ -129,17 +128,19 @@ export function useProfileStats() {
 
   return {
     inlineStats: {
-      countries: countriesExplored,
-      cities: citiesCount,
+      countries: countriesDiscovered,
+      cities: landmarksExploredCount,
       places: placesCount,
     } satisfies ProfileInlineStats,
+    countriesDiscovered,
     countriesExplored,
-    visitedCountriesSubtitle: formatVisitedCountriesSubtitle(countriesExplored),
-    citiesCount,
+    discoveredCountriesSubtitle:
+      formatDiscoveredCountriesSubtitle(countriesDiscovered),
+    landmarksExploredCount,
     placesCount,
     photosCount,
     continentsCount,
-    savedCount: savedCountries.length,
+    savedCount: totalSavedCount,
     topVisitedCountries,
     savedThumbnailUri,
   };

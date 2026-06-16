@@ -2,12 +2,15 @@ import type { FlightPhase } from "@/hooks/use-map-flight";
 import type { MapCluster } from "@/lib/map-clusters";
 import {
   buildDiscoveryPhases,
+  buildLandmarkDetailPhases,
   COUNTRY_DETAIL_FLIGHT_MS,
   EXPLORE_MAP_FLIGHT_MS,
   EXPLORE_MAP_RETARGET_MS,
+  regionForLandmarkFocus,
 } from "@/lib/map-discovery-flight";
 import type { SelectionSource } from "@/store/use-identity-store";
 import type { MapCountry } from "@/types/country";
+import type { MapLandmarkFocus } from "@/types/map-presentation";
 import type { Region } from "react-native-maps";
 
 /**
@@ -30,6 +33,7 @@ export type MapTransitionIntent = {
   country: MapCountry;
   mode: "focus" | "preview";
   source: Exclude<SelectionSource, null>;
+  landmarkFocus?: MapLandmarkFocus;
 };
 
 export type MapTransitionContext = {
@@ -181,14 +185,16 @@ export function resolveMapTransition(
   intent: MapTransitionIntent,
   context: MapTransitionContext,
 ): MapTransitionPlan {
-  const { country, mode, source } = intent;
+  const { country, mode, source, landmarkFocus } = intent;
   const { cluster, useGlobeCamera } = context;
 
   const exploreInSession =
     source === "explore" && getTransitionMemory().exploreHandoffInitialized;
   const exploreFlyIn = source === "explore" && !exploreInSession;
 
-  const shouldAnimate = decideAnimation(source, country.name);
+  const shouldAnimate = landmarkFocus
+    ? true
+    : decideAnimation(source, country.name);
   const isRepeatVisit = source === "countryDetail" && !shouldAnimate;
   const flightDuration = computeFlightDuration(
     source,
@@ -197,23 +203,34 @@ export function resolveMapTransition(
     exploreInSession,
   );
 
-  const flightPhases = buildDiscoveryPhases({
-    pick: country,
-    cluster,
-    source,
-    includeWorld: source === "search",
-    mode,
-    exploreInSession,
-  });
-  const targetRegion = flightPhases[flightPhases.length - 1]?.region ?? null;
+  const flightPhases = landmarkFocus
+    ? buildLandmarkDetailPhases(
+        landmarkFocus.latitude,
+        landmarkFocus.longitude,
+      )
+    : buildDiscoveryPhases({
+        pick: country,
+        cluster,
+        source,
+        includeWorld: source === "search",
+        mode,
+        exploreInSession,
+      });
+  const targetRegion: Region | null = landmarkFocus
+    ? regionForLandmarkFocus(
+        landmarkFocus.latitude,
+        landmarkFocus.longitude,
+      )
+    : (flightPhases[flightPhases.length - 1]?.region ?? null);
 
   let memoryRecord: MapTransitionMemoryRecord = "none";
   if (source === "countryDetail") {
     memoryRecord = shouldAnimate ? "onComplete" : "immediate";
   }
 
-  const reason =
-    source === "countryDetail"
+  const reason = landmarkFocus
+    ? "landmark detail map entry"
+    : source === "countryDetail"
       ? resolveCountryDetailReason(country.name)
       : source === "explore"
         ? resolveExploreHandoffReason()

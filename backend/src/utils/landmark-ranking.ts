@@ -2,6 +2,19 @@ import type { CountryLandmark } from "../types/landmarks.js";
 
 const MAX_DESCRIPTION_LENGTH = 140;
 
+export function parseLandmarkYearBuilt(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const signedMatch = trimmed.match(/^([+-]?\d{1,4})/);
+  if (!signedMatch) return null;
+
+  const year = Number.parseInt(signedMatch[1], 10);
+  if (!Number.isFinite(year) || year <= 0 || year > 9999) return null;
+
+  return year;
+}
+
 export function landmarkId(name: string): string {
   return name
     .trim()
@@ -131,13 +144,13 @@ export function landmarksAreDuplicate(
   return false;
 }
 
-export function mapWikidataType(
-  instanceLabel: string | null,
+export function isUnescoWorldHeritageSite(
   heritageLabel: string | null,
-): string {
-  const heritage = heritageLabel?.toLowerCase() ?? "";
-  if (heritage.includes("world heritage")) return "UNESCO World Heritage Site";
+): boolean {
+  return (heritageLabel?.toLowerCase() ?? "").includes("world heritage");
+}
 
+export function mapWikidataType(instanceLabel: string | null): string {
   const instance = instanceLabel?.toLowerCase() ?? "";
   if (instance.includes("castle") || instance.includes("fortress"))
     return "Castle";
@@ -191,7 +204,11 @@ export function landmarkRankScore(landmark: CountryLandmark): number {
   const description = landmark.description.toLowerCase();
   let score = 40;
 
-  if (type.includes("unesco") || description.includes("world heritage"))
+  if (
+    landmark.isUnescoWorldHeritage ||
+    type.includes("unesco") ||
+    description.includes("world heritage")
+  )
     score = 100;
   else if (type.includes("castle") || type.includes("fortress")) score = 88;
   else if (type.includes("national") && type.includes("landmark")) score = 85;

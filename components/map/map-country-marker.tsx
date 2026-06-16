@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -11,7 +12,9 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
+import { travelMapCountryPinColor } from "@/components/travel-map/travel-map-legend";
 import { MAP_COUNTRY_VISITED_RING_COLOR } from "@/constants/map-country-focus";
+import type { TravelMapCountryPinCategory } from "@/constants/travel-map-legend";
 import { resolveFlagCdnUrl } from "@/lib/flag-url";
 import { cca2FromFlagUrl, getMapDisplayLatLng } from "@/lib/map-country";
 import {
@@ -70,6 +73,7 @@ const FlagImage = memo(function FlagImage({
 type FlagPinBodyProps = {
   selected: boolean;
   visited: boolean;
+  categoryRingColor?: string;
   focusTransitioning: boolean;
   presentation: MapMarkerPresentation;
   flagUri: string | null;
@@ -81,6 +85,7 @@ type FlagPinBodyProps = {
 function FlagPinBody({
   selected,
   visited,
+  categoryRingColor,
   focusTransitioning,
   presentation,
   flagUri,
@@ -98,11 +103,20 @@ function FlagPinBody({
   const wrapperStyle = isEntering ? styles.wrapperEntering : styles.wrapper;
   const pinShellStyle = selected
     ? [styles.pin, styles.pinSelected]
-    : visited
-      ? [styles.pin, styles.pinVisited]
-      : isEntering
-        ? styles.pinEntering
-        : styles.pin;
+    : categoryRingColor
+      ? [
+          styles.pin,
+          styles.pinCategoryRing,
+          {
+            borderColor: categoryRingColor,
+            shadowColor: categoryRingColor,
+          },
+        ]
+      : visited
+        ? [styles.pin, styles.pinVisited]
+        : isEntering
+          ? styles.pinEntering
+          : styles.pin;
 
   const pulse = useSharedValue(1);
 
@@ -155,6 +169,7 @@ function FlagPinBody({
 type CirclePinBodyProps = {
   selected: boolean;
   visited: boolean;
+  categoryRingColor?: string;
   focusTransitioning: boolean;
   presentation: MapMarkerPresentation;
   onLayout: () => void;
@@ -163,6 +178,7 @@ type CirclePinBodyProps = {
 function CirclePinBody({
   selected,
   visited,
+  categoryRingColor,
   focusTransitioning,
   presentation,
   onLayout,
@@ -197,18 +213,51 @@ function CirclePinBody({
 
   const dotStyle = selected
     ? styles.circleDotSelected
-    : visited
-      ? styles.circleDotVisited
-      : isEntering
-        ? styles.circleDotEntering
-        : styles.circleDot;
+    : categoryRingColor
+      ? [
+          styles.circleDot,
+          {
+            backgroundColor: categoryRingColor,
+          },
+        ]
+      : visited
+        ? styles.circleDotVisited
+        : isEntering
+          ? styles.circleDotEntering
+          : styles.circleDot;
 
   return (
     <View style={styles.wrapper} pointerEvents="box-none" onLayout={onLayout}>
-      {visited && !selected && !focusTransitioning ? (
+      {categoryRingColor && !selected && !focusTransitioning ? (
+        <View
+          style={[
+            styles.circleCategoryRing,
+            { borderColor: categoryRingColor },
+          ]}
+          pointerEvents="none"
+        />
+      ) : null}
+      {visited && !categoryRingColor && !selected && !focusTransitioning ? (
         <View style={styles.circleVisitedRing} pointerEvents="none" />
       ) : null}
       <Animated.View style={[dotStyle, pinAnimatedStyle]} />
+    </View>
+  );
+}
+
+type LocationPinBodyProps = {
+  selected: boolean;
+  color: string;
+};
+
+function LocationPinBody({ selected, color }: LocationPinBodyProps) {
+  return (
+    <View style={styles.locationPinWrap} pointerEvents="none">
+      <Ionicons
+        name="location"
+        size={selected ? 38 : 34}
+        color={selected ? "#fbbf24" : color}
+      />
     </View>
   );
 }
@@ -229,6 +278,7 @@ type MapCountryMarkerProps = {
   suspendSnapshot?: boolean;
   /** Bumped when the map camera settles so markers re-snapshot. */
   refreshToken?: number;
+  travelCategory?: TravelMapCountryPinCategory;
   onPress: () => void;
 };
 
@@ -244,6 +294,7 @@ export const MapCountryMarker = memo(function MapCountryMarker({
   keepLive = false,
   suspendSnapshot = false,
   refreshToken = 0,
+  travelCategory,
   onPress,
 }: MapCountryMarkerProps) {
   const isEntering =
@@ -289,9 +340,6 @@ export const MapCountryMarker = memo(function MapCountryMarker({
     opacity: fadeOpacity.value,
     transform: [{ scale: fadeScale.value }],
   }));
-  const showFlag = displayMode === "flag";
-  const showCircle = displayMode === "circle";
-  const showMarker = showFlag || showCircle;
   const [displayLat, displayLng] = getMapDisplayLatLng(country);
   const latitude = coordinateOverride?.latitude ?? displayLat;
   const longitude = coordinateOverride?.longitude ?? displayLng;
@@ -302,8 +350,19 @@ export const MapCountryMarker = memo(function MapCountryMarker({
   const isVisited = useDiscoveryProgressStore((s) =>
     s.isCountryVisited({ name: country.name, cca2: "", flag: country.flag }),
   );
-  const showVisitedBadge = isVisited && !selected && !focusTransitioning;
-
+  const categoryRingColor = travelCategory
+    ? travelMapCountryPinColor(travelCategory)
+    : undefined;
+  const useTravelLocationPin = !!travelCategory;
+  const showVisitedBadge =
+    !useTravelLocationPin &&
+    !categoryRingColor &&
+    isVisited &&
+    !selected &&
+    !focusTransitioning;
+  const showFlag = displayMode === "flag" && !useTravelLocationPin;
+  const showCircle = displayMode === "circle" && !useTravelLocationPin;
+  const showMarker = showFlag || showCircle || useTravelLocationPin;
   const [tracksViewChanges, setTracksViewChanges] = useState(true);
   const [flagLoaded, setFlagLoaded] = useState(() => isFlagUriCached(flagUri));
   const [hasLaidOut, setHasLaidOut] = useState(false);
@@ -410,12 +469,13 @@ export const MapCountryMarker = memo(function MapCountryMarker({
 
   if (!showMarker) return null;
 
-  const tracksChanges =
-    keepLive ||
-    tracksViewChanges ||
-    suspendSnapshot ||
-    selected ||
-    focusTransitioning;
+  const tracksChanges = useTravelLocationPin
+    ? false
+    : keepLive ||
+      tracksViewChanges ||
+      suspendSnapshot ||
+      selected ||
+      focusTransitioning;
 
   return (
     <Marker
@@ -425,16 +485,25 @@ export const MapCountryMarker = memo(function MapCountryMarker({
         onPress();
       }}
       tracksViewChanges={tracksChanges}
-      anchor={{ x: 0.5, y: 0.5 }}
+      anchor={useTravelLocationPin ? { x: 0.5, y: 1 } : { x: 0.5, y: 0.5 }}
     >
       <Animated.View
         pointerEvents="box-none"
-        style={[styles.markerAnchor, fadeStyle]}
+        style={[
+          useTravelLocationPin ? styles.locationPinAnchor : styles.markerAnchor,
+          fadeStyle,
+        ]}
       >
-        {showFlag ? (
+        {useTravelLocationPin ? (
+          <LocationPinBody
+            selected={selected}
+            color={categoryRingColor ?? "#fbbf24"}
+          />
+        ) : showFlag ? (
           <FlagPinBody
             selected={selected}
             visited={showVisitedBadge}
+            categoryRingColor={categoryRingColor}
             focusTransitioning={focusTransitioning}
             presentation={presentation}
             flagUri={flagUri}
@@ -446,6 +515,7 @@ export const MapCountryMarker = memo(function MapCountryMarker({
           <CirclePinBody
             selected={selected}
             visited={showVisitedBadge}
+            categoryRingColor={categoryRingColor}
             focusTransitioning={focusTransitioning}
             presentation={presentation}
             onLayout={handlePinLayout}
@@ -472,6 +542,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     overflow: "visible",
+  },
+  locationPinAnchor: {
+    alignItems: "center",
+    justifyContent: "flex-end",
+    overflow: "visible",
+  },
+  locationPinWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 3,
+    elevation: 4,
   },
   wrapper: {
     alignItems: "center",
@@ -523,6 +607,13 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: MAP_COUNTRY_VISITED_RING_COLOR,
     shadowColor: MAP_COUNTRY_VISITED_RING_COLOR,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  pinCategoryRing: {
+    borderWidth: 2,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.35,
     shadowRadius: 4,
@@ -590,6 +681,14 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: MAP_COUNTRY_VISITED_RING_COLOR,
     opacity: 0.55,
+  },
+  circleCategoryRing: {
+    position: "absolute",
+    width: CIRCLE_DOT_SIZE + 8,
+    height: CIRCLE_DOT_SIZE + 8,
+    borderRadius: (CIRCLE_DOT_SIZE + 8) / 2,
+    borderWidth: 2,
+    opacity: 0.72,
   },
   labelRow: {
     position: "absolute",

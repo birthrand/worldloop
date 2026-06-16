@@ -65,7 +65,7 @@ import {
 import { continentDisplayLabel } from "@/constants/regions";
 import {
   formatCountryCapitalDisplay,
-  getAiFact,
+  getAiFactByIndex,
   getCountryImages,
   getCultureVideo,
 } from "@/lib/format-country";
@@ -163,7 +163,10 @@ export function ExploreSwipeCard({
     });
   }, []);
 
-  const fact = useMemo(() => getAiFact(country), [country]);
+  const fact = useMemo(
+    () => getAiFactByIndex(country, heroMode === "video" ? 0 : heroIndex),
+    [country, heroIndex, heroMode],
+  );
 
   useEffect(() => {
     if (heroIndexProp === undefined) {

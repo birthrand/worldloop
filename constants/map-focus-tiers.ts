@@ -31,3 +31,6 @@ export const DETAIL_ZOOM_LATITUDE_DELTA = 15;
 
 /** Continent cluster framing — several countries visible (not single-country focus). */
 export const CONTINENT_CONTEXT_LATITUDE_DELTA = 42;
+
+/** Landmark detail → map handoff — street-scale framing around a single POI. */
+export const LANDMARK_FOCUS_LATITUDE_DELTA = 0.045;

@@ -2,24 +2,26 @@
 
 Incremental backend implementation prompts for the WorldLoop API. Implement in numeric order unless a prompt says otherwise.
 
-| #   | Prompt                                                           | Description                                                 |
-| --- | ---------------------------------------------------------------- | ----------------------------------------------------------- |
-| 00  | [00-backend-overview.md](./00-backend-overview.md)               | Shared architecture, types, cache keys (read first)         |
-| 01  | [01-country-data-service.md](./01-country-data-service.md)       | REST Countries metadata + basic feed                        |
-| 02  | [02-local-redis-setup.md](./02-local-redis-setup.md)             | **Required** — install & run Redis, verify cache hits       |
-| 03  | [03-image-service.md](./03-image-service.md)                     | Unsplash / Pexels images per country                        |
-| 04  | [04-ai-content-service.md](./04-ai-content-service.md)           | AI facts, captions, narration                               |
-| 05  | [05-feed-endpoint.md](./05-feed-endpoint.md)                     | TikTok-style paginated feed                                 |
-| 06  | [06-search-and-explore.md](./06-search-and-explore.md)           | Search and filter by name / region                          |
-| 07  | [07-map-endpoint.md](./07-map-endpoint.md)                       | Map view country data                                       |
-| 08  | [08-redis-caching-layer.md](./08-redis-caching-layer.md)         | Central Redis cache service (code hardening)                |
-| 09  | [09-backend-security.md](./09-backend-security.md)               | Secrets, validation, rate limits                            |
-| 10  | [10-pregeneration-system.md](./10-pregeneration-system.md)       | Background AI pre-generation (optional)                     |
-| 11  | [11-health-and-monitoring.md](./11-health-and-monitoring.md)     | Health check and logging                                    |
-| 12  | [12-discover-endpoint.md](./12-discover-endpoint.md)             | Spatial bbox discover (pairs with `prompts/15-*`)           |
-| 13  | [13-news-service.md](./13-news-service.md)                       | GNews + Currents news layer, LLM, Redis 4h TTL              |
-| 14  | [14-landmarks-data-pipeline.md](./14-landmarks-data-pipeline.md) | Wikidata + OSM landmarks, Wikimedia images, 3–5 per country |
-| 15  | [15-video-service.md](./15-video-service.md)                     | Pexels travel clips per country for Explore video hero      |
+| #   | Prompt                                                                           | Description                                                           |
+| --- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| 00  | [00-backend-overview.md](./00-backend-overview.md)                               | Shared architecture, types, cache keys (read first)                   |
+| 01  | [01-country-data-service.md](./01-country-data-service.md)                       | REST Countries metadata + basic feed                                  |
+| 02  | [02-local-redis-setup.md](./02-local-redis-setup.md)                             | **Required** — install & run Redis, verify cache hits                 |
+| 03  | [03-image-service.md](./03-image-service.md)                                     | Unsplash / Pexels images per country                                  |
+| 04  | [04-ai-content-service.md](./04-ai-content-service.md)                           | AI facts, captions, narration                                         |
+| 05  | [05-feed-endpoint.md](./05-feed-endpoint.md)                                     | TikTok-style paginated feed                                           |
+| 06  | [06-search-and-explore.md](./06-search-and-explore.md)                           | Search and filter by name / region                                    |
+| 07  | [07-map-endpoint.md](./07-map-endpoint.md)                                       | Map view country data                                                 |
+| 08  | [08-redis-caching-layer.md](./08-redis-caching-layer.md)                         | Central Redis cache service (code hardening)                          |
+| 09  | [09-backend-security.md](./09-backend-security.md)                               | Secrets, validation, rate limits                                      |
+| 10  | [10-pregeneration-system.md](./10-pregeneration-system.md)                       | Background AI pre-generation (optional)                               |
+| 11  | [11-health-and-monitoring.md](./11-health-and-monitoring.md)                     | Health check and logging                                              |
+| 12  | [12-discover-endpoint.md](./12-discover-endpoint.md)                             | Spatial bbox discover (pairs with `prompts/15-*`)                     |
+| 13  | [13-news-service.md](./13-news-service.md)                                       | GNews + Currents news layer, LLM, Redis 4h TTL                        |
+| 14  | [14-landmarks-data-pipeline.md](./14-landmarks-data-pipeline.md)                 | Wikidata + OSM landmarks, Wikimedia images, 3–5 per country           |
+| 15  | [15-video-service.md](./15-video-service.md)                                     | Pexels travel clips per country for Explore video hero                |
+| 16  | [16-landmark-details-static-catalog.md](./16-landmark-details-static-catalog.md) | Static AI catalog for landmark detail modal (`landmark-details.json`) |
+| 16a | [16a-landmark-details-build-script.md](./16a-landmark-details-build-script.md)   | Build / validate scripts for landmark details catalog                 |
 
 ## Dev prerequisites
 

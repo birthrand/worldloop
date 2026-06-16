@@ -23,9 +23,9 @@ import {
 } from "@/lib/format-country";
 import { normalizeImageUrl } from "@/lib/normalize-image-url";
 import {
-  openCountryDetail,
+  openLandmarkCountryDetail,
   warmCountryDetail,
-} from "@/lib/open-country-detail";
+} from "@/lib/open-landmark-country-detail";
 import type { Country } from "@/types/country";
 import type { PlaceFeedItem } from "@/types/place-feed";
 
@@ -111,7 +111,7 @@ function SavedLandmarkGridCard({
         accessibilityRole="button"
         accessibilityLabel={`Open ${landmark.name} in ${country.name}`}
         onPressIn={() => warmCountryDetail(country)}
-        onPress={() => openCountryDetail(country, { from: "saved" })}
+        onPress={() => openLandmarkCountryDetail(item, "saved")}
         style={({ pressed }) => [
           styles.cardPressable,
           pressed && styles.cardPressed,
@@ -164,7 +164,7 @@ function SavedLandmarkListRow({ item }: { item: PlaceFeedItem }) {
         accessibilityRole="button"
         accessibilityLabel={`Open ${landmark.name} in ${country.name}`}
         onPressIn={() => warmCountryDetail(country)}
-        onPress={() => openCountryDetail(country, { from: "saved" })}
+        onPress={() => openLandmarkCountryDetail(item, "saved")}
         style={({ pressed }) => [
           styles.listRowPressable,
           pressed && styles.cardPressed,

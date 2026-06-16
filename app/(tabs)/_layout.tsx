@@ -4,8 +4,11 @@ import { StyleSheet, View } from "react-native";
 
 import { BottomTabBar } from "@/components/bottom-tab-bar";
 import { SearchOverlay } from "@/components/search/search-overlay";
-import { EXPLORE_SWIPE_TAB_BAR_BG } from "@/constants/explore-swipe-layout";
-import { SPACE_SCREEN_BASE } from "@/constants/space-theme";
+import {
+  EXPLORE_SWIPE_SCREEN_BG,
+  EXPLORE_SWIPE_TAB_BAR_BG,
+} from "@/constants/explore-swipe-layout";
+import { PROFILE_SCREEN_BG } from "@/constants/profile-theme";
 
 export default function TabsLayout() {
   const { isSignedIn, isLoaded } = useAuth();
@@ -25,6 +28,7 @@ export default function TabsLayout() {
         tabBar={(props) => <BottomTabBar {...props} />}
         screenOptions={{
           headerShown: false,
+          sceneStyle: { backgroundColor: EXPLORE_SWIPE_SCREEN_BG },
           tabBarStyle: {
             position: "absolute",
             left: 0,
@@ -52,7 +56,13 @@ export default function TabsLayout() {
           }}
         />
         <Tabs.Screen name="saved" options={{ href: null, title: "Saved" }} />
-        <Tabs.Screen name="profile" options={{ title: "Profile" }} />
+        <Tabs.Screen
+          name="profile"
+          options={{
+            title: "Profile",
+            sceneStyle: { backgroundColor: PROFILE_SCREEN_BG },
+          }}
+        />
       </Tabs>
       <SearchOverlay />
     </View>
@@ -62,6 +72,6 @@ export default function TabsLayout() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: SPACE_SCREEN_BASE,
+    backgroundColor: EXPLORE_SWIPE_SCREEN_BG,
   },
 });

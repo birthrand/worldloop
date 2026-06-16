@@ -64,7 +64,15 @@ export const cacheKeys = {
   ai: (name: string) => `ai:${name.toLowerCase()}`,
   news: (name: string) => `news:${name.trim().toLowerCase()}`,
   wikipedia: (name: string) => `wikipedia:${name.trim().toLowerCase()}`,
-  landmarks: (cca2: string) => `landmarks:v6:${cca2.trim().toUpperCase()}`,
+  landmarkWikipedia: (landmarkName: string, countryName: string) =>
+    `landmark-wikipedia:${landmarkName.trim().toLowerCase()}:${countryName.trim().toLowerCase()}`,
+  landmarkAi: (landmarkName: string, countryName: string) =>
+    `landmark-ai:${landmarkName.trim().toLowerCase()}:${countryName.trim().toLowerCase()}`,
+  /** v8 — includes landmark city (Wikidata P131 / OSM addr tags). */
+  landmarks: (cca2: string) => `landmarks:v8:${cca2.trim().toUpperCase()}`,
+  /** Pre-city schema — read only for one-time migration into v8. */
+  landmarksLegacy: (cca2: string) =>
+    `landmarks:v7:${cca2.trim().toUpperCase()}`,
 } as const;
 
 let client: RedisClientType | null = null;

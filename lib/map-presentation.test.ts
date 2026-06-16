@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   canSelectCountryOnMap,
   canSelectCountryOnMapBoundary,
+  isCountryDetailLandmarkMapSession,
   isExploreMapHandoff,
   isFlatSingleCountryFlagMode,
 } from "@/lib/map-presentation";
@@ -82,5 +83,42 @@ describe("canSelectCountryOnMap", () => {
   it("still locks marker selection to the active country", () => {
     expect(canSelectCountryOnMap(japan, korea.name)).toBe(false);
     expect(canSelectCountryOnMap(japan, japan.name)).toBe(true);
+  });
+
+  it("blocks all country changes during country-detail landmark map lock", () => {
+    expect(canSelectCountryOnMap(japan, japan.name, false, true)).toBe(false);
+    expect(canSelectCountryOnMap(japan, korea.name, true, true)).toBe(false);
+  });
+});
+
+describe("isCountryDetailLandmarkMapSession", () => {
+  it("is true only for country-detail landmark handoffs", () => {
+    expect(
+      isCountryDetailLandmarkMapSession(
+        "countryDetail",
+        {
+          id: "eiffel-tower",
+          name: "Eiffel Tower",
+          latitude: 48.8584,
+          longitude: 2.2945,
+        },
+        "France",
+      ),
+    ).toBe(true);
+    expect(
+      isCountryDetailLandmarkMapSession("countryDetail", null, "France"),
+    ).toBe(false);
+    expect(
+      isCountryDetailLandmarkMapSession(
+        "travelMap",
+        {
+          id: "eiffel-tower",
+          name: "Eiffel Tower",
+          latitude: 48.8584,
+          longitude: 2.2945,
+        },
+        "France",
+      ),
+    ).toBe(false);
   });
 });

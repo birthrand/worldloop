@@ -17,6 +17,7 @@ import { Divider } from "@/components/ai-explorer/divider";
 import { StatItem } from "@/components/ai-explorer/stat-item";
 import { FlagBadge } from "@/components/explore/flag-badge";
 import { OnboardingCta } from "@/components/onboarding/onboarding-cta";
+import { TravelMapLegendBadges } from "@/components/travel-map/travel-map-legend-badges";
 import { COUNTRY_DETAIL_MODULE_BG } from "@/constants/country-detail-layout";
 import {
   EXPLORE_SWIPE_ACCENT_COLOR,
@@ -31,6 +32,7 @@ import {
   EXPLORE_SWIPE_TOUCH_TARGET,
 } from "@/constants/explore-swipe-layout";
 import { continentDisplayLabel } from "@/constants/regions";
+import type { TravelMapCountryPinCategory } from "@/constants/travel-map-legend";
 import {
   formatOfficialLanguages,
   formatPopulation,
@@ -40,6 +42,7 @@ import {
   languagesForMapCountry,
   mapCountryToCountry,
 } from "@/lib/map-country";
+import type { CountryDetailOrigin } from "@/lib/open-country-detail";
 import {
   openCountryDetail,
   warmCountryDetail,
@@ -54,6 +57,9 @@ type MapCountryPreviewCardProps = {
   bottomInset?: number;
   /** Explore → Map preview only — opens country detail with map return handoff. */
   showViewCountryCta?: boolean;
+  viewCountryFrom?: CountryDetailOrigin;
+  returnToMapAfterViewCountry?: boolean;
+  travelLegendCategories?: TravelMapCountryPinCategory[];
 };
 
 const COUNTRY_NAME_FONT_SIZE = EXPLORE_SWIPE_TEXT_HEADER;
@@ -87,6 +93,9 @@ export function MapCountryPreviewCard({
   onDismiss,
   bottomInset = 0,
   showViewCountryCta = false,
+  viewCountryFrom = "explore",
+  returnToMapAfterViewCountry = false,
+  travelLegendCategories = [],
 }: MapCountryPreviewCardProps) {
   const translateY = useSharedValue(0);
   const isDismissing = useSharedValue(false);
@@ -115,8 +124,8 @@ export function MapCountryPreviewCard({
   const handleViewCountry = () => {
     warmCountryDetail(countryForDetail);
     openCountryDetail(countryForDetail, {
-      from: "explore",
-      returnToMap: true,
+      from: viewCountryFrom,
+      returnToMap: returnToMapAfterViewCountry || showViewCountryCta,
     });
   };
 
@@ -230,6 +239,12 @@ export function MapCountryPreviewCard({
           </Pressable>
         </View>
 
+        {travelLegendCategories.length > 0 ? (
+          <View style={styles.legendBadgesWrap}>
+            <TravelMapLegendBadges countryCategories={travelLegendCategories} />
+          </View>
+        ) : null}
+
         <View style={styles.statsPanel}>
           <View style={styles.statsRow}>
             <StatItem
@@ -326,6 +341,9 @@ const styles = StyleSheet.create({
   },
   saveButtonPressed: {
     opacity: 0.78,
+  },
+  legendBadgesWrap: {
+    marginTop: 14,
   },
   statsPanel: {
     marginTop: PREVIEW_HEADER_STATS_GAP,

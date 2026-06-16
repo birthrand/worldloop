@@ -61,9 +61,9 @@ import {
 } from "@/lib/format-country";
 import { normalizeImageUrl } from "@/lib/normalize-image-url";
 import {
-  openCountryDetail,
+  openLandmarkCountryDetail,
   warmCountryDetail,
-} from "@/lib/open-country-detail";
+} from "@/lib/open-landmark-country-detail";
 import { useSavedLandmarksStore } from "@/store/use-saved-landmarks-store";
 import type { Country } from "@/types/country";
 import type { PlaceFeedItem } from "@/types/place-feed";
@@ -279,7 +279,7 @@ export function ExploreSwipePlaceCard({
   }, []);
 
   const openDetail = () => {
-    openCountryDetail(country, { from: "explore" });
+    openLandmarkCountryDetail(item, "explore");
   };
 
   const warmDetail = () => {

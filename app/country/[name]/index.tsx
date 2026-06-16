@@ -1,18 +1,25 @@
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, useWindowDimensions } from "react-native";
 import Animated, {
   useAnimatedScrollHandler,
   useSharedValue,
   type SharedValue,
 } from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 import { CountryDetailCollapsingHeader } from "@/components/ai-explorer/country-detail-collapsing-header";
 import { CountryProfileCard } from "@/components/ai-explorer/country-profile-card";
 import type { HeroMediaMode } from "@/components/explore/explore-swipe-card";
-import { getCountryDetailContentPaddingBottom } from "@/constants/country-detail-layout";
+import {
+  COUNTRY_DETAIL_LANDMARK_FOCUS_SCROLL_GAP,
+  getCountryDetailContentPaddingBottom,
+  getCountryDetailStickyHeaderBottom,
+} from "@/constants/country-detail-layout";
 import { EXPLORE_SWIPE_SCREEN_BG } from "@/constants/explore-swipe-layout";
 import { useAiExplorerCountry } from "@/hooks/use-ai-explorer-country";
 import type { CountryLandmark, CountryWikipediaSummary } from "@/lib/api";
@@ -20,6 +27,8 @@ import { getCachedCountryProfile } from "@/lib/country-profile-cache";
 import { getCountryImages } from "@/lib/format-country";
 import { navigateBackFromCountryDetail } from "@/lib/navigate-back-from-country-detail";
 import { focusCountryOnMap } from "@/lib/open-country-on-map";
+import { useCountryDetailFocusStore } from "@/store/use-country-detail-focus-store";
+import { useDiscoveryProgressStore } from "@/store/use-discovery-progress-store";
 import type { Country } from "@/types/country";
 
 function parseHeroIndex(value: string | string[] | undefined): number {
@@ -47,6 +56,7 @@ type CountryDetailScreenBodyProps = {
   initialHeroMediaMode: HeroMediaMode;
   screenHeight: number;
   scrollY: SharedValue<number>;
+  focusLandmarkId: string | null;
   onBack: () => void;
   onShowMap: () => void;
 };
@@ -61,14 +71,40 @@ function CountryDetailScreenBody({
   initialHeroMediaMode,
   screenHeight,
   scrollY,
+  focusLandmarkId,
   onBack,
   onShowMap,
 }: CountryDetailScreenBodyProps) {
+  const insets = useSafeAreaInsets();
+  const scrollRef = useRef<Animated.ScrollView>(null);
+  const hasScrolledToLandmarkRef = useRef(false);
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
       scrollY.value = event.contentOffset.y;
     },
   });
+
+  useEffect(() => {
+    hasScrolledToLandmarkRef.current = false;
+  }, [country.name, focusLandmarkId]);
+
+  const handleLandmarkFocusScroll = useCallback(
+    (offsetY: number) => {
+      if (!focusLandmarkId || hasScrolledToLandmarkRef.current) return;
+
+      hasScrolledToLandmarkRef.current = true;
+      const stickyHeaderBottom = getCountryDetailStickyHeaderBottom(insets.top);
+      const targetY = Math.max(
+        0,
+        offsetY - stickyHeaderBottom - COUNTRY_DETAIL_LANDMARK_FOCUS_SCROLL_GAP,
+      );
+
+      requestAnimationFrame(() => {
+        scrollRef.current?.scrollTo({ y: targetY, animated: true });
+      });
+    },
+    [focusLandmarkId, insets.top],
+  );
 
   return (
     <>
@@ -81,6 +117,7 @@ function CountryDetailScreenBody({
       />
 
       <Animated.ScrollView
+        ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={[
           styles.scrollContent,
@@ -102,6 +139,8 @@ function CountryDetailScreenBody({
           onShowMap={onShowMap}
           initialHeroIndex={initialHeroIndex}
           initialHeroMediaMode={initialHeroMediaMode}
+          focusLandmarkId={focusLandmarkId}
+          onLandmarkFocusScroll={handleLandmarkFocusScroll}
         />
       </Animated.ScrollView>
     </>
@@ -124,6 +163,25 @@ export default function CountryDetailScreen() {
   const { country, refreshing, wikipedia, landmarks } = useAiExplorerCountry();
   const { height: screenHeight } = useWindowDimensions();
   const scrollY = useSharedValue(0);
+  const [focusLandmarkId, setFocusLandmarkId] = useState(() =>
+    useCountryDetailFocusStore.getState().consumeFocusLandmarkId(),
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      const pendingFocusId = useCountryDetailFocusStore
+        .getState()
+        .consumeFocusLandmarkId();
+      if (pendingFocusId) {
+        setFocusLandmarkId(pendingFocusId);
+      }
+    }, []),
+  );
+
+  useEffect(() => {
+    if (!country.name?.trim()) return;
+    useDiscoveryProgressStore.getState().recordCountryDetailView(country);
+  }, [country.name, country.cca2, country.flag]);
   const [initialHeroIndex] = useState(() => parseHeroIndex(heroIndexParam));
   const [initialHeroMediaMode] = useState(() =>
     parseHeroMediaMode(heroMediaModeParam),
@@ -158,6 +216,7 @@ export default function CountryDetailScreen() {
         initialHeroMediaMode={initialHeroMediaMode}
         screenHeight={screenHeight}
         scrollY={scrollY}
+        focusLandmarkId={focusLandmarkId}
         onBack={handleBack}
         onShowMap={handleShowMap}
       />

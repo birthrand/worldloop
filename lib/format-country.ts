@@ -24,14 +24,268 @@ export function formatLandmarkDescription(description: string): string {
   return first.toUpperCase() + trimmed.slice(1);
 }
 
-/** Compact landmark type for card subtitles (e.g. UNESCO World Heritage Site → UNESCO Site). */
+const LANDMARK_DESCRIPTION_MIN_LENGTH = 20;
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** True when landmark copy is empty or a generic pipeline placeholder. */
+export function isLandmarkDescriptionThin(
+  description: string | undefined,
+  landmark: { name: string; type?: string },
+): boolean {
+  const trimmed = description?.trim() ?? "";
+  if (!trimmed || trimmed.length <= LANDMARK_DESCRIPTION_MIN_LENGTH) {
+    return true;
+  }
+
+  const name = escapeRegExp(landmark.name.trim());
+  const type = escapeRegExp(formatLandmarkTypeDisplay(landmark.type));
+
+  if (
+    new RegExp(`^${name}\\s*—\\s*.+\\s+in the region\\.?$`, "i").test(trimmed)
+  ) {
+    return true;
+  }
+
+  if (
+    new RegExp(`^${name}\\s+is a notable\\s+.+\\s+in the area\\.?$`, "i").test(
+      trimmed,
+    )
+  ) {
+    return true;
+  }
+
+  if (
+    type !== "Landmark" &&
+    new RegExp(`^${type}\\s+in\\s+`, "i").test(trimmed)
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+/** Compact landmark type for cards and stats — never the UNESCO heritage label. */
 export function formatLandmarkTypeDisplay(type?: string): string {
   const trimmed = type?.trim();
   if (!trimmed) return "Landmark";
   if (/^unesco world heritage site$/i.test(trimmed)) {
-    return "UNESCO Site";
+    return "Landmark";
   }
   return trimmed;
+}
+
+export function isLandmarkUnesco(landmark: {
+  type?: string;
+  description?: string;
+  isUnescoWorldHeritage?: boolean;
+}): boolean {
+  if (landmark.isUnescoWorldHeritage === true) return true;
+  if (landmark.isUnescoWorldHeritage === false) return false;
+
+  const type = landmark.type?.toLowerCase() ?? "";
+  const description = landmark.description?.toLowerCase() ?? "";
+  return (
+    type.includes("unesco") ||
+    type.includes("world heritage") ||
+    description.includes("unesco") ||
+    description.includes("world heritage")
+  );
+}
+
+export function formatLandmarkHeritageDisplay(): string {
+  return "UNESCO World Heritage Site";
+}
+
+export function formatLandmarkCity(city?: string | null): string {
+  const trimmed = city?.trim();
+  return trimmed || "—";
+}
+
+const WIKI_CITY_REJECT_WORDS = new Set([
+  "the",
+  "a",
+  "an",
+  "northern",
+  "southern",
+  "eastern",
+  "western",
+  "central",
+  "north",
+  "south",
+  "east",
+  "west",
+  "region",
+  "area",
+  "country",
+  "state",
+  "province",
+  "district",
+  "county",
+  "centre",
+  "center",
+  "heart",
+  "middle",
+  "old",
+  "new",
+  "inner",
+  "outer",
+  "upper",
+  "lower",
+  "greater",
+  "metropolitan",
+]);
+
+const WIKI_CITY_REJECT_PHRASE =
+  /\b(river|island|mount|mountain|valley|lake|sea|ocean|harbor|harbour|square|street|road|bank of|north of|south of|east of|west of)\b/i;
+
+function normalizeWikiCityCandidate(raw: string): string | null {
+  let city = raw.trim().replace(/\s+/g, " ");
+  city = city.replace(/\s+(metropolitan area|area|region)$/i, "").trim();
+  if (city.length < 2) return null;
+  if (WIKI_CITY_REJECT_PHRASE.test(city)) return null;
+
+  const lower = city.toLowerCase();
+  if (WIKI_CITY_REJECT_WORDS.has(lower)) return null;
+  if (/^(the|a|an)\s/i.test(city)) return null;
+
+  return city;
+}
+
+function wikiCountryNamesMatch(
+  candidate: string,
+  countryName: string,
+): boolean {
+  const left = candidate.trim().toLowerCase();
+  const right = countryName.trim().toLowerCase();
+  if (!left || !right) return false;
+  return left === right || left.startsWith(right) || right.startsWith(left);
+}
+
+const WIKI_CITY_NAME = String.raw`[\p{L}][\p{L}\s'.-]*?`;
+
+function splitWikiSentences(text: string): string[] {
+  const normalized = text.trim().replace(/\s+/g, " ");
+  if (!normalized) return [];
+
+  return normalized
+    .split(/(?<=[.!?])\s+/)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean);
+}
+
+function inferCityFromWikiText(
+  text: string,
+  countryName?: string,
+): string | null {
+  const tryMatch = (pattern: RegExp): string | null => {
+    const match = text.match(pattern);
+    if (!match?.[1]) return null;
+    return normalizeWikiCityCandidate(match[1]);
+  };
+
+  let city = tryMatch(
+    new RegExp(`\\b(?:the )?city of (${WIKI_CITY_NAME})(?=[,;.]|$)`, "iu"),
+  );
+  if (city) return city;
+
+  city = tryMatch(
+    new RegExp(
+      `\\bin the(?: [\\p{L}\\w-]+)? city of (${WIKI_CITY_NAME})(?=[,;.]|$)`,
+      "iu",
+    ),
+  );
+  if (city) return city;
+
+  city = tryMatch(
+    new RegExp(
+      `\\b(?:located|situated) in (?:the )?(${WIKI_CITY_NAME})(?=[,;.]|$)`,
+      "iu",
+    ),
+  );
+  if (city) return city;
+
+  city = tryMatch(
+    new RegExp(`\\b(?:centre|center) of (${WIKI_CITY_NAME})(?=[,;.]|$)`, "iu"),
+  );
+  if (city) return city;
+
+  city = tryMatch(new RegExp(`\\bnear (${WIKI_CITY_NAME})(?=[,;.]|$)`, "iu"));
+  if (city) return city;
+
+  const country = countryName?.trim();
+  if (country) {
+    city = tryMatch(
+      new RegExp(
+        `\\bin (${WIKI_CITY_NAME}),\\s*${escapeRegExp(country)}(?:\\s|,|\\.|$)`,
+        "iu",
+      ),
+    );
+    if (city) return city;
+
+    const commaMatch = text.match(
+      new RegExp(`\\bin (${WIKI_CITY_NAME}),\\s*([^.,;]+)`, "iu"),
+    );
+    if (
+      commaMatch?.[1] &&
+      commaMatch[2] &&
+      wikiCountryNamesMatch(commaMatch[2], country)
+    ) {
+      city = normalizeWikiCityCandidate(commaMatch[1]);
+      if (city) return city;
+    }
+  }
+
+  city = tryMatch(new RegExp(`\\bin (${WIKI_CITY_NAME}),\\s+\\p{L}`, "iu"));
+  if (city) return city;
+
+  return null;
+}
+
+/** Best-effort city from a Wikipedia lead paragraph when structured data is missing. */
+export function inferLandmarkCityFromWikipediaExtract(
+  extract: string,
+  countryName?: string,
+): string | null {
+  const paragraph = extract.trim().replace(/\s+/g, " ");
+  if (!paragraph) return null;
+
+  for (const sentence of splitWikiSentences(paragraph)) {
+    const city = inferCityFromWikiText(sentence, countryName);
+    if (city) return city;
+  }
+
+  return inferCityFromWikiText(paragraph, countryName);
+}
+
+/** Try several text sources (Wikipedia extract, pipeline description, AI fact). */
+export function inferLandmarkCityFromTextSources(
+  sources: Array<string | null | undefined>,
+  countryName?: string,
+): string | null {
+  for (const source of sources) {
+    const trimmed = source?.trim();
+    if (!trimmed) continue;
+
+    const city = inferLandmarkCityFromWikipediaExtract(trimmed, countryName);
+    if (city) return city;
+  }
+
+  return null;
+}
+
+export function formatLandmarkYearBuilt(yearBuilt?: number | null): string {
+  if (
+    typeof yearBuilt !== "number" ||
+    !Number.isFinite(yearBuilt) ||
+    yearBuilt <= 0
+  ) {
+    return "—";
+  }
+
+  return String(Math.round(yearBuilt));
 }
 
 /** Compact population label (e.g. 33.7M). */
@@ -132,6 +386,16 @@ export function formatClimateZone(latlng: [number, number]): string {
 export function getCountryImages(country: { images?: string[] }): string[] {
   if (!country.images?.length) return [];
   return normalizeImageUrls(country.images);
+}
+
+/** Hero image for country cards (saved, visited, history lists). */
+export function getCountryCardHeroUri(country: {
+  images?: string[];
+  flag?: string;
+}): string | undefined {
+  const images = getCountryImages(country);
+  const flag = country.flag?.trim();
+  return images[0] ?? (flag ? flag : undefined);
 }
 
 function isValidVideoUrl(url: string | undefined): boolean {

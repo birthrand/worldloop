@@ -29,6 +29,7 @@ import {
   type WorldMapViewHandle,
 } from "@/components/map/world-map-view";
 import { MAP_FOCUS_SCRIM_RGB } from "@/constants/map-continent-focus";
+import type { TravelMapCountryPinCategory } from "@/constants/travel-map-legend";
 import type { MapCluster } from "@/lib/map-clusters";
 import type { MapPressCoordinate } from "@/lib/map-map-tap-hit";
 import type { MapMarkerPresentation } from "@/lib/map-region-markers";
@@ -40,9 +41,11 @@ import {
   shouldShowGlobeLayer,
   type MapViewTransition,
 } from "@/lib/map-view-transition";
+import type { TravelMapLandmarkPin } from "@/lib/travel-map-pins";
 import { useMapStore } from "@/store/use-map-store";
 import type { CountryMarkerDisplayMode } from "@/store/use-map-ui-store";
 import type { MapCountry } from "@/types/country";
+import type { MapLandmarkFocus } from "@/types/map-presentation";
 
 export type MapCanvasHandle = {
   animateToRegion: (region: Region, duration?: number) => void;
@@ -85,6 +88,11 @@ type MapCanvasProps = {
   exploreMapHandoff?: boolean;
   /** 2D only — render a single selected-country flag (explore preview or country detail). */
   flatSingleCountryFlag?: boolean;
+  travelMapSession?: boolean;
+  travelCategoryByName?: Record<string, TravelMapCountryPinCategory>;
+  landmarkPin?: MapLandmarkFocus | null;
+  landmarkPins?: TravelMapLandmarkPin[];
+  onLandmarkPinPress?: (pin: TravelMapLandmarkPin) => void;
   lockUserGestures?: boolean;
   autoRotateEnabled?: boolean;
   /** Keeps map markers updating while the camera animates (e.g. Explore → Map). */
@@ -124,6 +132,11 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
       onRegionChangeComplete,
       exploreMapHandoff = false,
       flatSingleCountryFlag = false,
+      travelMapSession = false,
+      travelCategoryByName,
+      landmarkPin = null,
+      landmarkPins = [],
+      onLandmarkPinPress,
       lockUserGestures = false,
       autoRotateEnabled = true,
       suspendMarkerSnapshot = false,
@@ -335,6 +348,11 @@ export const MapCanvas = forwardRef<MapCanvasHandle, MapCanvasProps>(
       lockUserGestures,
       suspendMarkerSnapshot,
       markerRefreshToken,
+      travelMapSession,
+      travelCategoryByName,
+      landmarkPin,
+      landmarkPins,
+      onLandmarkPinPress,
     };
 
     return (

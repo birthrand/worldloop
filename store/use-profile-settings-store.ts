@@ -3,18 +3,14 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 type ProfileSettingsState = {
-  darkModeEnabled: boolean;
   languageCode: string;
-  setDarkModeEnabled: (enabled: boolean) => void;
   setLanguageCode: (code: string) => void;
 };
 
 export const useProfileSettingsStore = create<ProfileSettingsState>()(
   persist(
     (set) => ({
-      darkModeEnabled: true,
       languageCode: "en",
-      setDarkModeEnabled: (enabled) => set({ darkModeEnabled: enabled }),
       setLanguageCode: (code) => set({ languageCode: code }),
     }),
     {

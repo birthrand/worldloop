@@ -45,6 +45,19 @@ export const COUNTRY_DETAIL_STICKY_HEADER_ROW_HEIGHT = 44;
 /** Extra top padding on the sticky header bar. */
 export const COUNTRY_DETAIL_STICKY_HEADER_PADDING_TOP = 8;
 
+/** Breathing room below the sticky header when scrolling to a landmark card. */
+export const COUNTRY_DETAIL_LANDMARK_FOCUS_SCROLL_GAP = 10;
+
+export function getCountryDetailStickyHeaderBottom(
+  safeAreaTop: number,
+): number {
+  return (
+    safeAreaTop +
+    COUNTRY_DETAIL_STICKY_HEADER_PADDING_TOP +
+    COUNTRY_DETAIL_STICKY_HEADER_ROW_HEIGHT
+  );
+}
+
 export function getCountryDetailHeroHeight(screenHeight: number): number {
   return Math.round(screenHeight * COUNTRY_DETAIL_HERO_HEIGHT_RATIO);
 }

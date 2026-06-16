@@ -3,7 +3,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { ProfileCompletionCard } from "@/components/profile/profile-completion-card";
+import {
+  ProfileCompletionCard,
+  type ProfileCompletionItemId,
+} from "@/components/profile/profile-completion-card";
 import { images } from "@/constants/images";
 import {
   PROFILE_EDIT_BADGE_BG,
@@ -18,7 +21,11 @@ function showComingSoon(label: string) {
   Alert.alert(label, "This feature is coming in a later lesson.");
 }
 
-export function ProfileSettingsHeader() {
+export function ProfileSettingsHeader({
+  onCompletionAdd,
+}: {
+  onCompletionAdd?: (id: ProfileCompletionItemId) => void;
+}) {
   const { user } = useUser();
 
   const emailLocal = user?.primaryEmailAddress?.emailAddress?.split("@")[0];
@@ -80,7 +87,7 @@ export function ProfileSettingsHeader() {
         </Text>
       </View>
 
-      <ProfileCompletionCard />
+      <ProfileCompletionCard onAddItem={onCompletionAdd} />
     </View>
   );
 }

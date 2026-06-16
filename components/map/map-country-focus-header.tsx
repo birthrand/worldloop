@@ -24,19 +24,22 @@ const HEADER_TITLE_TRAILING_INSET =
   HEADER_SIDE_INSET + HEADER_HORIZONTAL_PADDING;
 
 type MapCountryFocusHeaderProps = {
-  title: string;
+  title?: string;
   onBack: () => void;
   backAccessibilityLabel?: string;
   /** Subtle fade while the preview sheet is open. */
   dimmed?: boolean;
+  /** Landmark map handoff — back button only, no title. */
+  backOnly?: boolean;
 };
 
 /** Explore / country-detail handoff — back + title over a black top scrim. */
 export function MapCountryFocusHeader({
-  title,
+  title = "",
   onBack,
   backAccessibilityLabel = "Go back",
   dimmed = false,
+  backOnly = false,
 }: MapCountryFocusHeaderProps) {
   const insets = useSafeAreaInsets();
   const barPaddingTop = insets.top + HEADER_PADDING_TOP;
@@ -81,13 +84,23 @@ export function MapCountryFocusHeader({
             />
           </Pressable>
 
-          <View style={styles.titleWrap}>
-            <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">
-              {title}
-            </Text>
-          </View>
+          {backOnly ? (
+            <View style={styles.titleSpacer} />
+          ) : (
+            <>
+              <View style={styles.titleWrap}>
+                <Text
+                  style={styles.title}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {title}
+                </Text>
+              </View>
 
-          <View style={styles.titleTrailingInset} />
+              <View style={styles.titleTrailingInset} />
+            </>
+          )}
         </View>
       </View>
     </View>
@@ -136,6 +149,10 @@ const styles = StyleSheet.create({
   backSlotPressed: {
     opacity: 0.88,
     transform: [{ scale: 0.96 }],
+  },
+  titleSpacer: {
+    flex: 1,
+    minWidth: 0,
   },
   titleWrap: {
     flex: 1,

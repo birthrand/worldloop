@@ -163,6 +163,17 @@ export function parseOptionalSearchQuery(raw: unknown): string | undefined {
   return trimmed;
 }
 
+export function parseRequiredSearchQuery(
+  raw: unknown,
+  fieldName = "query",
+): string {
+  const value = parseOptionalSearchQuery(raw);
+  if (!value) {
+    throw new HttpError(`${fieldName} is required`, 400, "INVALID_QUERY");
+  }
+  return value;
+}
+
 export function parseOptionalRegion(raw: unknown): string | undefined {
   if (raw === undefined) return undefined;
 

@@ -39,6 +39,8 @@ const HEADER_RIGHT_INSET =
   HEADER_SIDE_BUTTON_SIZE * 2 +
   HEADER_ACTION_GAP +
   HEADER_TITLE_GAP;
+/** Balance title against the wider chrome side so the name stays screen-centered. */
+const HEADER_TITLE_INSET = Math.max(HEADER_SIDE_INSET, HEADER_RIGHT_INSET);
 
 type CountryDetailCollapsingHeaderProps = {
   country: Country;
@@ -353,8 +355,8 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
     bottom: 0,
-    paddingLeft: HEADER_SIDE_INSET,
-    paddingRight: HEADER_RIGHT_INSET,
+    paddingLeft: HEADER_TITLE_INSET,
+    paddingRight: HEADER_TITLE_INSET,
     justifyContent: "center",
     alignItems: "center",
   },
