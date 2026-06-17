@@ -21,6 +21,7 @@ type ProfileSettingsRowProps = {
   onPress?: () => void;
   isLast?: boolean;
   variant?: "default" | "field";
+  disabled?: boolean;
 };
 
 export function ProfileSettingsRow({
@@ -35,14 +36,20 @@ export function ProfileSettingsRow({
   onPress,
   isLast = false,
   variant = "default",
+  disabled = false,
 }: ProfileSettingsRowProps) {
   const isField = variant === "field";
+  const showRowChevron = showChevron && !disabled;
 
   const content = (
     <>
-      <View style={styles.left}>
-        <View style={styles.iconBox}>
-          <Ionicons name={icon} size={18} color={PROFILE_ICON} />
+      <View style={[styles.left, disabled && styles.leftDisabled]}>
+        <View style={[styles.iconBox, disabled && styles.iconBoxDisabled]}>
+          <Ionicons
+            name={icon}
+            size={18}
+            color={disabled ? "rgba(255,255,255,0.35)" : PROFILE_ICON}
+          />
         </View>
         <View style={styles.textBlock}>
           <Text
@@ -51,12 +58,14 @@ export function ProfileSettingsRow({
                 ? "text-[11px] font-medium uppercase tracking-[0.6px] text-white/45"
                 : "font-medium text-[15px] text-white"
             }
+            style={disabled ? { color: "rgba(255,255,255,0.35)" } : undefined}
           >
             {label}
           </Text>
           {isField && value ? (
             <Text
               className="mt-0.5 text-[15px] leading-5 text-white"
+              style={disabled ? { color: "rgba(255,255,255,0.45)" } : undefined}
               numberOfLines={1}
               ellipsizeMode="tail"
             >
@@ -95,7 +104,7 @@ export function ProfileSettingsRow({
             thumbColor="#ffffff"
             ios_backgroundColor="rgba(255,255,255,0.18)"
           />
-        ) : showChevron ? (
+        ) : showRowChevron ? (
           <Ionicons
             name="chevron-forward"
             size={17}
@@ -106,7 +115,7 @@ export function ProfileSettingsRow({
     </>
   );
 
-  if (showToggle) {
+  if (showToggle || disabled) {
     return (
       <View style={[styles.row, !isLast && styles.rowBorder]}>{content}</View>
     );
@@ -171,5 +180,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
     flexShrink: 0,
+  },
+  leftDisabled: {
+    opacity: 0.92,
+  },
+  iconBoxDisabled: {
+    backgroundColor: "rgba(255, 255, 255, 0.03)",
   },
 });

@@ -2,6 +2,7 @@ import type { CountryLandmark } from "../types/landmarks.js";
 import {
   landmarkId,
   mapOsmType,
+  parseLandmarkYearBuilt,
   trimDescription,
 } from "../utils/landmark-ranking.js";
 import { logger } from "../utils/logger.js";
@@ -95,6 +96,31 @@ function isExcludedOsmElement(tags: Record<string, string>): boolean {
   return false;
 }
 
+function parseOsmCity(tags: Record<string, string>): string | null {
+  for (const key of ["addr:city", "is_in:city", "addr:place"]) {
+    const value = tags[key]?.trim();
+    if (value) return value;
+  }
+
+  return null;
+}
+
+function parseOsmYearBuilt(tags: Record<string, string>): number | null {
+  for (const key of [
+    "start_date",
+    "building:year",
+    "construction_date",
+    "year",
+  ]) {
+    const value = tags[key]?.trim();
+    if (!value) continue;
+    const year = parseLandmarkYearBuilt(value);
+    if (year !== null) return year;
+  }
+
+  return null;
+}
+
 function elementToLandmark(element: OverpassElement): CountryLandmark | null {
   const tags = element.tags ?? {};
   const name = tags.name?.trim();
@@ -121,6 +147,8 @@ function elementToLandmark(element: OverpassElement): CountryLandmark | null {
     longitude: lon,
     imageUrl: null,
     source: "osm",
+    yearBuilt: parseOsmYearBuilt(tags),
+    city: parseOsmCity(tags),
   };
 }
 

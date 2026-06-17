@@ -15,6 +15,7 @@ import MapView, {
 import { MapContinentFocusLayers } from "@/components/map/map-continent-focus-layers";
 import { MapCountryFocusLayers } from "@/components/map/map-country-focus-layers";
 import { MapCountryMarker } from "@/components/map/map-country-marker";
+import { MapLandmarkPin } from "@/components/map/map-landmark-pin";
 import {
   boundaryStyleRenderKey,
   resolveBoundaryStrokeColor,
@@ -30,6 +31,7 @@ import {
 } from "@/constants/map-country-focus";
 import { MAP_DARK_STYLE } from "@/constants/map-dark-style";
 import { WORLD_INITIAL_REGION } from "@/constants/map-regions";
+import type { TravelMapCountryPinCategory } from "@/constants/travel-map-legend";
 import { getMapDisplayLatLng } from "@/lib/map-country";
 import {
   countryNamesMatch,
@@ -44,11 +46,13 @@ import {
   type MapMarkerPresentation,
 } from "@/lib/map-region-markers";
 import { areRegionBoundariesTappable } from "@/lib/map-signal-sources";
+import type { TravelMapLandmarkPin } from "@/lib/travel-map-pins";
 import {
   useMapUiStore,
   type CountryMarkerDisplayMode,
 } from "@/store/use-map-ui-store";
 import type { MapCountry } from "@/types/country";
+import type { MapLandmarkFocus } from "@/types/map-presentation";
 
 const countriesGeoJson = require("@/assets/geo/ne_50m_admin_0_countries/ne_50m_admin_0_countries.json");
 
@@ -131,6 +135,11 @@ type WorldMapViewProps = {
   exploreMapHandoff?: boolean;
   /** 2D only — single selected-country flag (explore preview or country detail). */
   flatSingleCountryFlag?: boolean;
+  travelMapSession?: boolean;
+  travelCategoryByName?: Record<string, TravelMapCountryPinCategory>;
+  landmarkPin?: MapLandmarkFocus | null;
+  landmarkPins?: TravelMapLandmarkPin[];
+  onLandmarkPinPress?: (pin: TravelMapLandmarkPin) => void;
 };
 
 export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
@@ -161,6 +170,11 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
       spreadNearbyMarkers = false,
       exploreMapHandoff = false,
       flatSingleCountryFlag = false,
+      travelMapSession = false,
+      travelCategoryByName,
+      landmarkPin = null,
+      landmarkPins = [],
+      onLandmarkPinPress,
     },
     ref,
   ) {
@@ -295,10 +309,9 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
       : showCountryHighlight
         ? countryFocusStyleRenderKey(boundaryStyle)
         : boundaryStyleRenderKey(boundaryStyle, zoomTier);
-    const boundariesTappable = areRegionBoundariesTappable(
-      boundaryFocusRegion,
-      zoomTier,
-    );
+    const boundariesTappable = travelMapSession
+      ? false
+      : areRegionBoundariesTappable(boundaryFocusRegion, zoomTier);
     const boundaryZIndex = showExploreHandoffBoundaries
       ? MAP_COUNTRY_FOCUS_STROKE_Z + 1
       : showCountryHighlight
@@ -429,6 +442,21 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
               );
             })
           : null}
+        {landmarkPins.map((pin) => (
+          <MapLandmarkPin
+            key={`travel-landmark-${pin.id}`}
+            landmark={pin}
+            category={pin.category}
+            selected={landmarkPin?.id === pin.id}
+            onPress={
+              onLandmarkPinPress ? () => onLandmarkPinPress(pin) : undefined
+            }
+          />
+        ))}
+        {landmarkPin &&
+        !landmarkPins.some((pin) => pin.id === landmarkPin.id) ? (
+          <MapLandmarkPin landmark={landmarkPin} />
+        ) : null}
         {markerCountries.map((country) => {
           const isSelected = focusCountryName === country.name;
           const isFocusTransitioning =
@@ -467,6 +495,7 @@ export const WorldMapView = forwardRef<WorldMapViewHandle, WorldMapViewProps>(
               keepLive={keepSingleMarkerLive || isHighlighted}
               suspendSnapshot={suspendMarkerSnapshot && isHighlighted}
               refreshToken={isHighlighted ? markerRefreshToken : 0}
+              travelCategory={travelCategoryByName?.[country.name]}
               onPress={() => onCountryPress(country)}
             />
           );

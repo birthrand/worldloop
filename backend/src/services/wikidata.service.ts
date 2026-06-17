@@ -1,7 +1,9 @@
 import type { CountryLandmark } from "../types/landmarks.js";
 import {
+  isUnescoWorldHeritageSite,
   landmarkId,
   mapWikidataType,
+  parseLandmarkYearBuilt,
   trimDescription,
 } from "../utils/landmark-ranking.js";
 import { logger } from "../utils/logger.js";
@@ -42,7 +44,7 @@ function buildHeritageQuery(cca2: string): string {
   const code = cca2.trim().toUpperCase();
 
   return `
-SELECT DISTINCT ?item ?itemLabel ?description ?coord ?image ?instanceLabel ?heritageLabel WHERE {
+SELECT DISTINCT ?item ?itemLabel ?description ?coord ?image ?instanceLabel ?heritageLabel ?inception ?locationLabel WHERE {
   ?country wdt:P297 "${code}" .
   ?item wdt:P17 ?country .
   ?item wdt:P625 ?coord .
@@ -53,6 +55,12 @@ SELECT DISTINCT ?item ?itemLabel ?description ?coord ?image ?instanceLabel ?heri
     FILTER(LANG(?description) = "en")
   }
   OPTIONAL { ?item wdt:P18 ?image }
+  OPTIONAL { ?item wdt:P571 ?inception . }
+  OPTIONAL {
+    ?item wdt:P131 ?location .
+    ?location rdfs:label ?locationLabel .
+    FILTER(LANG(?locationLabel) = "en")
+  }
   OPTIONAL {
     ?item wdt:P31 ?instance .
     ?instance rdfs:label ?instanceLabel .
@@ -74,7 +82,7 @@ function buildTypedLandmarksQuery(cca2: string): string {
   const typeValues = DIRECT_INSTANCE_TYPES.join(" ");
 
   return `
-SELECT DISTINCT ?item ?itemLabel ?description ?coord ?image ?instanceLabel ?heritageLabel WHERE {
+SELECT DISTINCT ?item ?itemLabel ?description ?coord ?image ?instanceLabel ?heritageLabel ?inception ?locationLabel WHERE {
   ?country wdt:P297 "${code}" .
   ?item wdt:P17 ?country .
   ?item wdt:P625 ?coord .
@@ -93,6 +101,12 @@ SELECT DISTINCT ?item ?itemLabel ?description ?coord ?image ?instanceLabel ?heri
     FILTER(LANG(?description) = "en")
   }
   OPTIONAL { ?item wdt:P18 ?image }
+  OPTIONAL { ?item wdt:P571 ?inception . }
+  OPTIONAL {
+    ?item wdt:P131 ?location .
+    ?location rdfs:label ?locationLabel .
+    FILTER(LANG(?locationLabel) = "en")
+  }
   OPTIONAL {
     ?item wdt:P31 ?instance .
     ?instance rdfs:label ?instanceLabel .
@@ -116,7 +130,7 @@ function buildLocatedInTypedQuery(cca2: string): string {
   const typeValues = DIRECT_INSTANCE_TYPES.join(" ");
 
   return `
-SELECT DISTINCT ?item ?itemLabel ?description ?coord ?image ?instanceLabel ?heritageLabel WHERE {
+SELECT DISTINCT ?item ?itemLabel ?description ?coord ?image ?instanceLabel ?heritageLabel ?inception ?locationLabel WHERE {
   ?country wdt:P297 "${code}" .
   ?item wdt:P131 ?country .
   ?item wdt:P625 ?coord .
@@ -135,6 +149,12 @@ SELECT DISTINCT ?item ?itemLabel ?description ?coord ?image ?instanceLabel ?heri
     FILTER(LANG(?description) = "en")
   }
   OPTIONAL { ?item wdt:P18 ?image }
+  OPTIONAL { ?item wdt:P571 ?inception . }
+  OPTIONAL {
+    ?item wdt:P131 ?location .
+    ?location rdfs:label ?locationLabel .
+    FILTER(LANG(?locationLabel) = "en")
+  }
   OPTIONAL {
     ?item wdt:P31 ?instance .
     ?instance rdfs:label ?instanceLabel .
@@ -157,7 +177,7 @@ function buildBroadCountryQuery(cca2: string): string {
   const code = cca2.trim().toUpperCase();
 
   return `
-SELECT DISTINCT ?item ?itemLabel ?description ?coord ?image ?instanceLabel ?heritageLabel WHERE {
+SELECT DISTINCT ?item ?itemLabel ?description ?coord ?image ?instanceLabel ?heritageLabel ?inception ?locationLabel WHERE {
   ?country wdt:P297 "${code}" .
   ?item wdt:P17 ?country .
   ?item wdt:P625 ?coord .
@@ -171,6 +191,12 @@ SELECT DISTINCT ?item ?itemLabel ?description ?coord ?image ?instanceLabel ?heri
   OPTIONAL {
     ?item schema:description ?description .
     FILTER(LANG(?description) = "en")
+  }
+  OPTIONAL { ?item wdt:P571 ?inception . }
+  OPTIONAL {
+    ?item wdt:P131 ?location .
+    ?location rdfs:label ?locationLabel .
+    FILTER(LANG(?locationLabel) = "en")
   }
   OPTIONAL {
     ?item wdt:P31 ?instance .
@@ -239,7 +265,8 @@ function bindingToLandmark(binding: SparqlBinding): CountryLandmark | null {
 
   const instanceLabel = binding.instanceLabel?.value?.trim() ?? null;
   const heritageLabel = binding.heritageLabel?.value?.trim() ?? null;
-  const type = mapWikidataType(instanceLabel, heritageLabel);
+  const type = mapWikidataType(instanceLabel);
+  const isUnescoWorldHeritage = isUnescoWorldHeritageSite(heritageLabel);
 
   const rawDescription = binding.description?.value?.trim() ?? "";
   const description = rawDescription
@@ -248,6 +275,9 @@ function bindingToLandmark(binding: SparqlBinding): CountryLandmark | null {
 
   const imageRaw = binding.image?.value?.trim() ?? "";
   const imageUrl = imageRaw ? resolveCommonsImageUrl(imageRaw) : null;
+  const inceptionRaw = binding.inception?.value?.trim() ?? "";
+  const yearBuilt = inceptionRaw ? parseLandmarkYearBuilt(inceptionRaw) : null;
+  const city = binding.locationLabel?.value?.trim() || null;
 
   return {
     id: landmarkId(name),
@@ -258,6 +288,9 @@ function bindingToLandmark(binding: SparqlBinding): CountryLandmark | null {
     longitude: coords?.longitude ?? null,
     imageUrl,
     source: "wikidata",
+    yearBuilt,
+    city,
+    ...(isUnescoWorldHeritage ? { isUnescoWorldHeritage: true } : {}),
   };
 }
 

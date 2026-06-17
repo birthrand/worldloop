@@ -3,6 +3,7 @@ import {
   Modal,
   Pressable,
   StyleSheet,
+  useWindowDimensions,
   View,
   type StyleProp,
   type ViewStyle,
@@ -13,32 +14,42 @@ import Animated, {
   Extrapolation,
   interpolate,
   runOnJS,
-  SlideInDown,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
   withTiming,
 } from "react-native-reanimated";
 
-const SHEET_ENTER = SlideInDown.springify()
-  .damping(20)
-  .stiffness(150)
-  .mass(0.85);
+const SHEET_ENTER_SPRING = {
+  damping: 20,
+  stiffness: 150,
+  mass: 0.85,
+};
 
 const SHEET_DISMISS_DRAG_PX = 88;
 const SHEET_DISMISS_VELOCITY = 900;
-const SHEET_DISMISS_EXIT_PX = 420;
-const SHEET_DISMISS_DURATION_MS = 220;
+const SHEET_DISMISS_DURATION_MS = 280;
 const BACKDROP_MAX_OPACITY = 0.55;
+const BACKDROP_FADE_IN_MS = 280;
+
+function dismissDurationMs(distancePx: number, screenHeight: number): number {
+  const normalized = Math.min(1, distancePx / screenHeight);
+  return Math.round(SHEET_DISMISS_DURATION_MS * (0.55 + normalized * 0.45));
+}
 
 type SwipeDismissSheetProps = {
   visible: boolean;
   onClose: () => void;
   children: ReactNode;
   sheetStyle?: StyleProp<ViewStyle>;
+  /** Backdrop opacity at rest (fades to 0 while swiping down). */
+  backdropMaxOpacity?: number;
   backdropAccessibilityLabel?: string;
   accessibilityLabel?: string;
   accessibilityHint?: string;
+  /** When false, sheet stays off-screen until ready — backdrop still fades in. */
+  enterReady?: boolean;
+  onEntered?: () => void;
 };
 
 export function SwipeDismissSheet({
@@ -46,33 +57,60 @@ export function SwipeDismissSheet({
   onClose,
   children,
   sheetStyle,
+  backdropMaxOpacity = BACKDROP_MAX_OPACITY,
   backdropAccessibilityLabel = "Close sheet",
   accessibilityLabel,
   accessibilityHint = "Swipe down to close",
+  enterReady = true,
+  onEntered,
 }: SwipeDismissSheetProps) {
+  const { height: screenHeight } = useWindowDimensions();
+  const dismissExitY = screenHeight;
   const canCloseFromBackdropRef = useRef(false);
-  const translateY = useSharedValue(0);
+  const translateY = useSharedValue(screenHeight);
+  const backdropEnter = useSharedValue(0);
   const isDismissing = useSharedValue(false);
 
   useEffect(() => {
     if (!visible) {
       canCloseFromBackdropRef.current = false;
       cancelAnimation(translateY);
-      translateY.value = 0;
+      cancelAnimation(backdropEnter);
+      translateY.value = dismissExitY;
+      backdropEnter.value = 0;
       isDismissing.value = false;
       return;
     }
 
     cancelAnimation(translateY);
-    translateY.value = 0;
+    cancelAnimation(backdropEnter);
     isDismissing.value = false;
+    backdropEnter.value = 0;
+    translateY.value = dismissExitY;
+
+    if (!enterReady) return;
+
+    backdropEnter.value = withTiming(1, { duration: BACKDROP_FADE_IN_MS });
+    translateY.value = withSpring(0, SHEET_ENTER_SPRING, (finished) => {
+      if (finished && onEntered) {
+        runOnJS(onEntered)();
+      }
+    });
 
     const timeout = setTimeout(() => {
       canCloseFromBackdropRef.current = true;
     }, 120);
 
     return () => clearTimeout(timeout);
-  }, [visible, isDismissing, translateY]);
+  }, [
+    visible,
+    enterReady,
+    backdropEnter,
+    dismissExitY,
+    isDismissing,
+    onEntered,
+    translateY,
+  ]);
 
   const dismissSheet = useCallback(() => {
     if (isDismissing.value) return;
@@ -80,16 +118,17 @@ export function SwipeDismissSheet({
     isDismissing.value = true;
     canCloseFromBackdropRef.current = false;
 
+    const distance = dismissExitY - translateY.value;
     translateY.value = withTiming(
-      SHEET_DISMISS_EXIT_PX,
-      { duration: SHEET_DISMISS_DURATION_MS },
+      dismissExitY,
+      { duration: dismissDurationMs(distance, dismissExitY) },
       (finished) => {
         if (finished) {
           runOnJS(onClose)();
         }
       },
     );
-  }, [isDismissing, onClose, translateY]);
+  }, [dismissExitY, isDismissing, onClose, translateY]);
 
   const handleBackdropClose = () => {
     if (!canCloseFromBackdropRef.current || isDismissing.value) return;
@@ -118,9 +157,14 @@ export function SwipeDismissSheet({
           }
 
           isDismissing.value = true;
+          const distance = dismissExitY - translateY.value;
+          const duration = Math.round(
+            SHEET_DISMISS_DURATION_MS *
+              (0.55 + Math.min(1, distance / dismissExitY) * 0.45),
+          );
           translateY.value = withTiming(
-            SHEET_DISMISS_EXIT_PX,
-            { duration: SHEET_DISMISS_DURATION_MS },
+            dismissExitY,
+            { duration },
             (finished) => {
               if (finished) {
                 runOnJS(onClose)();
@@ -128,21 +172,26 @@ export function SwipeDismissSheet({
             },
           );
         }),
-    [isDismissing, onClose, translateY],
+    [dismissExitY, isDismissing, onClose, translateY],
   );
 
-  const backdropStyle = useAnimatedStyle(() => ({
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#000000",
-    opacity: interpolate(
+  const backdropStyle = useAnimatedStyle(() => {
+    const dismissProgress = interpolate(
       translateY.value,
-      [0, SHEET_DISMISS_EXIT_PX],
-      [BACKDROP_MAX_OPACITY, 0],
+      [0, dismissExitY],
+      [1, 0],
       Extrapolation.CLAMP,
-    ),
-  }));
+    );
+
+    return {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "#000000",
+      opacity: backdropMaxOpacity * backdropEnter.value * dismissProgress,
+    };
+  });
 
   const dragStyle = useAnimatedStyle(() => ({
+    opacity: backdropEnter.value > 0.01 ? 1 : 0,
     transform: [{ translateY: translateY.value }],
   }));
 
@@ -155,7 +204,7 @@ export function SwipeDismissSheet({
       statusBarTranslucent
       onRequestClose={handleBackdropClose}
     >
-      <View style={styles.modalOverlay}>
+      <View style={[styles.modalOverlay, { height: screenHeight }]}>
         <Animated.View style={backdropStyle}>
           <Pressable
             style={StyleSheet.absoluteFill}
@@ -166,10 +215,7 @@ export function SwipeDismissSheet({
         </Animated.View>
         {visible ? (
           <GestureDetector gesture={panGesture}>
-            <Animated.View
-              entering={SHEET_ENTER}
-              style={styles.sheetEnterWrapper}
-            >
+            <Animated.View style={styles.sheetEnterWrapper}>
               <Animated.View
                 style={[sheetStyle, dragStyle]}
                 accessibilityViewIsModal
@@ -189,7 +235,7 @@ export function SwipeDismissSheet({
 
 const styles = StyleSheet.create({
   modalOverlay: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     justifyContent: "flex-end",
   },
   sheetEnterWrapper: {

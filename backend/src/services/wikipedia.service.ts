@@ -1,4 +1,7 @@
-import type { CountryWikipediaSummary } from "../types/wikipedia.js";
+import type {
+  CountryWikipediaSummary,
+  LandmarkWikipediaSummary,
+} from "../types/wikipedia.js";
 import { logger } from "../utils/logger.js";
 import { CACHE_TTL, cacheGet, cacheKeys, cacheSet } from "./cache.service.js";
 
@@ -129,6 +132,97 @@ export async function getWikipediaForCountry(
   }
 
   const fresh = await fetchWikipediaForCountry(countryName);
+  if (fresh?.extract?.trim()) {
+    await cacheSet(key, fresh, CACHE_TTL.wikipedia);
+  }
+
+  return fresh;
+}
+
+function extractFirstParagraph(text: string): string {
+  const trimmed = text.trim();
+  if (!trimmed) return trimmed;
+
+  const firstBlock = trimmed.split(/\n\s*\n/)[0]?.trim() ?? trimmed;
+  return firstBlock.replace(/\s+/g, " ").trim();
+}
+
+async function resolveLandmarkWikipediaPageTitle(
+  landmarkName: string,
+  countryName?: string,
+): Promise<string | null> {
+  const trimmedLandmark = landmarkName.trim();
+  if (!trimmedLandmark) return null;
+
+  const queries = countryName?.trim()
+    ? [`${trimmedLandmark} ${countryName.trim()}`, trimmedLandmark]
+    : [trimmedLandmark];
+
+  for (const query of queries) {
+    const title = await resolveWikipediaPageTitle(query);
+    if (title) return title;
+  }
+
+  return null;
+}
+
+async function fetchLandmarkWikipediaSummary(
+  landmarkName: string,
+  countryName?: string,
+): Promise<LandmarkWikipediaSummary | null> {
+  const title = await resolveLandmarkWikipediaPageTitle(
+    landmarkName,
+    countryName,
+  );
+  if (!title) return null;
+
+  const response = await fetchWikipedia(
+    `https://en.wikipedia.org/api/rest_v1/page/summary/${slugifyTitle(title)}`,
+    {
+      label: "Landmark Wikipedia summary error",
+      title,
+      landmarkName,
+      countryName: countryName ?? "",
+    },
+  );
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const data = (await response.json()) as WikipediaRestSummary;
+  const extract = extractFirstParagraph(data.extract?.trim() ?? "");
+  const pageUrl = data.content_urls?.desktop?.page?.trim();
+
+  if (!extract || !pageUrl) return null;
+
+  return {
+    title: data.title?.trim() || title,
+    extract,
+    pageUrl,
+  };
+}
+
+export async function getWikipediaForLandmark(
+  landmarkName: string,
+  countryName?: string,
+): Promise<LandmarkWikipediaSummary | null> {
+  const trimmedLandmark = landmarkName.trim();
+  if (!trimmedLandmark) return null;
+
+  const trimmedCountry = countryName?.trim() ?? "";
+  const key = cacheKeys.landmarkWikipedia(trimmedLandmark, trimmedCountry);
+  const cached = await cacheGet<LandmarkWikipediaSummary>(key);
+
+  if (cached?.extract?.trim()) {
+    return cached;
+  }
+
+  const fresh = await fetchLandmarkWikipediaSummary(
+    trimmedLandmark,
+    trimmedCountry || undefined,
+  );
+
   if (fresh?.extract?.trim()) {
     await cacheSet(key, fresh, CACHE_TTL.wikipedia);
   }

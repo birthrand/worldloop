@@ -6,14 +6,22 @@ import { StatItem } from "@/components/ai-explorer/stat-item";
 type ProfileSectionProps = {
   title: string;
   children: ReactNode;
+  trailing?: ReactNode;
 };
 
-export function ProfileSection({ title, children }: ProfileSectionProps) {
+export function ProfileSection({
+  title,
+  children,
+  trailing,
+}: ProfileSectionProps) {
   return (
     <View className="gap-2">
-      <Text className="font-medium text-[11px] leading-[14px] tracking-[0.6px] uppercase text-white/48">
-        {title}
-      </Text>
+      <View className="flex-row items-center justify-between gap-2">
+        <Text className="font-medium text-[11px] leading-[14px] tracking-[0.6px] uppercase text-white/48">
+          {title}
+        </Text>
+        {trailing}
+      </View>
       <View className="gap-2">{children}</View>
     </View>
   );

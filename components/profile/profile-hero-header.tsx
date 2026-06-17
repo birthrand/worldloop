@@ -50,7 +50,7 @@ export function ProfileHeroHeader({
       onEditPress();
       return;
     }
-    router.push("/(tabs)/profile/settings");
+    router.push("/(tabs)/profile/edit-profile");
   };
 
   return (
@@ -78,7 +78,10 @@ export function ProfileHeroHeader({
       </Text>
 
       <View style={styles.statsGroup}>
-        <InlineStat value={stats.countries} lines={["COUNTRIES", "VISITED"]} />
+        <InlineStat
+          value={stats.countries}
+          lines={["COUNTRIES", "DISCOVERED"]}
+        />
         <View style={styles.statDivider} />
         <InlineStat value={stats.cities} lines={["LANDMARKS", "EXPLORED"]} />
         <View style={styles.statDivider} />

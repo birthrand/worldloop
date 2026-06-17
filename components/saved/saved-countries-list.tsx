@@ -1,5 +1,5 @@
 import { Image } from "expo-image";
-import { useCallback, useState } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import {
   FlatList,
   Pressable,
@@ -21,10 +21,11 @@ import {
   EXPLORE_SWIPE_WORLD_BASE_DIM,
 } from "@/constants/explore-swipe-layout";
 import { continentDisplayLabel } from "@/constants/regions";
-import { getCountryImages } from "@/lib/format-country";
+import { getCountryCardHeroUri } from "@/lib/format-country";
 import {
   openCountryDetail,
   warmCountryDetail,
+  type CountryDetailOrigin,
 } from "@/lib/open-country-detail";
 import type { Country } from "@/types/country";
 
@@ -36,6 +37,8 @@ type SavedCountriesListProps = {
   countries: Country[];
   layout?: SavedCountriesLayout;
   scrollBottomPadding?: number;
+  detailOrigin?: CountryDetailOrigin;
+  renderCardMenu?: (country: Country) => ReactNode;
 };
 
 const CARD_GAP = 12;
@@ -69,6 +72,8 @@ export function SavedCountriesList({
   countries,
   layout = "grid",
   scrollBottomPadding = 24,
+  detailOrigin = "saved",
+  renderCardMenu,
 }: SavedCountriesListProps) {
   const isGrid = layout === "grid";
   const { onListLayout, cardWidth } = useSavedGridListLayout();
@@ -88,9 +93,18 @@ export function SavedCountriesList({
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) =>
           isGrid ? (
-            <SavedCountryGridCard country={item} width={cardWidth} />
+            <SavedCountryGridCard
+              country={item}
+              width={cardWidth}
+              detailOrigin={detailOrigin}
+              renderCardMenu={renderCardMenu}
+            />
           ) : (
-            <SavedCountryListRow country={item} />
+            <SavedCountryListRow
+              country={item}
+              detailOrigin={detailOrigin}
+              renderCardMenu={renderCardMenu}
+            />
           )
         }
       />
@@ -101,12 +115,20 @@ export function SavedCountriesList({
 function SavedCountryGridCard({
   country,
   width,
+  detailOrigin,
+  renderCardMenu,
 }: {
   country: Country;
   width: number;
+  detailOrigin: CountryDetailOrigin;
+  renderCardMenu?: (country: Country) => ReactNode;
 }) {
-  const images = getCountryImages(country);
-  const heroUri = images[0];
+  const heroUri = getCountryCardHeroUri(country);
+  const cardMenu = renderCardMenu ? (
+    renderCardMenu(country)
+  ) : (
+    <SavedCountryCardMenu country={country} />
+  );
 
   return (
     <View style={[styles.card, { width }]}>
@@ -114,7 +136,7 @@ function SavedCountryGridCard({
         accessibilityRole="button"
         accessibilityLabel={`Open ${country.name}`}
         onPressIn={() => warmCountryDetail(country)}
-        onPress={() => openCountryDetail(country, { from: "saved" })}
+        onPress={() => openCountryDetail(country, { from: detailOrigin })}
         style={({ pressed }) => [
           styles.cardPressable,
           pressed && styles.cardPressed,
@@ -152,16 +174,35 @@ function SavedCountryGridCard({
         </View>
       </Pressable>
 
-      <SavedCountryCardMenu country={country} style={styles.gridMenuTrigger} />
+      {renderCardMenu ? (
+        <View style={styles.gridMenuTrigger}>{cardMenu}</View>
+      ) : (
+        <SavedCountryCardMenu
+          country={country}
+          style={styles.gridMenuTrigger}
+        />
+      )}
     </View>
   );
 }
 
-function SavedCountryListRow({ country }: { country: Country }) {
-  const images = getCountryImages(country);
-  const heroUri = images[0];
+function SavedCountryListRow({
+  country,
+  detailOrigin,
+  renderCardMenu,
+}: {
+  country: Country;
+  detailOrigin: CountryDetailOrigin;
+  renderCardMenu?: (country: Country) => ReactNode;
+}) {
+  const heroUri = getCountryCardHeroUri(country);
   const capital = country.capital?.trim() || "—";
   const regionLabel = continentDisplayLabel(country.region?.trim() || "—");
+  const cardMenu = renderCardMenu ? (
+    renderCardMenu(country)
+  ) : (
+    <SavedCountryCardMenu country={country} />
+  );
 
   return (
     <View style={styles.listRow}>
@@ -169,7 +210,7 @@ function SavedCountryListRow({ country }: { country: Country }) {
         accessibilityRole="button"
         accessibilityLabel={`Open ${country.name}`}
         onPressIn={() => warmCountryDetail(country)}
-        onPress={() => openCountryDetail(country, { from: "saved" })}
+        onPress={() => openCountryDetail(country, { from: detailOrigin })}
         style={({ pressed }) => [
           styles.listRowPressable,
           pressed && styles.cardPressed,
@@ -209,7 +250,7 @@ function SavedCountryListRow({ country }: { country: Country }) {
         </View>
       </Pressable>
 
-      <SavedCountryCardMenu country={country} />
+      {cardMenu}
     </View>
   );
 }

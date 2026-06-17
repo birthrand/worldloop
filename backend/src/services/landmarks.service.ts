@@ -9,7 +9,7 @@ import {
   type LandmarkCountryBounds,
 } from "../utils/landmark-ranking.js";
 import { logger } from "../utils/logger.js";
-import { CACHE_TTL, cacheKeys, getOrSet } from "./cache.service.js";
+import { CACHE_TTL, cacheGet, cacheKeys, cacheSet } from "./cache.service.js";
 import { fetchOsmLandmarks } from "./osm.service.js";
 import { fetchWikidataLandmarks } from "./wikidata.service.js";
 
@@ -117,6 +117,7 @@ async function fetchWikipediaLandmarkSummary(
       typeof data.coordinates?.lon === "number" ? data.coordinates.lon : null,
     imageUrl: data.thumbnail?.source?.trim() || null,
     source: "wikipedia",
+    city: null,
   };
 }
 
@@ -244,6 +245,51 @@ export async function fetchLandmarksForCountry(
   return merged;
 }
 
+function landmarksNeedCityEnrichment(landmarks: CountryLandmark[]): boolean {
+  return landmarks.some((landmark) => landmark.city === undefined);
+}
+
+async function enrichLandmarksWithCity(
+  landmarks: CountryLandmark[],
+  context: LandmarksCountryContext,
+): Promise<CountryLandmark[]> {
+  const cca2 = context.cca2.trim().toUpperCase();
+  const [wikidataLandmarks, osmLandmarks] = await Promise.all([
+    fetchWikidataLandmarks(cca2),
+    fetchOsmLandmarks(cca2, context.latlng),
+  ]);
+
+  const cityById = new Map<string, string>();
+  for (const candidate of [...wikidataLandmarks, ...osmLandmarks]) {
+    const city = candidate.city?.trim();
+    if (city) {
+      cityById.set(candidate.id, city);
+    }
+  }
+
+  return landmarks.map((landmark) => {
+    if (landmark.city !== undefined) {
+      return landmark;
+    }
+
+    return {
+      ...landmark,
+      city: cityById.get(landmark.id) ?? null,
+    };
+  });
+}
+
+async function readCachedLandmarks(
+  cca2: string,
+): Promise<CountryLandmark[] | null> {
+  const cached = await cacheGet<CountryLandmark[]>(cacheKeys.landmarks(cca2));
+  if (cached !== null) {
+    return cached;
+  }
+
+  return cacheGet<CountryLandmark[]>(cacheKeys.landmarksLegacy(cca2));
+}
+
 export async function getLandmarksForCountry(
   countryName: string,
   imageFallbacks: string[] = [],
@@ -251,8 +297,31 @@ export async function getLandmarksForCountry(
 ): Promise<CountryLandmark[]> {
   const cca2 = context.cca2.trim().toUpperCase();
   const key = cacheKeys.landmarks(cca2);
+  const cached = await readCachedLandmarks(cca2);
 
-  return getOrSet(key, CACHE_TTL.landmarks, () =>
-    fetchLandmarksForCountry(countryName, imageFallbacks, context),
+  if (cached !== null) {
+    if (landmarksNeedCityEnrichment(cached)) {
+      const enriched = await enrichLandmarksWithCity(cached, context);
+      await cacheSet(key, enriched, CACHE_TTL.landmarks);
+
+      logger.info("Landmarks cache enriched with city", {
+        country: countryName,
+        cca2,
+        enrichedCount: enriched.filter((landmark) => landmark.city).length,
+        total: enriched.length,
+      });
+
+      return enriched;
+    }
+
+    return cached;
+  }
+
+  const fresh = await fetchLandmarksForCountry(
+    countryName,
+    imageFallbacks,
+    context,
   );
+  await cacheSet(key, fresh, CACHE_TTL.landmarks);
+  return fresh;
 }

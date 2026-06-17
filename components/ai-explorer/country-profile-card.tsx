@@ -22,6 +22,7 @@ import AnimatedReanimated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { CountryFactsCarousel } from "@/components/ai-explorer/country-facts-carousel";
 import { CountryHeroCarousel } from "@/components/ai-explorer/country-hero-carousel";
 import {
   CountryHeroTopScrim,
@@ -165,6 +166,8 @@ type CountryProfileCardProps = {
   onShowMap: () => void;
   initialHeroIndex?: number;
   initialHeroMediaMode?: HeroMediaMode;
+  focusLandmarkId?: string | null;
+  onLandmarkFocusScroll?: (offsetY: number) => void;
 };
 
 function SectionDivider() {
@@ -330,7 +333,10 @@ export function CountryProfileCard({
   onShowMap,
   initialHeroIndex = 0,
   initialHeroMediaMode = "image",
+  focusLandmarkId = null,
+  onLandmarkFocusScroll,
 }: CountryProfileCardProps) {
+  const rootRef = useRef<View>(null);
   const insets = useSafeAreaInsets();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const heroHeight = getCountryDetailHeroHeight(screenHeight);
@@ -469,7 +475,6 @@ export function CountryProfileCard({
     [country],
   );
   const aiFacts = useMemo(() => getProfileAiFacts(country), [country]);
-  const featuredFact = aiFacts[0];
 
   const wikipediaExtract = wikipedia?.extract?.trim() ?? "";
   const overviewText =
@@ -507,7 +512,7 @@ export function CountryProfileCard({
   };
 
   return (
-    <View style={styles.root}>
+    <View ref={rootRef} style={styles.root}>
       <View style={[styles.heroWrap, { height: heroHeight }]}>
         <AnimatedReanimated.View
           style={[
@@ -758,13 +763,11 @@ export function CountryProfileCard({
             </View>
           </ProfileSection>
 
-          {featuredFact ? (
+          {aiFacts.length > 0 ? (
             <>
               <SectionDivider />
               <ProfileSection title="Did you know?">
-                <View style={styles.factCallout}>
-                  <Text style={styles.factCalloutText}>{featuredFact}</Text>
-                </View>
+                <CountryFactsCarousel facts={aiFacts} />
               </ProfileSection>
             </>
           ) : null}
@@ -772,7 +775,13 @@ export function CountryProfileCard({
           {landmarks.length > 0 ? (
             <>
               <SectionDivider />
-              <CountryLandmarksSection landmarks={landmarks} />
+              <CountryLandmarksSection
+                country={country}
+                landmarks={landmarks}
+                focusLandmarkId={focusLandmarkId}
+                scrollContentRef={rootRef}
+                onFocusLandmarkPosition={onLandmarkFocusScroll}
+              />
             </>
           ) : null}
 
@@ -1029,23 +1038,9 @@ const styles = StyleSheet.create({
     color: EXPLORE_SWIPE_ACCENT_COLOR,
   },
   linkText: {
-    fontFamily: "Poppins-Medium",
+    fontFamily: "Poppins-Regular",
     fontSize: 13,
     color: EXPLORE_SWIPE_ACCENT_COLOR,
-  },
-  factCallout: {
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    borderRadius: 14,
-    backgroundColor: COUNTRY_DETAIL_MODULE_BG,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: EXPLORE_SWIPE_CARD_INFO_BORDER,
-  },
-  factCalloutText: {
-    fontFamily: "Poppins-Regular",
-    fontSize: EXPLORE_SWIPE_TEXT_BODY,
-    lineHeight: EXPLORE_SWIPE_TEXT_BODY_LINE_HEIGHT,
-    color: EXPLORE_SWIPE_CARD_FACT_TEXT_COLOR,
   },
   wikipediaButton: {
     alignSelf: "flex-start",

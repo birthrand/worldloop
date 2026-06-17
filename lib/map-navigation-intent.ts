@@ -1,6 +1,9 @@
 import type { SelectionSource } from "@/store/use-identity-store";
 import type { DiscoveryScope } from "@/types/geo";
-import type { MapPresentationIntent } from "@/types/map-presentation";
+import type {
+  MapLandmarkFocus,
+  MapPresentationIntent,
+} from "@/types/map-presentation";
 
 /**
  * Layer 1 — Intent (truth)
@@ -22,6 +25,7 @@ export function createMapPresentationIntent(input: {
   source: Exclude<SelectionSource, null>;
   discoveryScope?: DiscoveryScope;
   scopeMode?: DiscoveryScope["mode"];
+  landmarkFocus?: MapLandmarkFocus;
 }): MapPresentationIntent {
   return {
     intentId: nextMapNavigationIntentId(),

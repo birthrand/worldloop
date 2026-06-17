@@ -1,7 +1,9 @@
 import type { SelectionSource } from "@/store/use-identity-store";
 import type { MapCountry } from "@/types/country";
-import type { MapPresentationMode } from "@/types/map-presentation";
-
+import type {
+  MapLandmarkFocus,
+  MapPresentationMode,
+} from "@/types/map-presentation";
 /** Cross-screen map entry — user intent always overrides a locked selection. */
 const PROGRAMMATIC_MAP_ENTRY_SOURCES = new Set<Exclude<SelectionSource, null>>([
   "countryDetail",
@@ -54,15 +56,43 @@ export function isCountrySelectionLocked(
   return activeCountry !== null;
 }
 
+/** Country detail → landmark modal → map: single landmark pin, no switching. */
+export function isCountryDetailLandmarkMapSession(
+  selectionSource: SelectionSource,
+  activeLandmark: MapLandmarkFocus | null,
+  countryDetailReturnName: string | null,
+): boolean {
+  return (
+    selectionSource === "countryDetail" &&
+    activeLandmark !== null &&
+    countryDetailReturnName !== null
+  );
+}
+
 /** Whether the map may commit a different country while selection is locked (map-tap UX guard). */
 export function canSelectCountryOnMap(
   activeCountry: MapCountry | null,
   candidateName: string,
+  travelMapSessionActive = false,
+  countryDetailLandmarkMapLock = false,
 ): boolean {
+  if (countryDetailLandmarkMapLock) {
+    return false;
+  }
+  if (travelMapSessionActive) {
+    return true;
+  }
   if (!activeCountry) {
     return true;
   }
   return activeCountry.name === candidateName;
+}
+
+/** True while the map was opened from Profile travel map. */
+export function isTravelMapSessionActive(
+  travelMapSessionActive = false,
+): boolean {
+  return travelMapSessionActive;
 }
 
 /** Boundary taps may switch countries only during an Explore → Map handoff. */
@@ -71,7 +101,15 @@ export function canSelectCountryOnMapBoundary(
   candidateName: string,
   selectionSource: SelectionSource,
   exploreMapSessionActive = false,
+  travelMapSessionActive = false,
+  countryDetailLandmarkMapLock = false,
 ): boolean {
+  if (countryDetailLandmarkMapLock) {
+    return false;
+  }
+  if (travelMapSessionActive) {
+    return false;
+  }
   if (!activeCountry) {
     return true;
   }

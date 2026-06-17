@@ -1,5 +1,6 @@
 import { createStructuredChatCompletion } from "../lib/llm.js";
 import type { Country, CountryBasic } from "../types/country.js";
+import type { LandmarkAiContent } from "../types/landmarks.js";
 import { logger } from "../utils/logger.js";
 import { CACHE_TTL, cacheKeys, getOrSet } from "./cache.service.js";
 
@@ -356,4 +357,160 @@ export async function enrichCountryWithAi<T extends CountryBasic>(
     ...country,
     ai,
   };
+}
+
+export type LandmarkAiGenerationInput = {
+  landmarkName: string;
+  countryName: string;
+  type?: string;
+  description?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  /** When set, the LLM should not override city inference. */
+  knownCity?: string | null;
+};
+
+export function fallbackLandmarkAiContent(
+  input: LandmarkAiGenerationInput,
+): LandmarkAiContent {
+  const landmark = input.landmarkName.trim();
+  const country = input.countryName.trim();
+  const typeHint = input.type?.trim();
+
+  const fact = typeHint
+    ? `${landmark} is a notable ${typeHint.toLowerCase()} in ${country} — a stop worth adding to any travel list.`
+    : `${landmark} is one of ${country}'s most recognizable landmarks, steeped in local history and culture.`;
+
+  return {
+    fact,
+    city: input.knownCity?.trim() || null,
+  };
+}
+
+function isValidLandmarkAiContent(value: unknown): value is LandmarkAiContent {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Record<string, unknown>;
+
+  const fact =
+    typeof candidate.fact === "string" && candidate.fact.trim().length > 0;
+  const cityValid =
+    candidate.city === null ||
+    (typeof candidate.city === "string" && candidate.city.trim().length > 0);
+
+  return fact && cityValid;
+}
+
+function normalizeLandmarkAiContent(
+  raw: LandmarkAiContent,
+  input: LandmarkAiGenerationInput,
+): LandmarkAiContent {
+  const knownCity = input.knownCity?.trim();
+  const inferredCity = raw.city?.trim() || null;
+
+  return {
+    fact: raw.fact.trim(),
+    city: knownCity || inferredCity,
+  };
+}
+
+function buildLandmarkPrompt(input: LandmarkAiGenerationInput): string {
+  const typeLine = input.type?.trim()
+    ? `Type: ${input.type.trim()}`
+    : "Type: Unknown";
+  const descriptionLine = input.description?.trim()
+    ? `Description: ${input.description.trim().slice(0, 400)}`
+    : null;
+  const coordsLine =
+    typeof input.latitude === "number" &&
+    typeof input.longitude === "number" &&
+    Number.isFinite(input.latitude) &&
+    Number.isFinite(input.longitude)
+      ? `Coordinates: ${input.latitude.toFixed(4)}, ${input.longitude.toFixed(4)}`
+      : null;
+  const cityLine = input.knownCity?.trim()
+    ? `Known city: ${input.knownCity.trim()} (do not change)`
+    : "Known city: Unknown — infer the nearest city or town if confident";
+
+  return [
+    "Generate a short landmark enrichment for a country discovery app.",
+    "",
+    `Landmark: ${input.landmarkName.trim()}`,
+    `Country: ${input.countryName.trim()}`,
+    typeLine,
+    ...(descriptionLine ? [descriptionLine] : []),
+    ...(coordsLine ? [coordsLine] : []),
+    cityLine,
+    "",
+    "Rules:",
+    "- Family friendly, accurate, engaging tone",
+    "- fact: exactly 1-2 short sentences (fits ~2 lines on a phone); surprising but plausible",
+    "- city: nearest city/town name only, or null if unsure",
+    "- Return strict JSON only",
+    "",
+    `JSON shape: {"fact":"...","city":"City Name" | null}`,
+  ].join("\n");
+}
+
+async function generateLandmarkAiFromLlm(
+  input: LandmarkAiGenerationInput,
+): Promise<LandmarkAiContent> {
+  const rawJson = await createStructuredChatCompletion([
+    {
+      role: "system",
+      content:
+        "You write short, accurate, family-friendly landmark facts for travelers. Return JSON only.",
+    },
+    {
+      role: "user",
+      content: buildLandmarkPrompt(input),
+    },
+  ]);
+
+  const parsed = JSON.parse(rawJson) as unknown;
+  if (!isValidLandmarkAiContent(parsed)) {
+    logger.warn("Invalid landmark LLM JSON shape, using fallback", {
+      landmark: input.landmarkName,
+      country: input.countryName,
+    });
+    return fallbackLandmarkAiContent(input);
+  }
+
+  return normalizeLandmarkAiContent(parsed, input);
+}
+
+/** Catalog build script — bypass Redis; optional LLM when configured. */
+export async function generateLandmarkAiUncached(
+  input: LandmarkAiGenerationInput,
+): Promise<LandmarkAiContent> {
+  try {
+    return await generateLandmarkAiFromLlm(input);
+  } catch (error) {
+    logger.warn("Landmark AI generation failed, using fallback", {
+      landmark: input.landmarkName,
+      country: input.countryName,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return fallbackLandmarkAiContent(input);
+  }
+}
+
+export async function getAiForLandmark(
+  input: LandmarkAiGenerationInput,
+): Promise<LandmarkAiContent> {
+  const key = cacheKeys.landmarkAi(input.landmarkName, input.countryName);
+
+  const content = await getOrSet(key, CACHE_TTL.ai, async () => {
+    try {
+      return await generateLandmarkAiFromLlm(input);
+    } catch (error) {
+      logger.warn("Landmark AI generation failed, using fallback", {
+        landmark: input.landmarkName,
+        country: input.countryName,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return fallbackLandmarkAiContent(input);
+    }
+  });
+
+  return normalizeLandmarkAiContent(content, input);
 }

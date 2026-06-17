@@ -1,5 +1,6 @@
 import type { Region } from "react-native-maps";
 
+import { LANDMARK_FOCUS_LATITUDE_DELTA } from "@/constants/map-focus-tiers";
 import { WORLD_INITIAL_REGION } from "@/constants/map-regions";
 import type { FlightPhase } from "@/hooks/use-map-flight";
 import type { MapCluster } from "@/lib/map-clusters";
@@ -52,6 +53,31 @@ export const COUNTRY_DETAIL_FLIGHT_MS = 900;
 const COUNTRY_DETAIL_SOURCES = new Set<Exclude<SelectionSource, null>>([
   "countryDetail",
 ]);
+
+export function regionForLandmarkFocus(
+  latitude: number,
+  longitude: number,
+  latitudeDelta = LANDMARK_FOCUS_LATITUDE_DELTA,
+): Region {
+  return {
+    latitude,
+    longitude,
+    latitudeDelta,
+    longitudeDelta: latitudeDelta,
+  };
+}
+
+export function buildLandmarkDetailPhases(
+  latitude: number,
+  longitude: number,
+): FlightPhase[] {
+  return [
+    {
+      region: regionForLandmarkFocus(latitude, longitude),
+      duration: COUNTRY_DETAIL_FLIGHT_MS,
+    },
+  ];
+}
 
 /**
  * Builds camera phases for country navigation.

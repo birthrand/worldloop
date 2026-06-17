@@ -17,15 +17,23 @@ export type { WeekProgress } from "@/lib/discovery-progress";
 export type VisitedCountrySnapshot = Pick<Country, "name" | "cca2" | "flag">;
 
 type DiscoveryProgressState = {
-  /** Unique country ids (prefer cca2). */
+  /** Unique country ids manually marked as visited (prefer cca2). */
   visitedCountryIds: string[];
   visitedAtByCountryId: Record<string, number>;
   /** Lightweight country snapshots for profile/map UI when feed data is absent. */
   visitedCountryById: Record<string, VisitedCountrySnapshot>;
+  /** Unique countries opened via country detail or landmark detail. */
+  discoveredCountryIds: string[];
+  discoveredAtByCountryId: Record<string, number>;
+  discoveredCountryById: Record<string, VisitedCountrySnapshot>;
   lastActiveDate: string | null;
   streakDays: number;
   weekProgress: WeekProgress;
   countriesExplored: number;
+  countriesDiscovered: number;
+  /** Unique landmark detail sheets opened (by stable landmark id). */
+  viewedLandmarkDetailIds: string[];
+  landmarksExplored: number;
   worldProgressPercent: number;
   quizzesCompleted: number;
 
@@ -33,6 +41,13 @@ type DiscoveryProgressState = {
     country: Pick<Country, "name" | "cca2"> & { flag?: string },
   ) => void;
   toggleCountryVisited: (
+    country: Pick<Country, "name" | "cca2"> & { flag?: string },
+  ) => void;
+  recordCountryDetailView: (
+    country: Pick<Country, "name" | "cca2"> & { flag?: string },
+  ) => void;
+  recordLandmarkDetailView: (
+    landmarkId: string,
     country: Pick<Country, "name" | "cca2"> & { flag?: string },
   ) => void;
   /** Streak tick on app open (see applyDailyActivity streak rule). */
@@ -50,25 +65,42 @@ const INITIAL_STATE = {
   visitedCountryIds: [] as string[],
   visitedAtByCountryId: {} as Record<string, number>,
   visitedCountryById: {} as Record<string, VisitedCountrySnapshot>,
+  discoveredCountryIds: [] as string[],
+  discoveredAtByCountryId: {} as Record<string, number>,
+  discoveredCountryById: {} as Record<string, VisitedCountrySnapshot>,
   lastActiveDate: null as string | null,
   streakDays: 0,
   weekProgress: createEmptyWeekProgress(),
   countriesExplored: 0,
+  countriesDiscovered: 0,
+  viewedLandmarkDetailIds: [] as string[],
+  landmarksExplored: 0,
   worldProgressPercent: 0,
   quizzesCompleted: 0,
 };
 
-function recomputeDerived(
-  visitedCountryIds: string[],
-): Pick<DiscoveryProgressState, "countriesExplored" | "worldProgressPercent"> {
-  const count = visitedCountryIds.length;
+function recomputeDerived(state: {
+  visitedCountryIds: string[];
+  discoveredCountryIds: string[];
+  viewedLandmarkDetailIds: string[];
+}): Pick<
+  DiscoveryProgressState,
+  | "countriesExplored"
+  | "countriesDiscovered"
+  | "landmarksExplored"
+  | "worldProgressPercent"
+> {
   return {
-    countriesExplored: count,
-    worldProgressPercent: computeWorldProgressPercent(count),
+    countriesExplored: state.visitedCountryIds.length,
+    countriesDiscovered: state.discoveredCountryIds.length,
+    landmarksExplored: state.viewedLandmarkDetailIds.length,
+    worldProgressPercent: computeWorldProgressPercent(
+      state.visitedCountryIds.length,
+    ),
   };
 }
 
-const DISCOVERY_PROGRESS_STORAGE_VERSION = 2;
+const DISCOVERY_PROGRESS_STORAGE_VERSION = 4;
 
 function clearVisitedProgress(
   state: DiscoveryProgressState,
@@ -78,7 +110,13 @@ function clearVisitedProgress(
     visitedCountryIds: [],
     visitedAtByCountryId: {},
     visitedCountryById: {},
+    discoveredCountryIds: [],
+    discoveredAtByCountryId: {},
+    discoveredCountryById: {},
+    viewedLandmarkDetailIds: [],
     countriesExplored: 0,
+    countriesDiscovered: 0,
+    landmarksExplored: 0,
     worldProgressPercent: 0,
   };
 }
@@ -89,6 +127,39 @@ function toVisitedSnapshot(
     name: country.name.trim(),
     cca2: country.cca2?.trim().toUpperCase() ?? "",
     flag: country.flag ?? "",
+  };
+}
+
+function appendCountryDiscovery(
+  state: DiscoveryProgressState,
+  country: Pick<Country, "name" | "cca2"> & { flag?: string },
+): Pick<
+  DiscoveryProgressState,
+  "discoveredCountryIds" | "discoveredAtByCountryId" | "discoveredCountryById"
+> | null {
+  const id = resolveVisitCountryId(country);
+  if (!id || state.discoveredCountryIds.includes(id)) {
+    return null;
+  }
+
+  return {
+    discoveredCountryIds: [...state.discoveredCountryIds, id],
+    discoveredAtByCountryId: {
+      ...state.discoveredAtByCountryId,
+      [id]: Date.now(),
+    },
+    discoveredCountryById: {
+      ...state.discoveredCountryById,
+      [id]: toVisitedSnapshot(country),
+    },
+  };
+}
+
+function discoverySnapshot(state: DiscoveryProgressState) {
+  return {
+    visitedCountryIds: state.visitedCountryIds,
+    discoveredCountryIds: state.discoveredCountryIds,
+    viewedLandmarkDetailIds: state.viewedLandmarkDetailIds,
   };
 }
 
@@ -115,7 +186,10 @@ export const useDiscoveryProgressStore = create<DiscoveryProgressState>()(
             visitedCountryIds,
             visitedAtByCountryId,
             visitedCountryById,
-            ...recomputeDerived(visitedCountryIds),
+            ...recomputeDerived({
+              ...discoverySnapshot(state),
+              visitedCountryIds,
+            }),
           });
           return;
         }
@@ -159,7 +233,50 @@ export const useDiscoveryProgressStore = create<DiscoveryProgressState>()(
           streakDays,
           lastActiveDate: daily.lastActiveDate,
           weekProgress: daily.weekProgress,
-          ...recomputeDerived(visitedCountryIds),
+          ...recomputeDerived({
+            ...discoverySnapshot(state),
+            visitedCountryIds,
+          }),
+        });
+      },
+
+      recordCountryDetailView: (country) => {
+        const state = get();
+        const discovery = appendCountryDiscovery(state, country);
+        if (!discovery) return;
+
+        set({
+          ...discovery,
+          ...recomputeDerived({
+            ...discoverySnapshot(state),
+            discoveredCountryIds: discovery.discoveredCountryIds,
+          }),
+        });
+      },
+
+      recordLandmarkDetailView: (landmarkId, country) => {
+        const id = landmarkId.trim();
+        if (!id) return;
+
+        const state = get();
+        const discovery = appendCountryDiscovery(state, country);
+        const isNewLandmark = !state.viewedLandmarkDetailIds.includes(id);
+        if (!isNewLandmark && !discovery) return;
+
+        const viewedLandmarkDetailIds = isNewLandmark
+          ? [...state.viewedLandmarkDetailIds, id]
+          : state.viewedLandmarkDetailIds;
+        const discoveredCountryIds =
+          discovery?.discoveredCountryIds ?? state.discoveredCountryIds;
+
+        set({
+          ...(discovery ?? {}),
+          viewedLandmarkDetailIds,
+          ...recomputeDerived({
+            ...discoverySnapshot(state),
+            discoveredCountryIds,
+            viewedLandmarkDetailIds,
+          }),
         });
       },
 
@@ -205,8 +322,16 @@ export const useDiscoveryProgressStore = create<DiscoveryProgressState>()(
       storage: createJSONStorage(() => AsyncStorage),
       migrate: (persistedState, version) => {
         const state = persistedState as DiscoveryProgressState;
-        if (version < DISCOVERY_PROGRESS_STORAGE_VERSION) {
+        if (version < 2) {
           return clearVisitedProgress(state);
+        }
+        if (version < DISCOVERY_PROGRESS_STORAGE_VERSION) {
+          state.viewedLandmarkDetailIds = state.viewedLandmarkDetailIds ?? [];
+          state.landmarksExplored = state.viewedLandmarkDetailIds.length;
+          state.discoveredCountryIds = state.discoveredCountryIds ?? [];
+          state.discoveredAtByCountryId = state.discoveredAtByCountryId ?? {};
+          state.discoveredCountryById = state.discoveredCountryById ?? {};
+          state.countriesDiscovered = state.discoveredCountryIds.length;
         }
         return state;
       },
@@ -238,9 +363,19 @@ export const useDiscoveryProgressStore = create<DiscoveryProgressState>()(
         }
         state.weekProgress = state.weekProgress ?? createEmptyWeekProgress();
         state.quizzesCompleted = state.quizzesCompleted ?? 0;
+        state.viewedLandmarkDetailIds = state.viewedLandmarkDetailIds ?? [];
+        state.discoveredCountryIds = state.discoveredCountryIds ?? [];
+        state.discoveredAtByCountryId = state.discoveredAtByCountryId ?? {};
+        state.discoveredCountryById = state.discoveredCountryById ?? {};
 
-        const derived = recomputeDerived(state.visitedCountryIds);
+        const derived = recomputeDerived({
+          visitedCountryIds: state.visitedCountryIds,
+          discoveredCountryIds: state.discoveredCountryIds,
+          viewedLandmarkDetailIds: state.viewedLandmarkDetailIds,
+        });
         state.countriesExplored = derived.countriesExplored;
+        state.countriesDiscovered = derived.countriesDiscovered;
+        state.landmarksExplored = derived.landmarksExplored;
         state.worldProgressPercent = derived.worldProgressPercent;
       },
     },
